@@ -1,0 +1,192 @@
+% !TeX root = ../build/main.tex
+
+\martai{I suggest to readjust this section to the new paper style.}
+
+Vocdoni Z introduces the Vocdoni token (VOC) as a key element of its decentralized voting ecosystem, playing a crucial role in the protocol's sustainability.
+The token serves multiple utility functions that align the incentives of all participants (voting organizers, sequencers, and voters) ensuring the integrity, efficiency, and security of the voting system.
+
+\subsection{Roles of the VOC}
+
+\begin{enumerate}
+	\item \textbf{Collateral for sequencers}: Sequencers are required to stake VOC tokens as a collateral to participate in the protocol. This serves as a safeguard to ensure responsible participation. If a sequencer behaves improperly (whether due to malicious intent or unintentional errors) it can face penalties, including the loss of part of its staked tokens.
+	\item \textbf{Incentive mechanism}: Sequencers earn rewards in VOC tokens based on their contribution to processing valid votes and maintaining the network. Rewards are proportional to the number of valid votes successfully added to the shared state.
+	\item \textbf{Payment for voting processes}: Voting processes organizers use VOC tokens to cover the costs of creating and managing voting processes. The costs depend on factors like the size of the voting registry, the voting period's duration, and the desired level of security (based on the number of participating sequencers).
+	\item \textbf{Governance}: The VOC token facilitates decentralized governance by giving the token holders the right to participate in the project governance. Token holders can influence on important matters such as protocol upgrades, ecosystem development, and other initiatives aimed to enhance various aspects of Vocdoni Z. This ensures that the project evolves in a transparent, community-driven manner.
+\end{enumerate}
+
+\subsection{Economics for organizers}
+
+Organizers of voting processes pay fees in VOC tokens to create and manage their voting events. These fees cover operational costs and incentivize the sequencers.
+
+The costs of voting processes vary based on the following factors:
+
+\begin{itemize}
+	\item \textbf{Maximum number of votes}: Larger voter registries require more resources for processing.
+	\item \textbf{Voting duration}: Longer voting periods demand extended resource commitments from sequencers.
+	\item \textbf{Security level}: Organizers can adjust the number of participating sequencers to balance between cost and security needs.
+\end{itemize}
+
+Fees must be paid upfront but can be partially reimbursed. The formula for calculating the reimbursement is:
+
+$$ \reimbursement = \totalCost - \totalReward - \baseCost $$
+
+Given that there is a list of eligible voters for each voting process, organizers should reserve space equal to the maximum number of voters, anticipating that all eligible voters may participate. However, since this is unlikely, a portion of the reward pool may be reimbursed.
+
+The components of this formula are defined in the following sections.
+
+\subsection{Voting process cost model}
+
+The process cost model defines how the cost for a given process is calculated.
+Considering sequencer-specific capacities, process duration, number of voters and security costs, we define following components formula:
+
+$$ \totalCost = \baseCost + \capacityCost + \durationCost + \securityCost $$
+
+\subsubsection{Components definition}
+
+\begin{itemize}
+	\item $\baseCost$: The base cost is a fixed fee charged by the sequencer to set up a voting process based on a fixed value plus the number of and a fixed factor. It is independent of the process duration, or the security level. This part cannot be reimbursed thus is a portion of the that will alwways be rewarded to the sequencers.
+	$$ \baseCost = \fixedCost + \maxVotes \cdot p $$
+	Where:
+	\begin{itemize}
+		\item $\fixedCost$ is a fixed base fee defined into the protocol.
+		\item $\maxVotes$ is the maximum number of votes of a given voting process.
+		\item $p$ is a small lineal factor defined into the protocol.
+	\end{itemize}
+	
+	\item \capacityCost: It defines the cost given the current occupancy of the sequencer network. This component models the cost of reserving space for voting processes, relative to the number of sequencers available, the number of running voting processes and the maximum numbers of voters. The cost increases non-linearly as the number available sequencers approaches to the total number of sequencers and the number of running voting processes grows, so when there are fewer sequencers available and big number of voting processes running, the capacity becomes more valuable.
+	$$
+	k_1 \cdot \left( \frac{\totalVotingProcesses}{\totalSequencers - \usedSequencers + \epsilon} \cdot \maxVotes \right)^a
+	$$ 
+	\begin{itemize}
+		\item $k_1$: A scaling factor controlling the impact of sequencers usage.
+		\item $\totalVotingProcesses$: The total number of running voting processes.
+		\item $\totalSequencers$: The total number of registered sequencers.
+		\item $\usedSequencers$: The number of sequencers that are already handling other voting processes.
+		\item $a$: An exponent that controls how sharply the cost increases as the used capacity approaches the total available capacity. In other words, it controls the non-linearity of the cost increase.
+		\item $\epsilon$: Is a very small number that avoids zero division.
+	\end{itemize}
+	
+	\item $\durationCost$: This component models the cost of running the process for a specific duration, where longer processess incur more cost. The scaling is non-linear, meaning that shorter processes are more cost-efficient, while longer processes are increasingly expensive.
+	
+	It is expected to have a minimum and maximum duration thresholds (e.g 1 hour to 1 year).
+	
+	$$ k_2 \cdot \processDuration^b $$
+	
+	\begin{itemize}
+		\item $k_2$: A scaling factor for the process duration.
+		\item $\processDuration$: The duration of the process in hours.
+		\item $b$: An exponent that controls the non-linear scaling of the process duration.
+	\end{itemize}
+	
+	\item $\securityCost$: The security cost models the use of multiple sequencers to ensure a secure process. The cost scales exponentially based on the number of sequencers used, but with diminishing returns as the number of sequencers approaches the total available sequencers:
+	
+	$$ k_3 \cdot e^{c \cdot \left( \frac{\numSequencers}{\totalSequencers} \right)^d} $$
+	
+	\begin{itemize}
+		\item $k_3$: A scaling factor controlling the overall weight of security cost.
+		\item $c$: Controls the steepness of the exponential scaling for security costs.
+		\item $\numSequencers$: The number of sequencers used in this process.
+		\item $\totalSequencers$: The total number of available sequencers in the network.
+		\item $d$: An exponent controlling how fast the security cost increases as the number of sequencers approaches the total available sequencers.
+	\end{itemize}
+\end{itemize}
+
+\subsubsection{Constraints}
+
+There is the need to enforce some constrains in the formula in order to avoid impracticable scenarios.
+
+\begin{itemize}
+	\item If $\processDuration > \maxDuration$ then: $\totalCost = \infty$.
+	\item If $\numSequencers > \totalSequencers$ then: $\totalCost = \infty$.
+\end{itemize}
+
+\subsection{Economics for sequencers}
+
+To become a sequencer and earn rewards, participants must stake VOC tokens as collateral. This collateral is locked during the sequencer registry in the Sequencer Registry smart contract and can be withdrawn upon the sequencer commitments are fulfilled.
+
+Sequencers \textbf{receive rewards} based on:
+
+\begin{itemize}
+	\item The number of \textbf{votes} they include in the shared state.
+	\item The number of \textbf{vote rewrites} they include in the shared state.
+	\begin{itemize}
+		\item A vote rewrite can be either a vote overwrite (a voter casting another vote that overwrites the previous one) or a vote re-encryption (made by the sequencer). Rewriting votes enables more flexibility for the voter and is a key mechanism for the receipt-freeness.
+		\item It is expected for the sequencers to maximize the number of vote rewrites because there is no way to distinguish between a vote overwrite and a vote re-encryption. This is considered a positive behavior because it contributes to the receipt-freeness mechanism of the protocol.
+		\item A vote and a vote rewrite are distinguishable because the former include a nullifier that has not ever been included in a specific process.
+		\item Given that each sequencer will submit a ZK proof validating the state transition into the settlement layer smart contract it is straight forward to count the number of votes and the number of vote rewrites processed by each sequencer.
+		\item Sequencers can allow vote rewrites up to $T$ times the number of new votes for any state transition. $T$ will be defined as a constant in the protocol.
+	\end{itemize}
+	\item The number of \textbf{non-processed votes} in relation to the maximum number of voters.
+\end{itemize}
+
+The total reward obtained can be expressed as:
+
+$$ \sequencerReward_i = R \cdot \left( \frac{\votes_i}{\maxVotes} \right) + W \cdot \left( \frac{\voteRewrites_i}{\totalRewrites}  \right) $$
+
+And subject to the constraints:
+
+$$ \frac{\voteRewrites_i}{\votes_i} \leq T$$
+
+$$ \totalReward = R + W $$
+
+$$ R > W $$
+
+\begin{itemize}
+	\item $R > W$ since the sequencers must prioritize processing votes and not be incetivized to just rewrite existing votes.
+\end{itemize}
+
+Where:
+
+\begin{itemize}
+	\item $R$: A part of the reward pool allocated for a specific voting process.
+	\item $\votes_i$: The number of votes processed by the sequencer for a specific voting process.
+	\item $\maxVotes$: The maximum number of voters participating in a voting process.
+	\item $W$: A part of the reward pool allocated for a specific voting process.
+	\item $\voteRewrites_i$: The number of vote rewrites processed by the sequencer for a specific voting process.
+	\item $\totalRewrites$: The total number of vote rewrites for a specific process.
+\end{itemize}
+
+\subsubsection{Penalties}
+
+\begin{itemize}
+	\item Non-participation: Sequencers who fail to meet their obligation, not providing key shares during the tally phase, can have their collateral slashed.
+	Penalites for a sequencer can be expressed as:
+	$$ \slashedAmount_i = s \cdot \stakedCollateral_i $$
+	Where:
+	\begin{itemize}
+		\item $\slashedAmount_i$: The total slashed amount for a given sequencer.
+		\item $s$: The slashing coefficient $0 \leq s \leq 1$.
+		\item $\stakedCollateral_i$: The amount of VOC tokens staked by a given sequencer.
+	\end{itemize}
+\end{itemize}
+
+\subsection{Summary}
+
+The total cost formula combines four main components:
+
+\begin{enumerate}
+	\item A base cost for setting up the process.
+	\item A capacity cost based on the number of voters, the total running processes and available sequencer capacity.
+	\item A duration cost based on how long the process lasts.
+	\item A security cost based on the number of sequencers used, with diminishing returns for using more than a certain number.
+\end{enumerate}
+
+The proposed formula ensures that:
+
+\begin{itemize}
+	\item Small processes are cost-efficient.
+	\item Larger processes or processes using a high proportion of available sequencer capacity incur higher costs.
+	\item The cost of security increases rapidly if more sequencers are used, but adding sequencers beyond a certain point leads to diminishing returns.
+	\item Impractical scenarios cannot be reached.
+\end{itemize}
+
+\subsubsection{Notes on optimization}
+
+In the model presented we can clearly see that there are conflicting objectives from the two main actors:
+
+\begin{itemize}
+	\item The organizer (the ``buyer'' of services) wants to minimize the cost of running the process.
+	\item The sequencers (the ``sellers'' of capacity) want to maximize their rewards. A sequencer can decide whether to participate based on expected profits.
+\end{itemize}
+
+These are naturally conflicting objectives that can be modeled as a strategic game. However, modeling this equilibrium for the protocol it is not in the scope on this document and will be presented in a separate piece.

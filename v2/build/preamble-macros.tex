@@ -1,0 +1,121 @@
+% !TeX root = main.tex
+
+% Doc sytle
+\setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
+
+% Working directory
+\newcommand{\definedir}[2]{\newcommand{#1}{#2}}
+\definedir{\secs}{../sections}
+\definedir{\figs}{../figures}
+\definedir{\bib}{../bibliography}
+
+% Comments
+\newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\pau}[1]{\todo[size=\small, color=blue!40]{\textbf{Pau}: #1}}
+\newcommand{\paui}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Pau}: #1}}
+\newcommand{\jordi}[1]{\todo[size=\small, color=green!40]{\textbf{Jordi}: #1}}
+\newcommand{\jordii}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Jordi}: #1}}
+
+% freefootnote
+\let\svthefootnote\thefootnote
+\newcommand\freefootnote[1]{%
+	\let\thefootnote\relax%
+	\footnotetext{#1}%
+	\let\thefootnote\svthefootnote%
+}
+
+% Colors
+\definecolor{cred}{rgb}{1, 0.5, 0.5}
+\definecolor{cgreen}{rgb}{0.5, 1, 0.5}
+\definecolor{cblue}{rgb}{0.5, 0.5, 1}
+
+% Hyperref setup
+%\hypersetup{
+%	final=true,
+%	colorlinks=true,
+%	linkcolor=cblue,
+%	urlcolor=black,
+%	citecolor=cblue,
+%}
+
+% Mathbb
+\newcommand{\N}{\ensuremath{\mathbb{N}}\xspace}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}\xspace}
+\newcommand{\G}{\ensuremath{\mathbb{G}}\xspace}
+\newcommand{\F}{\ensuremath{\mathbb{F}}\xspace}
+\newcommand{\J}{\ensuremath{\mathbb{J}}\xspace}
+
+% Ballot protocol
+\newcommand{\ballotstyle}[1]{\texttt{#1}\xspace}
+\newcommand{\maxcount}{\ballotstyle{maxCount}}
+\newcommand{\maxvalue}{\ballotstyle{maxValue}}
+\newcommand{\minvalue}{\ballotstyle{minValue}}
+\newcommand{\uniquevalues}{\ballotstyle{uniqueValues}}
+\newcommand{\maxtotalcost}{\ballotstyle{maxTotalCost}}
+\newcommand{\mintotalcost}{\ballotstyle{minTotalCost}}
+\newcommand{\costexponent}{\ballotstyle{costExponent}}
+
+% Voting protocol
+\newcommand{\variablestyle}[1]{\texttt{#1}\xspace}
+\newcommand{\nullifier}{\variablestyle{nullifier}}
+\newcommand{\commitment}{\variablestyle{commitment}}
+
+% Others
+\newcommand{\noi}{\noindent}
+
+% Hyperlinks
+\newcommand{\hlset}[1]{\hypertarget{\detokenize{#1}}{#1}}
+\newcommand{\hlget}[1]{\hyperlink{\detokenize{#1}}{#1}}
+
+% Cryptographic primitives
+\newcommand{\methodstyle}[1]{{\sf{#1}}\xspace}
+\newcommand{\Enc}{\methodstyle{Enc}}
+\newcommand{\Dec}{\methodstyle{Dec}}
+\newcommand{\GenerateShares}{\methodstyle{GenerateShares}}
+\newcommand{\VerifyShare}{\methodstyle{VerifyShare}}
+\newcommand{\DerivePublicKey}{\methodstyle{DerivePublicKey}}
+\newcommand{\DeriveSecretShare}{\methodstyle{DeriveSecretShare}}
+
+\newcommand{\blinder}[1][]{{\sf{blinder}^{#1}}}
+\newcommand{\pk}[1][]{{\sf{pk}^{#1}}}
+\newcommand{\sk}[1][]{{\sf{sk}^{#1}}} 
+\newcommand{\msg}[1][]{{\sf{message}^{#1}}}
+\newcommand{\enc}[1][]{{\sf{ciphertext}^{#1}}}
+\newcommand{\sample}{\xleftarrow{\$}}
+
+% VOC token
+\newcommand{\vocstyle}[1]{{\sf{#1}}\xspace}
+
+\newcommand{\baseCost}{\vocstyle{baseCost}}
+\newcommand{\capacityCost}{\vocstyle{capacityCost}}
+\newcommand{\durationCost}{\vocstyle{durationCost}}
+\newcommand{\fixedCost}{\vocstyle{fixedCost}}
+\newcommand{\maxVotes}{\vocstyle{maxVotes}}
+\newcommand{\maxDuration}{\vocstyle{maxDuration}}
+\newcommand{\numSequencers}{\vocstyle{numSequencers}}
+\newcommand{\processDuration}{\vocstyle{processDuration}}
+\newcommand{\reimbursement}{\vocstyle{reimbursement}}
+\newcommand{\securityCost}{\vocstyle{securityCost}}
+\newcommand{\sequencerReward}{\vocstyle{sequencerReward}}
+\newcommand{\slashedAmount}{\vocstyle{slashedAmount}}
+\newcommand{\stakedCollateral}{\vocstyle{stakedCollateral}}
+\newcommand{\totalCost}{\vocstyle{totalCost}}
+\newcommand{\totalReward}{\vocstyle{totalReward}}
+\newcommand{\totalRewrites}{\vocstyle{totalRewrites}}
+\newcommand{\totalSequencers}{\vocstyle{totalSequencers}}
+\newcommand{\totalVotingProcesses}{\vocstyle{totalVotingProcesses}}
+\newcommand{\usedSequencers}{\vocstyle{usedSequencers}}
+\newcommand{\votes}{\vocstyle{votes}}
+\newcommand{\voteRewrites}{\vocstyle{voteRewrites}}
+
+
+
+
+% draft watermark
+%\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
+
+% new foonote referencing a previous footmark
+\makeatletter
+\newcommand\footnoteref[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
+\makeatother

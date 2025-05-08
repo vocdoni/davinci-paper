@@ -1,0 +1,77 @@
+% !TeX root = ../build/main.tex
+
+Vocdoni Z employs a Distributed Key Generation (DKG) protocol that allows a group of participants (Sequencers) to jointly generate a public/private key pair for the ElGamal cryptosystem without any single participant knowing the complete private key. Instead, each participant holds a share of the private key, and only a threshold number of participants can collaborate to decrypt messages (the threshold is configurable). This enhances security by eliminating the need for a trusted dealer and protecting against single-point failures.
+
+\subsection{Properties}
+
+\begin{itemize}
+	\item \textbf{Decentralized Key Generation}: No single party knows the complete secret key.
+	\item \textbf{Coordinated via Ethereum}: The parties do not need to interact directly, they use an Ethereum Smart Contract to bootstrap the process and exchange the required information.
+	\item \textbf{Threshold Security}: A minimum number of participants (threshold) is required to reconstruct the secret.
+	\item \textbf{Verifiable Shares}: Parties and Ethereum can verify the correctness of the shares they receive.
+	\item \textbf{Scalability}: Supports any number of participants and configurable threshold.
+\end{itemize}
+
+\subsection{Protocol Steps}
+
+\begin{enumerate}
+	\item \textbf{Initialization}:
+			\begin{itemize}
+				\item The Ethereum Smart Contract provides the initial parameters:
+						\begin{itemize}
+							\item \textbf{Threshold} $t$: Minimum number of participants required to decrypt messages.
+							\item \textbf{Total Participants} $n$: : Total number of sequencers involved.
+							\item \textbf{Elliptic Curve Parameters}: Choose a suitable elliptic curve with generator point $G$ and order $q$.
+						\end{itemize}
+			\end{itemize}
+	\item \textbf{Secret Polynomial Generation}:
+			\begin{itemize}
+				\item Each participant $P_i$ generates a random secret polynomial of degree $t-1$:
+						$$f_i (x) = a_{i,0} + a_{i, 1}x + a_{i,2}x^2 + \dots + a_{i, t-1}x^{t-1}$$
+						\begin{itemize}
+							\item Coefficients $a_{i,j} \in \mathbb{Z}_q$ are randomly selected.
+							\item The constant term $a{i,0}$ is $P_i$'s individual secret.
+						\end{itemize}
+			\end{itemize}
+	\item \textbf{Commitment to Coefficients}:
+			\begin{itemize}
+				\item Participants compute public commitments to their polynomial coefficients: $C_{i,j} = a_{i,j}\cdot G$
+					\begin{itemize}
+						\item These commitments are points on the elliptic curve and are published to all participants.
+						\item This ensures transparency and allows others to verify shares without revealing secrets.
+					\end{itemize}
+			\end{itemize}
+	\item \textbf{Share Computation}:
+			\begin{itemize}
+				\item Each participant computes shares for every other participant  $P_j$: $s_{i,j} = f_i(j)$
+					\begin{itemize}
+						\item The shares $s_{i,j} \in \mathbb{Z}_q$ are secret scalar values.
+					\end{itemize}
+			\end{itemize}
+	\item \textbf{Secure and Verified Distribution}:
+			\begin{itemize}
+				\item Shares are encrypted before distribution using a simplified version of the \textbf{Elliptic Curve Integrated Encryption Scheme (ECIES)}, since we only need to encrypt a scalar:
+				\item Each participant provides a zkSNARK proof to prove:
+					\begin{itemize}
+						\item The correctness of the encrypted share.
+						\item Compliance with the DKG protocol rules.
+					\end{itemize}
+				\item This allows the smart contract on Ethereum to verify the validity without revealing secrets.
+			\end{itemize}
+	\item \textbf{Aggregation of Shares}:
+			\begin{itemize}
+				\item Each participant computes their private key share by summing the shares received (including their own): $s_j = \sum_{i ^1}^ns_{i,j} \mod q$
+				\item This becomes $P_j$'s portion of the collective private key.
+			\end{itemize}
+	\item \textbf{Public Key Computation}:
+			\begin{itemize}
+				\item Participants compute the collective public key: $PK = \sum_{i = 1}^n C_{i,0}$
+					\begin{itemize}
+						\item Since $C_{i,0} = a_{i,0}\cdot G$, the public key is effectively: $PK = s\cdot G$ where $s = \sum_{i = 1}^n a_{i,0} \mod q$ is the collective private key (unknown to any single participant).
+					\end{itemize}
+			\end{itemize}
+	\item \textbf{Public Key Distribution}:
+			\begin{itemize}
+				\item Any of the participants can publish the collective public key $PK$ to the Ethereum smart contract.
+			\end{itemize}
+\end{enumerate}

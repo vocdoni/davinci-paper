@@ -1,0 +1,57 @@
+% !TeX root = ../build/main.tex
+
+In the Vocdoni Z system, the privacy of the voting process is ensured through the use of a \textbf{Threshold Homomorphic Encryption Scheme}. Specifically, the \textbf{Threshold ElGamal Cryptosystem over elliptic curves} is used. This cryptosystem provides both homomorphic and threshold properties essential for secure and verifiable digital voting.
+
+Encrypted messages can be combined to produce an encryption of the sum of the original plaintexts without decrypting them. In the context of voting, this allows for the secure aggregation of votes while keeping the voter's choice private.
+
+\begin{enumerate}
+	\item \textbf{Collaborative Key Generation:} 
+			\begin{itemize}
+				\item The public key is generated collaboratively among the sequencers without any single party knowing the entire private key.
+				\item Utilizes a \textbf{Distributed Key Generation (DKG)} protocol to share the private key $s$ among $n$ sequencers using a threshold scheme.
+			\end{itemize}
+	\item \textbf{Encryption}: Given a message $m$ encoded as a point $M(M = mG)$ on the elliptic curve:
+		\begin{itemize}
+			\item Select a random scalar $k \in [1, n-1]$ and consider $H = sG$.
+			\item Compute:
+				\begin{itemize}
+					\item $C_1 = k\cdot G$
+					\item $C_2 = M + k \cdot H$
+				\end{itemize}
+			\item The ciphertext is $(C_1, C_2)$.
+		\end{itemize}
+
+	\item \textbf{Homomorphic Addition}: The ElGamal cryptosystem over elliptic curves supports additive homomorphism for messages represented as points:
+		\begin{itemize}
+			\item Given two ciphertexts $(C_1^{(1)}, C_2^{(1)})$ and $(C_1^{(2)}, C_2^{(2)})$, their component-wise addition yields:
+				\begin{itemize}
+					\item $C_1^{\text{sum}} = C_1^{(1)} + C_1^{(2)}$
+					\item $C_2^{\text{sum}} = C_2^{(1)} + C_2^{(2)}$
+				\end{itemize}
+			\item The aggregated ciphertext decrypts to the sum of the messages:
+				\begin{itemize}
+					\item $M^{\text{sum}} = M_1 + M_2$
+				\end{itemize}
+		\end{itemize}
+	
+	\item \textbf{Decryption}:
+	
+			\begin{itemize}
+				\item To decrypt an aggregated ciphertext (total sum of votes), a minimum number of sequencers (the threshold ) must provide their partial decryption shares. Each Sequencer compute $D_i = s_i \cdot C_1$
+				\item \textbf{Combine Partial Decryptions}:
+					\begin{itemize}
+						\item Use Lagrange interpolation to combine the $D_i$ and recover $s\cdot C_1$.
+						\item Substract from $_c2$ to obtain the aggregated message point:
+							\begin{itemize}
+								\item $M^{\text{sum}} = C_2 + s \cdot C_1$
+							\end{itemize}
+						\item Extract the message $m$ from $M$ by solving the discrete logarithm:
+							\begin{itemize}
+								\item $m = \log_G M$
+							\end{itemize}
+					\end{itemize}
+			\end{itemize}
+		
+	For solving the discrete logarithm problem and compute the final results, since the message is small, it can be done via brute-force search or using the algorithm \textbf{baby-step giant-step}.
+
+\end{enumerate}

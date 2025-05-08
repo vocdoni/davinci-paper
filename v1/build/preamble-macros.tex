@@ -1,0 +1,70 @@
+% !TeX root = main.tex
+
+% Doc sytle
+\setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
+
+% Working directory
+\newcommand{\definedir}[2]{\newcommand{#1}{#2}}
+\definedir{\secs}{../sections}
+\definedir{\figs}{../figures}
+\definedir{\bib}{../bibliography}
+
+% Comments
+\newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\xavi}[1]{\todo[size=\small, color=green!40]{\textbf{xavi}: #1}}
+\newcommand{\xavii}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Xavi}: #1}}
+\newcommand{\fede}[1]{\todo[size=\small, color=blue!40]{\textbf{Fede}: #1}}
+\newcommand{\fedei}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Fede}: #1}}
+\newcommand{\ema}[1]{\todo[size=\small, color=irabge!40]{\textbf{Ema}: #1}}
+\newcommand{\emai}[1]{\todo[inline, size=\small, color=orange!40]{\textbf{Ema}: #1}}
+
+% Mathbb
+\newcommand{\N}{\ensuremath{\mathbb{N}}\xspace}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}\xspace}
+\newcommand{\G}{\ensuremath{\mathbb{G}}\xspace}
+\newcommand{\F}{\ensuremath{\mathbb{F}}}
+
+% Consensus
+\newcommand{\valid}{\texttt{valid}\xspace}
+\newcommand{\invalid}{\texttt{invalid}\xspace}
+\newcommand{\noquorum}{\texttt{noQuorum}\xspace}
+\newcommand{\nocandidate}{\texttt{noCandidate}\xspace}
+\newcommand{\nil}{\texttt{NIL}\xspace}
+\newcommand{\final}{\texttt{final}\xspace}
+\newcommand{\score}{\texttt{score}\xspace}
+\newcommand{\stepvotes}{\texttt{stepVotes}\xspace}
+\newcommand{\unknown}{\texttt{unknown}\xspace}
+\newcommand{\round}{\texttt{R}\xspace}
+\newcommand{\seed}{\texttt{seed}\xspace}
+\newcommand{\step}{\texttt{S}\xspace}
+\newcommand{\credit}{\texttt{c}\xspace}
+\newcommand{\accepted}{\texttt{accepted}\xspace}
+\newcommand{\attested}{\texttt{attested}\xspace}
+\newcommand{\confirmed}{\texttt{confirmed}\xspace}
+\newcommand{\failed}{\texttt{failed}\xspace}
+\newcommand{\stake}{\texttt{stake}\xspace}
+\newcommand{\amount}{\texttt{amount}\xspace}
+\newcommand{\height}{\texttt{height}\xspace}
+\newcommand{\epoch}{\texttt{epoch}\xspace}
+\newcommand{\minstake}{\texttt{minStake}\xspace}
+
+% Others
+\newcommand{\dusk}{{\footnotesize{\sf{DUSK}}}\xspace}
+\newcommand{\noi}{\noindent}
+
+% freefootnote
+\let\svthefootnote\thefootnote
+\newcommand\freefootnote[1]{%
+	\let\thefootnote\relax%
+	\footnotetext{#1}%
+	\let\thefootnote\svthefootnote%
+}
+
+% draft watermark
+\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
+
+% new foonote referencing a previous footmark
+\makeatletter
+\newcommand\footnoteref[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
+\makeatother

@@ -19,16 +19,10 @@
 # these rules might exclude image files for figures etc.
 # *.ps
 # *.eps
-# *.pdf
-
-## Generated if empty string is given at "Please type another file name for output:"
-.pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
 *.bbl
-*.bbl-SAVE-ERROR
 *.bcf
-*.bcf-SAVE-ERROR
 *.blg
 *-blx.aux
 *-blx.bib
@@ -41,8 +35,6 @@
 *.synctex.gz
 *.synctex.gz(busy)
 *.pdfsync
-*.rubbercache
-rubber.cache
 
 ## Build tool directories for auxiliary files
 # latexrun
@@ -59,9 +51,6 @@ acs-*.bib
 # amsthm
 *.thm
 
-# attachfile2
-*.atfi
-
 # beamer
 *.nav
 *.pre
@@ -70,7 +59,6 @@ acs-*.bib
 
 # changes
 *.soc
-*.loc
 
 # comment
 *.cut
@@ -119,16 +107,9 @@ acs-*.bib
 *.glsdefs
 *.lzo
 *.lzs
-*.slg
-*.slo
-*.sls
 
 # uncomment this for glossaries-extra (will ignore makeindex's style files!)
 # *.ist
-
-# gnuplot
-*.gnuplot
-*.table
 
 # gnuplottex
 *-gnuplottex-*
@@ -145,9 +126,6 @@ acs-*.bib
 *.lg
 *.trc
 *.xref
-
-# hypdoc
-*.hd
 
 # hyperref
 *.brf
@@ -180,7 +158,6 @@ acs-*.bib
 
 # minted
 _minted*
-*.data.minted
 *.pyg
 
 # morewrites
@@ -208,9 +185,6 @@ _minted*
 # scrwfile
 *.wrt
 
-# svg
-svg-inkscape/
-
 # sympy
 *.sout
 *.sympy
@@ -234,9 +208,6 @@ pythontex-files-*/
 *.dpth
 *.md5
 *.auxlock
-
-# titletoc
-*.ptc
 
 # todonotes
 *.tdo
@@ -311,3 +282,6 @@ TSWLatexianTemp*
 # option is specified. Footnotes are the stored in a file with suffix Notes.bib.
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
+
+# others
+.DS_Store

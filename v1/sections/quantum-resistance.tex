@@ -1,0 +1,24 @@
+% !TeX root = ../build/main.tex
+
+As quantum computing technology advances, it poses significant challenges to classical cryptographic schemes that underpin the security of digital systems, including voting platforms like Vocdoni Z. Ensuring that the system remains secure in the face of quantum threats is crucial for its longevity and trustworthiness.
+
+Quantum computers have the potential to solve certain mathematical problems exponentially faster than classical computers. Notably, Shor's algorithm allows quantum computers to efficiently factor large integers and compute discrete logarithms, undermining the security of widely used cryptographic schemes such as RSA, DSA, ECDSA, and the ElGamal cryptosystem.
+
+However, the design of Vocdoni Z incorporates mechanisms that preserve voter anonymity even in the face of future quantum attacks:
+
+\begin{itemize}
+	\item \textbf{Detachment of Identity and Encrypted Ballot}: The voter's identity and their encrypted ballot are decoupled through the use of a secret in the nullifier. The nullifier is computed as:
+		$$ N = \text{Hash}(\text{ProcessId} || s) $$	
+	where is a secret known only to the voter. This means that even if an adversary decrypts the encrypted ballots using a quantum computer, they cannot link a decrypted vote back to a voter's identity in the census without knowledge of the secret $s$.
+	\item \textbf{Quantum-Resistant Hash Functions}: The \textbf{Nullifier} and \textbf{Commitment} are computed using cryptographic hash functions that are believed to be resistant to quantum attacks (e.g., SHA-3). While Grover's algorithm can provide a quadratic speedup in searching for preimages, using sufficiently long hash outputs (e.g., 256 bits) mitigates this risk.
+\end{itemize}
+
+To further safeguard against quantum threats, the following measures can be implemented in the futre:
+
+\begin{enumerate}
+	\item Adopt post-quantum signature schemes. Replace ECDSA/EdDSA with quantum-resistant algorithms such as \textbf{CRYSTALS-Dilithium}, \textbf{Falcon}, or \textbf{Rainbow}, which are based on hard lattice problems.
+	
+	\item Explore lattice-based homomorphic encryption schemes. Replace ElGamal cryptosystem with quantum-resistant alternatives such as the \textbf{Brakerski-Gentry-Vaikuntanathan (BGV)} scheme or the \textbf{Brakerski/Fan-Vercauteren (BFV)}.
+	
+	\item Adopt quantum-resistant zero-knowledge proof systems, such as zkSNARK constructions based on post-quantum assumptions or \textbf{zkSTARKs}.
+\end{enumerate}

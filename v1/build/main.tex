@@ -1,0 +1,108 @@
+\documentclass{llncs}
+%\documentclass[runningheads, draft]{llncs}
+
+\input{preamble-packages}
+\input{preamble-macros}
+
+\title{\textsc{Vocdoni Z Whitepaper}\vspace{-0.4cm}}
+\author{Authors: Pau Escrich and Jordi Piñana from Vocdoni Association}
+\institute{Last update: \today}
+
+\begin{document}
+	
+\maketitle
+
+%enumerate pages
+\pagestyle{plain}
+\thispagestyle{plain}
+
+\begin{abstract}
+\end{abstract}
+
+\setcounter{tocdepth}{3}
+\makeatletter
+\renewcommand*\l@author[2]{}
+\renewcommand*\l@title[2]{}
+\makeatletter
+\tableofcontents
+
+\section{Vocdoni Z -- the universal voting protocol}
+\label{sec:vocdoni-z}
+\input{\secs/vocdoni-z}
+
+\section{Key Technologies Used}
+\label{sec:tech-used}
+\input{\secs/tech-used}
+
+\section{Components Overview}
+\label{sec:components-overview}
+\input{\secs/components-overview}
+
+\section{Operation Overview}
+\label{sec:operation-overview}
+\input{\secs/operation-overview}
+
+\section{Sequencer and State Transitions}
+\label{sec:sequencer-state-transition}
+\input{\secs/sequencer-state-transition}
+
+\section{The Vote}
+\label{sec:vote}
+\input{\secs/vote}
+
+\section{The Ballot Protocol}
+\label{sec:ballot-protocol}
+\input{\secs/ballot-protocol}
+
+\section{The voting encryption key}
+\label{sec:voting-encryption-key}
+\input{\secs/voting-encryption-key}
+
+\section{The distributed key generation (DKG)}
+\label{sec:distributed-key-generation}
+\input{\secs/distributed-key-generation}
+
+\section{Receipt-Freeness}
+\label{sec:receipt-freeness}
+\input{\secs/receipt-freeness}
+
+\section{How User's Privacy Is Preserved}
+\label{sec:user-privacy-preserving}
+\input{\secs/user-privacy-preserving}
+
+\section{Quantum Resistance}
+\label{sec:quantum-resistance}
+\input{\secs/quantum-resistance}
+
+\section{The Vocdoni Token (VOC)}
+\label{sec:vocdoni-token}
+\input{\secs/vocdoni-token}
+
+\section{Acknowledgments}
+
+The authors would like to thank the following reviewers and contributors for their valuable feedback and support:
+
+\begin{itemize}
+	\item The Vocdoni team
+	\item Jordi Baylina (Iden3 and Polygon)
+	\item Adrià Maçanet (Privacy Scaling Explorations, Ethereum Foundation)
+	\item Arnaucube (0xPARC)
+	\item Alex Kampa (AZKR)
+	\item Roger Baig (Polytechnic University of Catalonia)
+	\item Javier Herranz (Polytechnic University of Catalonia)
+	\item Jordi Puiggali (Secrets Vault)
+\end{itemize}
+
+% ---- Bibliography ----
+
+\section*{References}
+\begin{itemize}
+	\item Ivan Damgård and Mads Jurik. ``A Generalisation of Paillier’s Public-Key System with Applications to Electronic Voting."
+	\item Markus Jakobsson, Kazue Sako, and Russell Impagliazzo. ``Designated Verifier Proofs and Their Applications."
+	\item Damgård and M. Koprowski: Practical Threshold RSA Signatures Without a Trusted Dealer
+\end{itemize}
+
+%\bibliographystyle{splncs04}
+%\bibliography{\bib/bibtex}
+
+\end{document}

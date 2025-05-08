@@ -1,0 +1,32 @@
+% !TeX root = ../build/main.tex
+
+\begin{enumerate}
+	\item \textbf{zkSNARKs}\\
+	
+	\textit{Zero-Knowledge Succinct Non-Interactive Arguments of Knowledge} are a crucial component in ensuring the validity of the voting results. Voters generate zkSNARK proofs to prove that their encrypted votes comply with the rules and requirements of the voting process, without revealing any information about their choices. Sequencers also generate zkSNARK proofs to prove the correct aggregation of votes into the shared state that maintains the status of the voting process.\\
+	
+	\item \textbf{Merkle Trees}\\
+			
+	Merkle trees are employed to create a cryptographic representation of both the voter registry (census) and the voting process state:
+
+	\begin{itemize}
+		\item \textbf{Census}: Each voter is assigned a Merkle proof, which they use to prove their eligibility to vote. This mechanism ensures efficient and secure verification of voter eligibility.
+		\item \textbf{State}: The voting process state is represented as a Merkle tree, with new votes being added to the tree. The root of this Merkle tree is stored on Ethereum, allowing multiple sequencers to participate in the voting phase and ensuring consistency. 
+	\end{itemize}
+	
+	\item \textbf{Threshold Homomorphic Encryption} \\
+	
+	Threshold homomorphic encryption, specifically the \textbf{ElGamal} scheme, is used to allow the summation of encrypted votes without decrypting them. This enables the system to compute the final vote tally while maintaining the privacy of individual votes. By ensuring that no vote is exposed during the aggregation phase, this scheme preserves voter confidentiality and provides anti-coercion protection, as voters cannot prove their choice to a third party once an encrypted vote is added. \\
+	
+	\item \textbf{Distributed Key Generation (DKG)} \\
+	
+	The DKG protocol is used to generate the encryption public key (EPK) in a decentralized manner. Sequencers collaboratively participate in the DKG process to create the EPK, ensuring that no single party has full control over the key. This approach guarantees that the encryption key remains secure and that decryption of results is only possible when a threshold number of sequencers publish their shares. \\
+	
+	\item \textbf{Ethereum Smart Contracts} \\
+	
+	Ethereum smart contracts are employed to orchestrate the voting process, manage state transitions, and store critical data, such as the current state root and encryption public keys. These smart contracts provide a trustless environment, ensuring that all participants can be confident that the voting process rules are correctly enforced. \\
+	
+	\item \textbf{Ethereum Data Blobs (EIP-4844)} \\
+	
+	EIP-4844 is used for data availability, enabling the storage of state transition data in the form of Ethereum data blobs. This mechanism allows sequencers to collaborate on the construction and verification of the voting process state, ensuring efficient and decentralized data availability.
+\end{enumerate}

@@ -1,0 +1,32 @@
+% !TeX root = ../build/main.tex
+
+In democratic processes, the ability of voters to cast their votes freely, without undue influence or coercion, is crucial. A critical aspect of maintaining this freedom is ensuring receipt-freeness, preventing voters from being able to prove to third parties how they voted. Vocdoni Z implements receipt-freeness by leveraging the properties of the ElGamal cryptosystem, and zkSNARKs.
+
+\subsection{Ballor re-encryption}
+
+The ElGamal cryptosystem over elliptic curves supports additive homomorphism, allowing operations to be performed on ciphertexts that translate to addition on the underlying plaintexts. Re-encryption is a process that refreshes the randomness of a ciphertext without changing the underlying plaintext message. This makes computationally infeasible to link the original and re-encrypted ciphertexts.
+
+\subsection{Handling Receipts}
+
+To prevent voters from being able to prove how they voted, Vocdoni Z employs re-encryption of ballots by the Sequencers. When a voter submits an encrypted ballot, the Sequencer re-encrypts it before storing it in the state Merkle tree.
+
+This way, the system ensures that voters cannot produce a receipt of their vote by revealing r since the stored ciphertext no longer corresponds to r. This prevents vote-buying and coercion by third parties.
+
+\subsection{Handling Collusion}
+
+To further enhance receipt-freeness and mitigate the risk of collusion between voters and Sequencers, Vocdoni Z allows voters to overwrite their votes. A voter can submit multiple votes, with each new submission replacing the previous one.
+
+When a Sequencer receives a new vote from a voter who has already voted, it performs the following steps:
+
+\begin{enumerate}
+	\item \textbf{Detect Overwrite}: The Sequencer checks the state Merkle tree using the voter's nullifier to determine if the voter has previously cast a vote.
+	\item \textbf{Subtract Previous Vote}: The Sequencer takes the existing encrypted ballot and adds it to a "Subtractive Results" accumulator. This effectively negates the previous vote in the final tally.
+	\item \textbf{Add New Vote}: The new encrypted ballot is added to the "Results" accumulator.
+	\item \textbf{Update State Merkle Tree}: The Sequencer re-encrypts the new ballot and updates the state Merkle tree with this re-encrypted ballot.
+\end{enumerate}
+
+\subsection{Concealing Vote Overwrites}
+
+To prevent observers from detecting when overwrites occur, the Sequencers regularly re-encrypt a random subset of ballots in the state Merkle tree during each state update. This process obscures the occurrence of overwrites, as re-encryptions are indistinguishable from standard re-randomizations performed for privacy enhancement.
+
+By re-encrypting random ballots, the system increases the entropy and makes it statistically improbable for an adversary to determine if a specific ballot was overwritten or simply re-randomized.

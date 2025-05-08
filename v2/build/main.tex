@@ -1,0 +1,90 @@
+%\documentclass{llncs}
+\documentclass[runningheads, draft]{llncs}
+
+\input{preamble-packages}
+\input{preamble-macros}
+
+\title{\textsc{DAVINCI}\vspace{-0.4cm}}
+\author{Authors: Pau Escrich and Jordi Piñana from Vocdoni Association}
+\institute{Last update: \today}
+
+% election, vote, polling, ballot, selection, decision-making process
+
+\begin{document}
+	
+\maketitle
+
+%enumerate pages
+\pagestyle{plain}
+\thispagestyle{plain}
+
+\addcontentsline{toc}{section}{\protect\numberline{}Abstract}
+\begin{abstract}
+		Abstract goes here.
+%	    \freefootnote{\scriptsize{Authors are listed in alphabetical order (\url{https://www.ams.org/profession/leaders/CultureStatement04.pdf}).}}
+\end{abstract}
+
+\martai{Change Vocdoni to DAVINCI.}
+
+\setcounter{tocdepth}{3}
+\makeatletter
+\renewcommand*\l@author[2]{}
+\renewcommand*\l@title[2]{}
+\makeatletter
+\tableofcontents
+
+%\pagebreak
+\addcontentsline{toc}{section}{Old introduction}
+\section*{Old introduction}
+\label{sec:intro-old}
+\input{\secs/introduction-old}
+
+\section{Introduction}
+\label{sec:intro}
+\input{\secs/introduction}
+
+\section{Background}
+\label{sec:background}
+\input{\secs/background}
+
+\section{Protocol intuition}
+\label{sec:protocol-intuition}
+\input{\secs/protocol-intuition}
+
+\section{Crytographic primitives} %building blocks
+\label{sec:cryptographic-primitives}
+\input{\secs/cryptographic-primitives}
+
+\section{The Vocdoni voting protocol}
+\label{sec:vocdoni-protocol}
+\input{\secs/vocdoni-protocol}
+
+\section{The Vocdoni ballot protocol}
+\label{sec:ballot-protocol}
+\input{\secs/ballot-protocol}
+
+\section{The Vocdoni token}
+\label{sec:token}
+\input{\secs/token}
+
+\section{Analysis}
+\label{sec:analysis}
+\input{\secs/analysis}
+
+\section{Conclusions}
+\label{sec:conclusions}
+\input{\secs/conclusions}
+
+\section*{Acknowledgments}
+\addcontentsline{toc}{section}{\protect\numberline{}Acknowledgments}
+\label{sec:acknowledgments}
+
+The authors would like to thank the following reviewers and contributors for their valuable feedback and support: all team members from the Vocdoni association, Jordi Baylina (from Iden3 and Polygon), Adrià Maçanet (Privacy Scaling Explorations, Ethereum Foundation), Arnaucube (0xPARC), Alex Kampa (AZKR), Roger Baig (Polytechnic University of Catalonia), Javier Herranz (Polytechnic University of Catalonia), and Jordi Puiggali (Secrets Vault).
+
+
+% ---- Bibliography ----
+
+\bibliographystyle{splncs04}
+\bibliography{\bib/bibtex}
+
+\end{document}

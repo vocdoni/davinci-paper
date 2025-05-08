@@ -1,0 +1,42 @@
+% !TeX root = main.tex
+
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{authblk}
+%S\usepackage[ruled,vlined]{algorithm2e}
+
+\usepackage{float}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\usepackage{hyperref}
+\hypersetup{final}
+
+\usepackage{footmisc} %footnotes handling
+
+\usepackage{amsmath, amssymb, mathtools}
+\usepackage{listings}
+\usepackage{graphicx, color, xcolor}
+\usepackage{xspace} %list of punctuation marks 
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{ifdraft}
+%\usepackage{draftwatermark}
+
+\usepackage{setspace}
+
+\usepackage{mdframed} % frame figures
+
+%\ifdraft{
+%	% \usepackage[color = {[rgb]{0.9, 0.9, 0.9}}]{draftwatermark}
+%	\usepackage{draftwatermark}
+%	\SetWatermarkText{Draft}
+%	\SetWatermarkScale{4}
+%}
+
+\ifdraft{\usepackage[colorinlistoftodos, textwidth = 40mm]{todonotes}}
+{\usepackage[disable, colorinlistoftodos, textwidth = 40mm]{todonotes}}
+
+\usepackage{tikz,tikz-cd}

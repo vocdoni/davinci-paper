@@ -1,0 +1,70 @@
+% !TeX root = ../build/main.tex
+
+\martai{This subsection contains the abstract and introduction from the specs. I believe it should be adjusted to the new paper style.}
+
+\paragraph{Abstract.} Vocdoni Z is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Leveraging recent advancements in zero-knowledge proofs and blockchain technology, Vocdoni Z transitions to a \textbf{specialized zkRollup} system that inherits network security from settlement layers like Ethereum Mainnet. The system \textbf{relies exclusively on cryptographic proofs} to ensure integrity and security, eliminating the need for centralized authorities. By integrating \textbf{zkSNARKs and threshold homomorphic encryption} (ElGamal), Vocdoni Z enables end-to-end verifiability, privacy, and trustlessness in the voting process. The protocol employs a distributed key generation among sequencers, coordinated via Ethereum smart contracts, and utilizes Ethereum data blobs (EIP-4844) for data availability. With a focus on \textbf{accessibility, scalability, receipt-freeness, and automation}, Vocdoni Z aims to facilitate high-frequency, low-cost voting, fostering mass adoption of e-voting and simplifying civil participation. Finally, the introduction of the \textbf{Vocdoni Token} (VOC) aligns incentives among participants, ensuring the system's sustainability and enabling decentralized governance.
+
+Moreover, the design of Vocdoni Z is grounded in practicality; all components have been implemented using current technologies and have undergone proof-of-concept testing. This ensures that the proposed architecture is not merely theoretical but a viable solution ready for short-term deployment.
+
+\paragraph{Vision and background.}
+
+Voĉdoni, meaning “to give voice” in Esperanto, embodies our mission to empower civil society from the grassroots level. We aim to build essential primitives and tools that enable any collective—from small groups to millions of citizens—to be heard, regardless of their circumstances or available resources.
+
+Our philosophy envisions voting beyond traditional nation-state elections; we see it as a collective signaling mechanism with cryptographic guarantees of integrity and outcome.
+
+To address the challenge, we developed a end-to-end verifiable and anonymous voting system designed to work on any device, including smartphones. We also successfuly deployed an infrastructure that maximizes resilience, neutrality, and transparency.
+
+In 2018, when Vocdoni began, zkSNARKs was just an emerging technology. We chose to base our solution on a customized Byzantine Fault Tolerant L1 blockchain called Vochain. This allowed us to achieve scalability (approximately 700 transactions per second), to leverage advanced cryptographic tools that are prohibitively expensive on EVM-based blockchains, and enable users to send voting transactions without costs.
+
+This experience has provided us with invaluable insights that have enabled us to overcome technical and operational challenges. Although this solution has effectively met user requirements and demonstrated its viability, further development is essential for its widespread adoption as a \textbf{universal voting protocol}.
+
+Vocdoni Z represents the evolution of the Vocdoni voting protocol. It integrates smart contracts for orchestration, a zkSNARK-based state machine for verifying and accumulating votes, and a decentralized data availability layer to ensure censorship resistance.
+
+\paragraph{Design principles.}
+
+To build the Vocdoni Z Stack, we adhere to the following design principles:
+
+\begin{enumerate}
+	\item \textbf{Cryptography as the source of truth}: We rely exclusively on cryptographic proofs to ensure the integrity and security of the voting process. By trusting only in cryptography, we eliminate the need for centralized authorities, making the system inherently secure and transparent.
+	
+	\item \textbf{Trustlessness}: Our system operates without requiring trust in any single party. Through cryptographic protocols and decentralized infrastructure, we ensure system integrity and prevent compromise from any malicious actor.
+	
+	\item \textbf{End-to-end verifiability}: Every voter can verify their ballot from casting to result computation (individual verifiability). Additionally, any third party can audit the election data to confirm results (universal verifiability) and verify that each vote comes from a uniquely registered voter (eligibility verifiability). Transparent cryptographic mechanisms make this possible.
+	
+	\item \textbf{Composability}: The system is modular, consisting of interchangeable components that can be rearranged or integrated with external systems via adaptable interfaces. This allows for redundancy, flexibility, and seamless integration with third-party applications, exemplified by our voting-as-a-service APIs.
+	
+	\item \textbf{Accessibility}: Vocdoni’s voting platform (App) is open source, universally available and user-friendly. The interface is intuitive for all users, including those less familiar with technology, and accommodates voters that use assistive technologies like screen readers.
+	
+	\item \textbf{Open source}: By releasing our code openly, we invite anyone to audit and contribute, enhancing security and fostering community engagement. Transparency prevents security through obscurity and accelerates innovation.
+	
+	\item \textbf{Resilience}: We design for robustness against hardware failures, network outages, and censorship. Infrastructure decentralization and distributed ownership enhance system availability and resistance to attacks.
+	
+	\item \textbf{Scalability}: Our solution processes votes at high throughput, exceeding current requirements to accommodate future growth. The decentralized infrastructure scales organically as usage increases, ensuring consistent performance.
+	
+	\item \textbf{Receipt-freeness}: To mitigate risks of collusion, coercion, and vote-buying, the system enables voters to verify their votes without being able to prove to others how they voted, thus reducing incentives for coercion and bribery. Additionally, voters are allowed to overwrite their votes while maintaining secrecy.
+	
+	\item \textbf{Automation}: We minimize human intervention through smart contracts and cryptographic protocols, reducing costs and human error. Automation ensures consistent operation and frees resources for voter support and auditing.
+\end{enumerate}
+
+\paragraph{Components overview}
+
+Below, we detail the components of the architecture that collectively support the operation and management of the voting system.
+
+
+\begin{figure}[h]
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/architecture.png}}
+	\caption{Caption.}
+	\label{fig:circuit-inputs}
+\end{figure}
+
+\begin{enumerate}
+	\item \textbf{Ethereum}. An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an EVM blockchain, the process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement several smart contracts.
+		\begin{itemize}
+			\item \textbf{Process Management}: Responsible for the lifecycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+			\item \textbf{Results Verification}: For each voting process, this smart contract maintains the integrity of the cast votes and process lifecycle. It verifies that each state transition committed by a ZK sequencer adheres to the predefined rules.			
+			\item \textbf{Sequencer Registry}: This smart contract keeps track of the existing available sequencers, stores the collateral to ensure good behavior, and it's used to coordinate the distributed key generation when a new Process is created.
+		\end{itemize}
+	\item \textbf{Sequencer}. The Sequencer is a specialized component designed to handle the voting process using zero-knowledge proof mechanisms. It ensures that all transactions related to this process are validated and sequenced. The Sequencers periodically commit the state of the voting process to Ethereum.
+	\item \textbf{Frontend User Interface}. The user interface serves as the primary interaction layer for voters and organizers. It provides tools and functionalities needed by organizers to set up, manage, and oversee elections. This interface simplifies the complexities involved in managing a decentralized vote.
+	\item \textbf{Data availability}. For each voting process, the system needs to keep track of the current State Merkle Tree, which contains all information of such processes. A public data availability layer, ensures that all state transitions are available and verifiable and allows the participation of multiple sequencers within the same voting process.
+\end{enumerate}

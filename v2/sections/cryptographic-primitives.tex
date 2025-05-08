@@ -1,0 +1,190 @@
+% !TeX root = ../build/main.tex
+
+In this section, we detail the cryptographic primitives used in Section~\ref{sec:vocdoni-protocol}. We briefly introduce Merkle trees, the commitment and encryption schemes, proof systems, elliptic curves and hash functions used. We also specify at each step the concrete parameters with which each of the primitives is instantiated.\\
+
+\martai{This section is a mix of theoretical description and implementation details.}
+\martai{Hmm not really, it's more details. Maybe it should go under the protocol section?}
+\martai{Rethink the structure (e.g., hash functions should go before Merkle trees).}
+
+\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
+%Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
+%$\F_p$ denotes de finite field of order $p$, and $\F_p^* = \F_p/\{0\}$.
+
+\subsection{Merkle trees}
+\label{sec:cryptographic-primitives:merkle-trees}
+
+\martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
+
+\subsection{Zero-knowledge proof systems}
+\label{sec:cryptographic-primitives:zkp}
+
+\textit{Old text: zero-knowledge succinct non-interactive arguments of knowledge are a crucial component in ensuring the validity of the voting results. Voters generate zkSNARK proofs to prove that their encrypted votes comply with the rules and requirements of the voting process, without revealing any information about their choices. Sequencers also generate zkSNARK proofs to prove the correct aggregation of votes into the shared state that maintains the status of the voting process.}
+
+\subsection{Elliptic curves}
+\label{sec:cryptographic-primitives:elliptic-curves}
+
+\martai{Curves BLS12-377, BW6-761 (Brezing–Weng pairing-friendly outer curve to BLS12-377), and BN256.}
+
+% https://eprint.iacr.org/2021/1359.pdf
+% ElHouseni & Guillevic són els originals de la chain
+% https://eprint.iacr.org/2020/351.pdf
+
+% BLS12-377 curve: a Barreto–Lynn–Scott curve over a 377-bit prime field
+% BW6-761 curve: a Brezing–Weng curve of embedding degree 6 over a 761-bit prime field
+% Abans crec que en comptes de BW es feia amb la CP, però que BW és més eficient
+
+Vocdoni uses the BLS12-377, xxx, and xxx elliptic curves. More precisely, let
+\[\begin{array}{lll}
+	& q = ,\\
+	\\
+	& p = .
+\end{array}\]
+Note that both are prime numbers, with bit-lengths $xxx$ and $xxx$, respectively. The curve BLS12-377 is the curve over $\mathbb{F}_q$ defined by the equation
+\[E: Y^2 = aX^3 + b.\]
+We have that $E(\mathbb{F}_q)$ has different subgroups $\G_1, \G_2$ such that $\#\G_1 = \#\G_2 = p$. This curve is pairing-friendly (with embedding degree $k = 12$), so pairings are efficiently computable. More precisely, we make use of the bilinear group 
+\[\mathbb{B}=\left( p, \G_1, \G_2, \G_T, e: \G_1\times\G_2 \rightarrow \G_T \right).\]
+
+By instantiating the zk-SNARK with the bilinear group $\mathbb{B}$, we are able to prove statements about satisfiability of arithmetic circuits over $\mathbb{F}_p$, the so-called \emph{scalar field} of $E$. 
+
+Furthermore, we are interested in proving certain operations with the zk-SNARK, like the correct verification of XXX. Note that XXX is an element of a certain elliptic curve $J$, but is represented as two coordinates in the base field $\F_s$ of $J$. Therefore, the verification can be best represented as arithmetic constraints modulo $s$. While it is possible to represent any NP statement using arithmetic modulo $p$ to plug it into the zk-SNARK, this incurs into a significant efficiency loss if not done carefully. The natural thing is to set $s=p$. Therefore, the signature scheme must be instantiated with an elliptic curve over $\mathbb{F}_p$. For this, let
+\[d = -\frac{xxx}{xxx} \bmod{p}.\]
+Vocdoni uses the XXX curve, defined by the equation
+\[J : -X^2+Y^2 = 1 + dX^2Y^2,\]
+over $\mathbb{F}_p$. In particular, it uses a subgroup $\mathbb{J}$ of order
+\[\begin{array}{lll}
+	& t = ,\\
+\end{array}\]
+which is a $xxx$-bit prime. 
+
+The primes and groups defined here will be used through the rest of the document.
+
+\subsection{Hash functions}
+\label{sec:cryptographic-primitives:hash}
+
+\subsection{Encryption schemes}
+\label{sec:cryptographic-primitives:encryption}
+
+\textit{Old text: Threshold homomorphic encryption, specifically the ElGamal scheme, is used to allow the summation of encrypted votes without decrypting them. This enables the system to compute the final vote tally while maintaining the privacy of individual votes. By ensuring that no vote is exposed during the aggregation phase, this scheme preserves voter confidentiality and provides anti-coercion protection, as voters cannot prove their choice to a third party once an encrypted vote is added.}\\
+
+ElGamal [CITE].
+
+\medskip
+
+\begin{mdframed}
+	\begin{minipage}[t]{0.54\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\Enc}_{\pk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
+			\begin{enumerate}
+				\item Map $\msg$ to $\J$ via $M = mG$. (link G).
+				\item Select a random scalar $k \sample $.
+				\item Compute $C_1 = k \cdot G \in \J$.
+				\item Compute $C_2 = k \cdot \pk + M \in \J$. 
+				\item Output $\enc = (C_1, C_2) \in \J^2$.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+	\begin{minipage}[t]{0.44\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\Dec}_{\sk}(\enc \in \J)$: \vspace{0.1cm}
+			\begin{enumerate}
+				
+				%From a ciphertext (C,D) calculate C′=xC, and retrieve the point Pm with Pm=D−C′=(k(xP)+Pm)−(x(kP)). Then calculate the message m with f−1(Pm).
+				
+				\item Parse $\enc = (C_1, C_2) \in \J^2$.
+				\item Compute $K = \sk \cdot C_1 \in \J$.
+				\item Output $\msg = C_2 - K$. 
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+\end{mdframed}
+
+\martai{The group $\J$ is not the right group. This should be changed after writing the elliptic curves section. Actually, I am unsure we should specify where do all elements live.}
+
+\martai{It remains to explain how to recover $m$ from $M$. I propose to define a function $P_m$ that maps $m$ to $\J$, and then say that although it is generally not invertible, in this case the message space is small, and therefore, it can be done via brute-force search or using the baby-step giant-step algorithm [CITE].}
+
+Note that this scheme is additively homomorphic. That is, given two ciphertexts $(C_1, C_2)$ and $(C_1', C_2')$, their component-wise addition yields: $(C_1^{sum}, C_2^{sum}) = (C_1 + C_1', C_2, C_2)$. The aggregated ciphertext decrypts to the sum of the messages $M^{sum} = M_1 + M_2$.
+
+\martai{The $pk$ used to encrypt is generated by multiple parties as defined in Section~\ref{sec:cryptographic-primitives:dkg}.}
+
+\subsection{Commitment schemes}
+\label{sec:cryptographic-primitives:commitments}
+
+%Pedersen commitment scheme~\cite{pedersen1991non}. 
+
+\subsection{Digital signature schemes}
+\label{sec:cryptographic-primitives:signatures}
+
+\subsection{Key generation schemes}
+\label{sec:cryptographic-primitives:dkg}
+
+\textit{Old text: The DKG protocol is used to generate the encryption public key (EPK) in a decentralized manner. Sequencers collaboratively participate in the DKG process to create the EPK, ensuring that no single party has full control over the key. This approach guarantees that the encryption key remains secure and that decryption of results is only possible when a threshold number of sequencers publish their shares.}\\
+
+We use the distributed key generation (DKG) protocol that allows a group of participants to jointly generate a pair of public/private keys for the ElGamal cryptosystem [CITE]. Each participant holds a share of the private key, and only a threshold number of participants can collaborate to decrypt messages. 
+
+\martai{We use a variation of DKG because of the encryption of shares. Below I described the original functions but they should be changed!}
+\martai{Mention that in the SC participants are listed, that is, they have an associated number $i$.}
+
+Let $t$ be the threshold parameter (minimum number of participants required to decrypt messages) and $n$ the total number of participants participating in the DKG protocol ($t \leq n$). Let $G$ be generator point of order $q$. (This will already be defined in the EC section).
+
+\begin{mdframed}
+Each participant $P_i$ will use $\hlget{\GenerateShares}$ to generate their share. Then, they will make the set $\{C_i\}_{i=1}^{t-1}$ publicly available and send each $s_j$ privately to each participant $s_j$. Every participant $P_i$ can verify the share $s_{j,i}$ received from $P_j$ (from of the others) using the algorithm $\hlget{\VerifyShare}$.\\
+
+\noindent
+\begin{minipage}[t]{0.5\textwidth}
+	\begin{itemize}
+		\item[$\bullet$] $\hlset{\GenerateShares}(\text{participant $i$})$:  \vspace{0.1cm}
+		\begin{enumerate}
+			\item Select random scalars $a_{i,0} \sample \Z_q$.
+			\item Define the polynomial $f_i(x) = \sum_{j = 0}^{t-1} a_{i,j} x^{j}$.
+			\item For every $j\in\{0,\dots,t-1\}$, compute 
+			$$C_{i, j} = a_{i,j}\cdot G.$$
+			\item For every $j\in\{1,\dots,n\}$, compute shares 
+			$$s_{i, j} = f_i(j).$$
+			\item Output $\{C_{i,j}\}_{i=0}^{t-1}$ and $\{s_{i,j}\}_{j=1}^{n}$.  
+		\end{enumerate}
+	\end{itemize}
+	\martai{This is not true - according to the specs, shares are encrypted using a simplified version of the EC integrated encryption scheme (ECIES). Each participant generates a zkSNARK proof to prove the correctness of the encrypted shares and compliance of the DKG protocol. This allows the Ethereum SC to verify the validity without revealing the secrets.}
+	\martai{Change the name of algorithm to $\texttt{GenerateEncryptedShares}$.}
+\end{minipage}
+\begin{minipage}[t]{0.5\textwidth}
+	\begin{itemize}
+	\item[$\bullet$] $\hlset{\VerifyShare}(i, j, s_{i,j}, C_i)$:  \vspace{0.1cm}
+	\begin{enumerate}
+		\item Compute $V = \sum_{i = 0}^{t-1} C_i$.
+		\item Verify that $V = s_{i,j} \cdot G$.
+		\martai{This is done by the smart contract - the shares are not in the clear but encrypted.}
+	\end{enumerate}
+	\end{itemize}
+	\martai{Describe slashing mechanism in SC section if one of the shares fails the verification?}
+\end{minipage}
+\end{mdframed}
+%%%%
+%
+%%%%
+\begin{mdframed}
+Participant $P_j$ uses the algorithm $\hlget{\DeriveSecretShare}$ to compute their portion of the collective private key. The algorithm $\hlget{\DerivePublicKey}$ generates the public key from the committed data from the participants. \\
+
+\noindent 
+\begin{minipage}[t]{0.5\textwidth}
+	\begin{itemize}
+		\item[$\bullet$] $\hlset{\DeriveSecretShare}(\text{participant $j$})$:  \vspace{0.1cm}
+		\begin{enumerate}
+			\item Compute $s_j = \sum_{i = 1}^{n} s_{i, j} \mod q$.
+			\item Output $s_j$.
+		\end{enumerate}
+	\end{itemize}
+\end{minipage}
+%
+\begin{minipage}[t]{0.5\textwidth}
+	\begin{itemize}
+	\item[$\bullet$] $\hlset{\DerivePublicKey}(\{C_{i,0}\}_{i=1}^n)$:  \vspace{0.1cm}
+	\begin{enumerate}
+		\item Let $pk = \sum_{i=1}^n C_{i,0}$.
+		\item Output $pk$.
+	\end{enumerate}
+	\end{itemize}
+	Note that since $C_{i,0} = a_{i,0} \cdot G$, the public key is effectively $sG$ where $s = \sum_{i = 1}^n a_{i,0} \mod q$ is the collective private key (unknown to any single participant).
+	\martai{As before, this should be changed to the encrypted version. It should be explained how the public key is generated from the encrypted shares.}
+\end{minipage}
+%
+\end{mdframed}

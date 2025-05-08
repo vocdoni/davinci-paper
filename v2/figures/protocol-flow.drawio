@@ -1,0 +1,288 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0" version="26.3.0">
+  <diagram name="Page-1" id="w7KB5Wdl0Kbl-dEWBDwj">
+    <mxGraphModel dx="2765" dy="1538" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-88" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry width="800" height="1280" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-66" value="Fetch current state root and data" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="860" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-67" value="Verify individual votes and accumulate" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="900" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-68" value="Build zkSNARK proof for state transition" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="400" y="960" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-69" value="Send new state root and updated data" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="1020" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-70" value="Publish shares of EPK after voting ends" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1100" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-71" value="Reward for participation" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="1140" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-45" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="120" y="560" width="480" height="520" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-63" value="Generate zkSNARK proof proving the validity of the encrypted vote" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="160" y="760" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-62" value="Encrypt vote choice using the encryption public key" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="160" y="700" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-53" value="Verify encryption shares" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="300" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-54" value="Create encryption public key" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="560" y="360" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-44" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="200" width="320" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-55" value="Fetch encryption public key" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="460" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-1" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="1240" as="sourcePoint" />
+            <mxPoint x="80" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-3" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="1240" as="sourcePoint" />
+            <mxPoint x="400" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-4" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="1240" as="sourcePoint" />
+            <mxPoint x="560" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-5" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="720" y="1240" as="sourcePoint" />
+            <mxPoint x="720" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-12" value="Ethereum SC" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="520" y="50" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-13" value="&lt;div&gt;IPFS&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="680" y="50" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-14" value="Sequencer" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="360" y="50" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-15" value="Voter" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="120" y="50" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-16" value="Organizer" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-20" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="480" as="sourcePoint" />
+            <mxPoint x="400" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-21" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="380" as="sourcePoint" />
+            <mxPoint x="560" y="400" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="600" y="380" />
+              <mxPoint x="640" y="380" />
+              <mxPoint x="640" y="400" />
+              <mxPoint x="600" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-22" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="320" as="sourcePoint" />
+            <mxPoint x="560" y="340" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="600" y="320" />
+              <mxPoint x="640" y="320" />
+              <mxPoint x="640" y="340" />
+              <mxPoint x="600" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-30" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="720" as="sourcePoint" />
+            <mxPoint x="160" y="740" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="240" y="720" />
+              <mxPoint x="240" y="740" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-31" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="780" as="sourcePoint" />
+            <mxPoint x="160" y="800" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="240" y="780" />
+              <mxPoint x="240" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-34" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="880" as="sourcePoint" />
+            <mxPoint x="560" y="880" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-37" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="920" as="sourcePoint" />
+            <mxPoint x="400" y="940" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="460" y="920" />
+              <mxPoint x="480" y="920" />
+              <mxPoint x="480" y="940" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-38" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="980" as="sourcePoint" />
+            <mxPoint x="400" y="1000" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="480" y="980" />
+              <mxPoint x="480" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-39" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="1040" as="sourcePoint" />
+            <mxPoint x="560" y="1040" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-40" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="1120" as="sourcePoint" />
+            <mxPoint x="560" y="1120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-41" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="1160" as="sourcePoint" />
+            <mxPoint x="400" y="1160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-47" value="Publish census Merkle tree" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="280" y="100" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-50" value="Create new voting process (Merkle tree, details) and pay" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="180" y="140" width="280" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-2" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="1240" as="sourcePoint" />
+            <mxPoint x="160" y="80" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-51" value="Provide collateral for participation" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="220" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-17" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="120" as="sourcePoint" />
+            <mxPoint x="720" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-18" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="80" y="160" as="sourcePoint" />
+            <mxPoint x="560" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-52" value="Generate and publish encryption share" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="410" y="260" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-19" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="240" as="sourcePoint" />
+            <mxPoint x="560" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-23" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="280" as="sourcePoint" />
+            <mxPoint x="560" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-56" value="Download census Merkle tree" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="490" y="500" width="140" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-24" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="400" y="520" as="sourcePoint" />
+            <mxPoint x="720" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-57" value="&lt;font style=&quot;font-size: 8px;&quot;&gt;DKG process&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=bottom;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="200" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-58" value="&lt;font style=&quot;font-size: 8px;&quot;&gt;voting loop&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=bottom;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="120" y="560" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-59" value="Fetch voting process details" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="240" y="580" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-60" value="Fetch census Merkle proof" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="620" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-61" value="Fetch encryption public key" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="240" y="660" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-25" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="600" as="sourcePoint" />
+            <mxPoint x="560" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-27" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="680" as="sourcePoint" />
+            <mxPoint x="560" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-26" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="640" as="sourcePoint" />
+            <mxPoint x="400" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-64" value="Send encrypted vote, Merkle proof, and identity proof" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="180" y="820" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-32" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="840" as="sourcePoint" />
+            <mxPoint x="400" y="840" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-72" value="Decrypt results once the EPK threshold is reached" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=default;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1180" width="240" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pK1FVDeCFm6uw4lnA_kY-42" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="560" y="1200" as="sourcePoint" />
+            <mxPoint x="80" y="1200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
