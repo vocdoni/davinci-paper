@@ -123,9 +123,9 @@ Below, we detail each component and its role in the voting process.
 	The \textbf{Nullifier} $N$ is a 32-byte hash used to:
 	
 	\begin{itemize}
-		\item \textbf{Prevent Double Voting}: Ensures each voter can cast only one vote or overwrite their previous vote.
-		\item \textbf{Allow Vote Overwriting}: Voters can submit a new vote with the same nullifier to replace their previous vote.
-		\item \textbf{Provide Anonymity}: Cannot be linked back to the voter's identity without knowledge of the secret $s$.
+		\item \textbf{Prevent double voting}: Ensures each voter can cast only one vote or overwrite their previous vote.
+		\item \textbf{Allow vote overwrite}: Voters can submit a new vote with the same nullifier to replace their previous vote.
+		\item \textbf{Provide anonymity}: Cannot be linked back to the voter's identity without knowledge of the secret $s$.
 	\end{itemize}
 	
 	$$ N = \text{Hash}(\text{C} || s) $$ 
