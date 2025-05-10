@@ -5,6 +5,7 @@
 \input{preamble-macros}
 
 \title{\textsc{DAVINCI}\vspace{-0.4cm}}
+%Decentralized autonomous vote integrity network with cryptographic inference
 \author{Authors: Pau Escrich and Jordi Piñana from Vocdoni Association}
 \institute{Last update: \today}
 
@@ -20,11 +21,16 @@
 
 \addcontentsline{toc}{section}{\protect\numberline{}Abstract}
 \begin{abstract}
-		Abstract goes here.
+		\Davinci is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Leveraging recent advancements in zero-knowledge (ZK) proof systems and blockchain technology, \davinci transitions to a specialized ZK-rollup system that inherits network security from settlement layers like Ethereum mainnet. The system relies on cryptographic proofs to ensure integrity and security, eliminating the need for centralized authorities. By integrating ZK-SNARKs and threshold homomorphic encryption, \davinci enables end-to-end verifiability, privacy, and trustlessness in the voting process. The protocol employs a distributed key generation among sequencers, coordinated via Ethereum smart contracts, and utilizes Ethereum data blobs for data availability. With a focus on accessibility, scalability, receipt-freeness, and automation, \davinci aims to facilitate high-frequency, low-cost voting, fostering mass adoption of e-voting and simplifying civil participation. Finally, the introduction of the Vocdoni token (VOC) aligns incentives among participants, ensuring the system's sustainability and enabling decentralized governance.
+		
+		Moreover, the design of \davinci is grounded in practicality; all components have been implemented using current technologies and have undergone proof-of-concept testing. This ensures that the proposed architecture is not merely theoretical but a viable solution ready for short-term deployment.
+		
 %	    \freefootnote{\scriptsize{Authors are listed in alphabetical order (\url{https://www.ams.org/profession/leaders/CultureStatement04.pdf}).}}
 \end{abstract}
 
 \martai{Change Vocdoni to DAVINCI.}
+
+\martai{We should decide which kind of document we want: an specification (e.g. include technical details such as the sets each element belongs to), a whitepaper (e.g. include the vision and mission), or an academic paper (e.g. include an extensive state of the art section).}
 
 \setcounter{tocdepth}{3}
 \makeatletter
@@ -34,8 +40,8 @@
 \tableofcontents
 
 %\pagebreak
-\addcontentsline{toc}{section}{Old introduction}
-\section*{Old introduction}
+\addcontentsline{toc}{section}{Vocdoni}
+\section*{Vocdoni}
 \label{sec:intro-old}
 \input{\secs/introduction-old}
 

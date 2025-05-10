@@ -10,21 +10,21 @@ Make a section called \textit{properties}?
 
 \subsubsection{Receipt-freeness}
 
-In democratic processes, the ability of voters to cast their votes freely, without undue influence or coercion, is crucial. A critical aspect of maintaining this freedom is ensuring receipt-freeness, preventing voters from being able to prove to third parties how they voted. Vocdoni Z implements receipt-freeness by leveraging the properties of the ElGamal cryptosystem, and zkSNARKs.
+In democratic processes, the ability of voters to cast their votes freely, without undue influence or coercion, is crucial. A critical aspect of maintaining this freedom is ensuring receipt-freeness, preventing voters from being able to prove to third parties how they voted. \davinci implements receipt-freeness by leveraging the properties of the ElGamal cryptosystem, and zkSNARKs.
 
-\paragraph{Ballor re-encryption}
+\paragraph{Ballor re-encryption.}
 
 The ElGamal cryptosystem over elliptic curves supports additive homomorphism, allowing operations to be performed on ciphertexts that translate to addition on the underlying plaintexts. Re-encryption is a process that refreshes the randomness of a ciphertext without changing the underlying plaintext message. This makes computationally infeasible to link the original and re-encrypted ciphertexts.
 
-\paragraph{Handling Receipts}
+\paragraph{Handling receipts.}
 
-To prevent voters from being able to prove how they voted, Vocdoni Z employs re-encryption of ballots by the Sequencers. When a voter submits an encrypted ballot, the Sequencer re-encrypts it before storing it in the state Merkle tree.
+To prevent voters from being able to prove how they voted, \davinci employs re-encryption of ballots by the Sequencers. When a voter submits an encrypted ballot, the Sequencer re-encrypts it before storing it in the state Merkle tree.
 
 This way, the system ensures that voters cannot produce a receipt of their vote by revealing r since the stored ciphertext no longer corresponds to r. This prevents vote-buying and coercion by third parties.
 
-\paragraph{Handling Collusion}
+\paragraph{Handling collusion.}
 
-To further enhance receipt-freeness and mitigate the risk of collusion between voters and Sequencers, Vocdoni Z allows voters to overwrite their votes. A voter can submit multiple votes, with each new submission replacing the previous one.
+To further enhance receipt-freeness and mitigate the risk of collusion between voters and Sequencers, \davinci allows voters to overwrite their votes. A voter can submit multiple votes, with each new submission replacing the previous one.
 
 When a Sequencer receives a new vote from a voter who has already voted, it performs the following steps:
 
@@ -35,7 +35,7 @@ When a Sequencer receives a new vote from a voter who has already voted, it perf
 	\item \textbf{Update state Merkle tree}: The Sequencer re-encrypts the new ballot and updates the state Merkle tree with this re-encrypted ballot.
 \end{enumerate}
 
-\paragraph{Concealing Vote Overwrites}
+\paragraph{Concealing vote overwrites.}
 
 To prevent observers from detecting when overwrites occur, the Sequencers regularly re-encrypt a random subset of ballots in the state Merkle tree during each state update. This process obscures the occurrence of overwrites, as re-encryptions are indistinguishable from standard re-randomizations performed for privacy enhancement.
 
@@ -43,7 +43,7 @@ By re-encrypting random ballots, the system increases the entropy and makes it s
 
 \subsubsection{Privacy}
 
-Vocdoni Z ensures user anonymity by anonymizing both the ballot and the voter's identity, employing cryptographic techniques that maintain privacy even in the face of future quantum computing threats. The system uses the ElGamal homomorphic encryption scheme to encrypt ballots, allowing for the aggregation of votes without revealing individual choices. Since encrypted ballots are stored in public repositories like Ethereum blobs—which, although removed after some weeks, may still be accessible—it is crucial to prevent any association between decrypted ballots and voter identities. By decoupling the voter's identity from their encrypted ballot through the use of secrets and cryptographic hashes, even if an adversary decrypts the ballots in the future, they cannot link them back to individual voters.
+\Davinci ensures user anonymity by anonymizing both the ballot and the voter's identity, employing cryptographic techniques that maintain privacy even in the face of future quantum computing threats. The system uses the ElGamal homomorphic encryption scheme to encrypt ballots, allowing for the aggregation of votes without revealing individual choices. Since encrypted ballots are stored in public repositories like Ethereum blobs—which, although removed after some weeks, may still be accessible—it is crucial to prevent any association between decrypted ballots and voter identities. By decoupling the voter's identity from their encrypted ballot through the use of secrets and cryptographic hashes, even if an adversary decrypts the ballots in the future, they cannot link them back to individual voters.
 
 The identity anonymization acts as a double security factor, enhancing long-term privacy. While the Sequencer processing the vote can identify the voter (since voters submit proofs of eligibility and commitments), there is no incentive for the Sequencer to make this information public, and the Sequencer cannot decrypt the voter's ballot because they do not possess the private decryption keys. This ensures that voter choices remain confidential.
 
@@ -51,11 +51,11 @@ We have adopted this partial identity anonymization because generating fully ano
 
 \subsubsection{Quantum resistance}
 
-As quantum computing technology advances, it poses significant challenges to classical cryptographic schemes that underpin the security of digital systems, including voting platforms like Vocdoni Z. Ensuring that the system remains secure in the face of quantum threats is crucial for its longevity and trustworthiness.
+As quantum computing technology advances, it poses significant challenges to classical cryptographic schemes that underpin the security of digital systems, including voting platforms like \davinci. Ensuring that the system remains secure in the face of quantum threats is crucial for its longevity and trustworthiness.
 
 Quantum computers have the potential to solve certain mathematical problems exponentially faster than classical computers. Notably, Shor's algorithm allows quantum computers to efficiently factor large integers and compute discrete logarithms, undermining the security of widely used cryptographic schemes such as RSA, DSA, ECDSA, and the ElGamal cryptosystem.
 
-However, the design of Vocdoni Z incorporates mechanisms that preserve voter anonymity even in the face of future quantum attacks:
+However, the design of \davinci incorporates mechanisms that preserve voter anonymity even in the face of future quantum attacks:
 
 \begin{itemize}
 	\item Detachment of identity and encrypted Ballot: The voter's identity and their encrypted ballot are decoupled through the use of a secret in the nullifier. The nullifier is computed as:
