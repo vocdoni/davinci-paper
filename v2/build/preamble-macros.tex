@@ -2,6 +2,8 @@
 
 % Doc sytle
 \setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
+% Set the first-level itemize label to use math mode \bullet
+\setlist[itemize,1]{label=$\bullet$}
 
 % Working directory
 \newcommand{\definedir}[2]{\newcommand{#1}{#2}}
@@ -17,7 +19,7 @@
 \newcommand{\jordi}[1]{\todo[size=\small, color=green!40]{\textbf{Jordi}: #1}}
 \newcommand{\jordii}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Jordi}: #1}}
 
-% freefootnote
+% Freefootnote
 \let\svthefootnote\thefootnote
 \newcommand\freefootnote[1]{%
 	\let\thefootnote\relax%
@@ -25,7 +27,22 @@
 	\let\thefootnote\svthefootnote%
 }
 
-% Colors
+% Table of contents style
+% Make section entries bold in ToC
+\makeatletter
+\renewcommand{\@dotsep}{4.5}
+\renewcommand{\l@section}[2]{\addpenalty{\@secpenalty}
+	\addvspace{1.0em plus 1pt}
+	\@tempdima=1.5em
+	\parindent \z@ \rightskip \@pnumwidth
+	\parfillskip -\@pnumwidth
+	{\leavevmode
+		\advance\leftskip\@tempdima
+		\hskip -\leftskip
+		\bfseries #1\hfil \hbox to\@pnumwidth{\hss #2}}\par}
+\makeatother
+
+% Colours
 \definecolor{cred}{rgb}{1, 0.5, 0.5}
 \definecolor{cgreen}{rgb}{0.5, 1, 0.5}
 \definecolor{cblue}{rgb}{0.5, 0.5, 1}
@@ -63,11 +80,29 @@
 
 % Voting protocol
 \newcommand{\variablestyle}[1]{\texttt{#1}\xspace}
+\newcommand{\vote}{\variablestyle{vote}}
+\newcommand{\processid}{\variablestyle{processID}}
+\newcommand{\censuspf}{\variablestyle{censusProof}}
+\newcommand{\commitment}{\variablestyle{identityCommitment}}
 \newcommand{\nullifier}{\variablestyle{nullifier}}
-\newcommand{\commitment}{\variablestyle{commitment}}
+\newcommand{\encryptedballot}{\variablestyle{encryptedBallot}}
+\newcommand{\zkproof}{\variablestyle{ZKproof}}
+\newcommand{\signature}{\variablestyle{signature}}
+
+% State Merkle tree
+\newcommand{\censusroot}{\variablestyle{censusRoot}}
+\newcommand{\type}{\variablestyle{type}}
+\newcommand{\ballotmode}{\variablestyle{ballotMode}}
+\newcommand{\epk}{\variablestyle{encryptionKey}}
+\newcommand{\addaccumulator}{\variablestyle{addedResultsAccumulator}}
+\newcommand{\substractaccumulator}{\variablestyle{substractResultsAccumulator}}
+\newcommand{\addresses}{\variablestyle{addresses}}
+\newcommand{\nullifiers}{\variablestyle{nullifiers}}
+
 
 % Others
 \newcommand{\noi}{\noindent}
+\newcommand{\conc}{\:||\:}
 
 % Hyperlinks
 \newcommand{\hlset}[1]{\hypertarget{\detokenize{#1}}{#1}}
@@ -114,14 +149,14 @@
 \newcommand{\votes}{\vocstyle{votes}}
 \newcommand{\voteRewrites}{\vocstyle{voteRewrites}}
 
-% misc
+% Misc
 \newcommand{\davinci}{DAVINCI\xspace}
 \newcommand{\Davinci}{DAVINCI\xspace}
 
-% draft watermark
+% Draft watermark
 %\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
 
-% new foonote referencing a previous footmark
+% New foonote referencing a previous footmark
 \makeatletter
 \newcommand\footnoteref[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
 \makeatother

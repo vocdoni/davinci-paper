@@ -1,5 +1,6 @@
-%\documentclass{llncs}
 \documentclass[runningheads, draft]{llncs}
+%\documentclass{llncs}
+%\documentclass{article}
 
 \input{preamble-packages}
 \input{preamble-macros}
@@ -40,8 +41,8 @@
 \tableofcontents
 
 %\pagebreak
-\addcontentsline{toc}{section}{Vocdoni}
 \section*{Vocdoni}
+\addcontentsline{toc}{section}{\protect\numberline{}Vocdoni}
 \label{sec:intro-old}
 \input{\secs/introduction-old}
 
@@ -61,11 +62,11 @@
 \label{sec:cryptographic-primitives}
 \input{\secs/cryptographic-primitives}
 
-\section{The Vocdoni voting protocol}
+\section{Voting protocol}
 \label{sec:vocdoni-protocol}
 \input{\secs/vocdoni-protocol}
 
-\section{The Vocdoni ballot protocol}
+\section{Ballot protocol}
 \label{sec:ballot-protocol}
 \input{\secs/ballot-protocol}
 
@@ -86,7 +87,6 @@
 \label{sec:acknowledgments}
 
 The authors would like to thank the following reviewers and contributors for their valuable feedback and support: all team members from the Vocdoni association, Jordi Baylina (from Iden3 and Polygon), Adrià Maçanet (Privacy Scaling Explorations, Ethereum Foundation), Arnaucube (0xPARC), Alex Kampa (AZKR), Roger Baig (Polytechnic University of Catalonia), Javier Herranz (Polytechnic University of Catalonia), and Jordi Puiggali (Secrets Vault).
-
 
 % ---- Bibliography ----
 

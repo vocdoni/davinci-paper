@@ -33,18 +33,18 @@ A voting process involves three types of participants: the organizer, the sequen
 The State tree contains some special addresses (indices) for storing some required data regarding the voting process:
 
 \begin{itemize}
-	\item Address \texttt{0x0}: Process identifier: stores a unique identifier for the voting process.
-	\item Address \texttt{0x1}: Census Root and Type: contains the information necessary to validate vote proofs.
-	\item Address \texttt{0x2}: Ballot Mode: encodes rules for validating votes, such as the maximum number of selectable options.
-	\item Address \texttt{0x3}: Threshold Encryption key: the public key used to encrypt the votes.
-	\item Address \texttt{0x4}: Added Results Accumulator: stores the aggregated encrypted voting results that need to be added.
-	\item Address \texttt{0x5}: Subtract Results Accumulator: stores the aggregated encrypted voting results that need to be subtracted.
-	\item Any address: vote addresses: are stored within the State tree pointing to a voter's identity commitment. Each commitment is a 32-byte hash derived from the voter's unique information and a secret.
-	\item Any address: vote nullifiers: are stored within the State tree to prevent double voting and to allow vote overwrite. Each nullifier is a 32-byte hash derived from the voter's commitment and a secret.
+	\item Address \texttt{0x0}: it stores \processid, a unique identifier for the voting process.
+	\item Address \texttt{0x1}: it stores \censusroot and \type, which contains the necessary information to validate vote proofs.
+	\item Address \texttt{0x2}: it stores \ballotmode, which encodes rules for validating votes, such as the maximum number of selectable options.
+	\item Address \texttt{0x3}: it stores the \epk, which is the public key used to encrypt the votes.
+	\item Address \texttt{0x4}: it stores the \addaccumulator. That is, the aggregated encrypted voting results that need to be added.
+	\item Address \texttt{0x5}: it stores the \substractaccumulator. That is, it stores the aggregated encrypted voting results that need to be subtracted.
+	\item Any address: vote \addresses: are stored within the State tree pointing to a voter's identity commitment. Each commitment is a 32-byte hash derived from the voter's unique information and a secret.
+	\item Any address: vote \nullifiers: are stored within the State tree to prevent double voting and to allow vote overwrite. Each nullifier is a 32-byte hash derived from the voter's commitment and a secret.
 \end{itemize}
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state}}
+sd	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state}}
 	\caption{Structure of the state Merkle tree (FIGURE SHOULD BE POLISHED).}
 	\label{fig:mt-state}
 \end{figure}
@@ -73,127 +73,52 @@ The State tree contains some special addresses (indices) for storing some requir
 \subsubsection{Votes [I don't think this is the right place]}
 
 In the \davinci system, a vote comprises several components that work together to ensure secure, private, and verifiable voting. These components are:
+\begin{align*}
+		\vote = [	\processid, \censuspf, \commitment, \nullifier,	
+				 	\encryptedballot, \zkproof, \signature ].
+\end{align*}
+\martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
 
-\begin{enumerate}
-	\item Process Identifier
-	\item Census Proof
-	\item Identity Commitment
-	\item Nullifier
-	\item Encrypted Ballot and Zero-Knowledge Proof (ZKP)
-	\item Signature	
-\end{enumerate}
-
-Below, we detail each component and its role in the voting process.
-
-\begin{enumerate}
-	\item \textbf{Process Identifier} \\
-	
-	The \textbf{Process Identifier} (\texttt{ProcessId}) is a unique 32-byte number that uniquely identifies a specific voting process within the \davinci ecosystem. It encapsulates essential information, including the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.\\
-	
-	\item \textbf{Census Proof} \\
-	
-	The \textbf{Census Proof} serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides:
+Below, we detail each component and its role in the voting process:
+\begin{itemize}
+	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
+	\martai{what does the identifier (blockchain instance) mean?}
+	%
+	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
+	%
+	\item \commitment: the identity commitment is used to prevent a voter from registering multiple nullifiers and avoid collisions if different voters choose the same secret. The commitment is computed the following way:
+	\[ \commitment = \text{Hash}(\text{Address} \conc \processid \conc s)\]
+	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
+	{\it Old text:
 	\begin{itemize}
-		\item \textbf{Merkle Tree-Based Proof}: A Merkle proof showing inclusion in the census.
-		\item \textbf{Credential Service Provider (CSP)}: A credential issued by a trusted third party. \\
-	\end{itemize}
-	
-	\item \textbf{Identity Commitment}\\
-	
-	The \textbf{Commitment} $C$ is used to prevent a voter from registering multiple nullifiers and to avoid collisions if different voters choose the same secret.
-	
-	$$ C = \text{Hash} (\text{Address} || ProcessId || s). $$
-	
-	\begin{itemize}
-		\item \textbf{Stored in State Merkle Tree (SMT)}: Indexed by the voter's address.
-		\item \textbf{Prevents Multiple Registrations}: Each address can have only one commitment, ensuring a voter cannot register multiple secrets.
-		\item \textbf{Collision Resistance}: Including the address in $C$ ensures that commitments are unique even if voters choose the same secret $s$.
+		\item Stored in state Merkle tree (SMT): indexed by the voter's address.
+		\item Prevents multiple registrations: each address can have only one commitment, ensuring a voter cannot register multiple secrets.
+		\item Collision resistance: including the address in $\commitment$ ensures that commitments are unique even if voters choose the same secret $s$.
 	\end{itemize}
 	
 	The secret $s$ can be implemented from different ways or a combination of them, such as:
 	
 	\begin{itemize}
-		\item A secure enough Password introduced by the user.
+		\item A secure enough password introduced by the user.
 		\item A signature of a specific text.
 		\item A random input that the user must store to allow potential vote overwrite.\\
-	\end{itemize}
-	
-	\item \textbf{Nullifier} \\
-	
-	The \textbf{Nullifier} $N$ is a 32-byte hash used to:
-	
-	\begin{itemize}
-		\item \textbf{Prevent double voting}: Ensures each voter can cast only one vote or overwrite their previous vote.
-		\item \textbf{Allow vote overwrite}: Voters can submit a new vote with the same nullifier to replace their previous vote.
-		\item \textbf{Provide anonymity}: Cannot be linked back to the voter's identity without knowledge of the secret $s$.
-	\end{itemize}
-	
-	$$ N = \text{Hash}(\text{C} || s) $$ 
-	
-	\item \textbf{Encrypted Ballot and Zero-Knowledge Proof (ZKP)} \\
-	
-	The ballot contains the voter's selections encoded according to the ballot protocol rules. To ensure privacy, the ballot is encrypted using the ElGamal cryptosystem over elliptic curves, which allows homomorphic combination of encrypted votes.
-	
-	\textbf{Encryption process}:
-	
-	\begin{itemize}
-		\item The voter's choice $m$ is encoded as a point on the elliptic curve.
-		\item The voter selects a random scalar $k \in [1, n-1]$, where is the order of the elliptic curve group.
-		\item Compute the ciphertext components:
-		\begin{itemize}
-			\item $C_1 = k \cdot G$
-			\item $C_2 = M + k \cdot H$
-		\end{itemize}
-		\item The ciphertext is the pair $(C_1, C_2)$.
-	\end{itemize}
-	
-	
-	\textbf{Zero-Knowledge Proof (ZKP)}:
-	
-	The voter generates a ZKP to prove the correctness of the ballot and encryption process:
-	
-	\begin{enumerate}
-		\item \textbf{Correctness of Encryption}: Ensures the ciphertext $(C_1, C_2)$ is correctly computed from the plaintext message $M$ and random scalar $k$.
-		\item \textbf{Compliance with Ballot Protocol Rules}: The plaintext vote adheres to the ballot protocol constraints, such as valid choices and allowed number of selections.
-		\item \textbf{Correct Computation of Commitment and Nullifier}:
-		\begin{itemize}
-			\item \textbf{Commitment}: $C = \text{Hash} (\text{Address} || ProcessId || s).$
-			\item \textbf{Nullifier}: $N = \text{Hash}(\text{C} || s)$.
-			\item The voter knows the secret linking the commitment and nullifier.
-		\end{itemize}
-	\end{enumerate}
-	
-	\textbf{Inputs to the ZKP Circuit}:
-	
-	\begin{itemize}
-		\item \textbf{Public Inputs}:
-		\begin{itemize}
-			\item Encrypted Ballot $(C_1, C_2)$.
-			\item Ballot Protocol Configuration.
-			\item Encryption Parameters.
-			\item Voter's Weight
-			\item Commitment $C$.
-			\item Nullifier $N$.
-		\end{itemize}
-		\item \textbf{Private Inputs}:
-		\begin{itemize}
-			\item Plaintext Vote $m$.
-			\item Secret $s$.
-			\item Random Scalar $k$.
-			\item Voter's Address (used internally in the computation of $C$).
-		\end{itemize}
-	\end{itemize}
-	
-	\begin{figure}[H]
-		\centering
-		\fbox{
-			\includegraphics[scale = 0.3, draft = false]{\figs/vote-circuit-inputs.png}}
-	\end{figure}
-	
-	\item \textbf{Signature}\\
-	
-	The \textbf{Signature} authenticates the vote and ensures that it was cast by a legitimate voter. The voter signs necessary components using their private key, depending on the census configuration (e.g., ECDSA, EdDSA, RSA).	
-\end{enumerate}
+	\end{itemize}}
+	%
+	\item \nullifier: the nullifier is a 32-byte hash used to prevent double voting. It is computed the following way:
+	\[\nullifier = \text{Hash}(\commitment || s) \]
+	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
+	That is, it ensures that each voter can either cast only one vote or overwrite their previous vote. By means of nullifiers, voters can submit a new vote with the same nullifier to replace their previous vote. Moreover, nullifiers provide users' anonymity, since nullifiers cannot be linked back to the voter's identity without knowledge of the secret $s$.
+	%
+	\item \encryptedballot: it contains the voter's selections encoded according to the ballot protocol rules. To ensure privacy, the ballot is encrypted using an homomorphic encryption scheme, which allows homomorphic combination of encrypted votes. More specifically, given the voter's choice $m$, the vote is encoded as follows:
+	\[ \encryptedballot = \hlget{\Enc}(m). \]
+	%
+	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
+	\[ \zkproof = \text{Prove(), Circuit()}. \]
+	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
+	%
+	\item \signature: the signature authenticates the vote and ensure that was cast by a legitimate voter. The voter signs necessary components using their private key, depending on the census configuration (e.g., ECDSA, EdDSA, RSA).	
+	\[ \signature = \text{Sign(xxx)}. \]
+\end{itemize}
 
 
 \subsection{Circuits}
@@ -213,6 +138,8 @@ Below, we detail each component and its role in the voting process.
 \subsubsection{Voter circuit}
 
 Figure~\ref{fig:circuit-voter}.
+
+\martai{ (1) I think that the voter's address should be private, and (2) the vote's weight is missing.}
 
 \paragraph{Description.} Generated by the user when casting a vote, this circuit proves that the encrypted ballot is valid (i.e. follows the protocol rules) and that the nullifier and commitment are correctly generated.
 
@@ -236,6 +163,40 @@ Figure~\ref{fig:circuit-voter}.
 	\caption{Voter circuit. All public values are framed in green.}
 	\label{fig:circuit-voter}
 \end{figure}
+
+	The voter generates a ZKP to prove the correctness of the ballot and encryption process:
+
+\begin{enumerate}
+	\item \textbf{Correctness of Encryption}: Ensures the ciphertext $(C_1, C_2)$ is correctly computed from the plaintext message $M$ and random scalar $k$.
+	\item \textbf{Compliance with Ballot Protocol Rules}: The plaintext vote adheres to the ballot protocol constraints, such as valid choices and allowed number of selections.
+	\item \textbf{Correct Computation of Commitment and Nullifier}:
+	\begin{itemize}
+		\item \textbf{Commitment}: $C = \text{Hash} (\text{Address} || ProcessId || s).$
+		\item \textbf{Nullifier}: $N = \text{Hash}(\text{C} || s)$.
+		\item The voter knows the secret linking the commitment and nullifier.
+	\end{itemize}
+\end{enumerate}
+
+\textbf{Inputs to the ZKP Circuit}:
+
+\begin{itemize}
+	\item \textbf{Public Inputs}:
+	\begin{itemize}
+		\item Encrypted Ballot $(C_1, C_2)$.
+		\item Ballot Protocol Configuration.
+		\item Encryption Parameters.
+		\item Voter's Weight
+		\item Commitment $C$.
+		\item Nullifier $N$.
+	\end{itemize}
+	\item \textbf{Private Inputs}:
+	\begin{itemize}
+		\item Plaintext Vote $m$.
+		\item Secret $s$.
+		\item Random Scalar $k$.
+		\item Voter's Address (used internally in the computation of $C$).
+	\end{itemize}
+\end{itemize}
 
 \subsubsection{Authentication circuit}
 
@@ -393,7 +354,7 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 	\label{fig:protocol-flow}
 \end{figure}
 
-\subsection{Prior to voting (only once)}
+\subsubsection{Prior to voting (only once)}
 \label{sec:vocdoni-protocol:prior-steps}
 
 \martai{Remove the first step, we assume contracts are already deployed or at least, the logic is available.}
@@ -416,7 +377,7 @@ Sequencers (nodes validadors) -- this process is always open:
 	\item Send transaction to Sequencer registry smart contract (pay for tx fee).
 \end{enumerate}
 
-\subsection{Start of the voting process}
+\subsubsection{Start of the voting process}
 \label{sec:vocdoni-protocol:start}
 
 The organizer:
@@ -430,7 +391,7 @@ The organizer:
 	\item Send transaction to the Ethereum process management smart contract with all data. Note this transaction has a cost (Eth tx fees) that needs to be covered by the organizer.
 \end{enumerate}
 
-\subsection{Key generation process} %Voting key generation
+\subsubsection{Key generation process} %Voting key generation
 \label{sec:vocdoni-protocol:dkg}
 
 The sequencer:
@@ -449,7 +410,7 @@ After XXX time (set by the organizer in the PM contract?): all contributions to 
 	\martai{The idea here is that some sequencer makes EPK available (a.k.a. sends a transaction). Alternatively, generate a SNARK proving the EPK has been generated correctly and the SC verifies it.}
 \end{itemize}
 
-\subsection{Voting process}
+\subsubsection{Voting process}
 \label{sec:vocdoni-protocol:voting}
 
 Voter:
@@ -492,7 +453,7 @@ SC:
 	\item Confirm that the blob hash matches the one stored in Ethereum.
 \end{itemize}
 
-\subsection{Results validation}
+\subsubsection{Results validation}
 \label{sec:vocdoni-protocol:validation}
 
 Once the voting is completed (I understand the timeout set by the organizer expires), the following things happen.
@@ -517,5 +478,5 @@ This way:
 	\martai{elaborate on this.}
 \end{itemize}
 
-\subsection{Finalization of the voting process}
+\subsubsection{Finalization of the voting process}
 \label{sec:vocdoni-protocol:finalization}

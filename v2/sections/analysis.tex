@@ -59,7 +59,7 @@ However, the design of \davinci incorporates mechanisms that preserve voter anon
 
 \begin{itemize}
 	\item Detachment of identity and encrypted Ballot: The voter's identity and their encrypted ballot are decoupled through the use of a secret in the nullifier. The nullifier is computed as:
-	$$ N = \text{Hash}(\text{ProcessId} || s) $$	
+	$$ N = \text{Hash}(\processid \conc s) $$	
 	where is a secret known only to the voter. This means that even if an adversary decrypts the encrypted ballots using a quantum computer, they cannot link a decrypted vote back to a voter's identity in the census without knowledge of the secret $s$.
 	\martai{Instead of ``detachment", I propose ``unlinkability": identity unlinkability.}
 	\item Quantum-resistant hash functions: the \nullifier and \commitment are computed using cryptographic hash functions that are believed to be resistant to quantum attacks (e.g., SHA-3). While Grover's algorithm can provide a quadratic speedup in searching for preimages, using sufficiently long hash outputs (e.g., 256 bits) mitigates this risk.
