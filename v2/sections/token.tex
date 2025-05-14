@@ -1,20 +1,20 @@
 % !TeX root = ../build/main.tex
 
-\Davinci introduces the Vocdoni token (VOC) as a key element of its decentralized voting ecosystem, playing a crucial role in the protocol's sustainability.
+\Davinci introduces the Vocdoni token (\token) as a key element of its decentralized voting ecosystem, playing a crucial role in the protocol's sustainability.
 The token serves multiple utility functions that align the incentives of all participants (voting organizers, sequencers, and voters) ensuring the integrity, efficiency, and security of the voting system.
 
-\subsection{Roles of the VOC}
+\subsection{Roles of the \token}
 
 \begin{enumerate}
-	\item \textbf{Collateral for sequencers}: Sequencers are required to stake VOC tokens as a collateral to participate in the protocol. This serves as a safeguard to ensure responsible participation. If a sequencer behaves improperly (whether due to malicious intent or unintentional errors) it can face penalties, including the loss of part of its staked tokens.
-	\item \textbf{Incentive mechanism}: Sequencers earn rewards in VOC tokens based on their contribution to processing valid votes and maintaining the network. Rewards are proportional to the number of valid votes successfully added to the shared state.
-	\item \textbf{Payment for voting processes}: Voting processes organizers use VOC tokens to cover the costs of creating and managing voting processes. The costs depend on factors like the size of the voting registry, the voting period's duration, and the desired level of security (based on the number of participating sequencers).
-	\item \textbf{Governance}: The VOC token facilitates decentralized governance by giving the token holders the right to participate in the project governance. Token holders can influence on important matters such as protocol upgrades, ecosystem development, and other initiatives aimed to enhance various aspects of \davinci. This ensures that the project evolves in a transparent, community-driven manner.
+	\item \textbf{Collateral for sequencers}: Sequencers are required to stake \token tokens as a collateral to participate in the protocol. This serves as a safeguard to ensure responsible participation. If a sequencer behaves improperly (whether due to malicious intent or unintentional errors) it can face penalties, including the loss of part of its staked tokens.
+	\item \textbf{Incentive mechanism}: Sequencers earn rewards in \token tokens based on their contribution to processing valid votes and maintaining the network. Rewards are proportional to the number of valid votes successfully added to the shared state.
+	\item \textbf{Payment for voting processes}: Voting processes organizers use \token tokens to cover the costs of creating and managing voting processes. The costs depend on factors like the size of the voting registry, the voting period's duration, and the desired level of security (based on the number of participating sequencers).
+	\item \textbf{Governance}: The \token token facilitates decentralized governance by giving the token holders the right to participate in the project governance. Token holders can influence on important matters such as protocol upgrades, ecosystem development, and other initiatives aimed to enhance various aspects of \davinci. This ensures that the project evolves in a transparent, community-driven manner.
 \end{enumerate}
 
 \subsection{Economics for organizers}
 
-Organizers of voting processes pay fees in VOC tokens to create and manage their voting events. These fees cover operational costs and incentivize the sequencers.
+Organizers of voting processes pay fees in \token tokens to create and manage their voting events. These fees cover operational costs and incentivize the sequencers.
 
 The costs of voting processes vary based on the following factors:
 
@@ -64,7 +64,7 @@ $$ \totalCost = \baseCost + \capacityCost + \durationCost + \securityCost $$
 		\item $\epsilon$: Is a very small number that avoids zero division.
 	\end{itemize}
 	
-	\item $\durationCost$: This component models the cost of running the process for a specific duration, where longer processess incur more cost. The scaling is non-linear, meaning that shorter processes are more cost-efficient, while longer processes are increasingly expensive.
+	\item $\durationCost$: This component models the cost of running the process for a specific duration, where longer processes incur into more cost. The scaling is non-linear, meaning that shorter processes are more cost-efficient, while longer processes are increasingly expensive.
 	
 	It is expected to have a minimum and maximum duration thresholds (e.g 1 hour to 1 year).
 	
@@ -100,7 +100,7 @@ There is the need to enforce some constrains in the formula in order to avoid im
 
 \subsection{Economics for sequencers}
 
-To become a sequencer and earn rewards, participants must stake VOC tokens as collateral. This collateral is locked during the sequencer registry in the Sequencer Registry smart contract and can be withdrawn upon the sequencer commitments are fulfilled.
+To become a sequencer and earn rewards, participants must stake \token tokens as collateral. This collateral is locked during the sequencer registry in the Sequencer Registry smart contract and can be withdrawn upon the sequencer commitments are fulfilled.
 
 Sequencers \textbf{receive rewards} based on:
 
@@ -154,7 +154,7 @@ Where:
 	\begin{itemize}
 		\item $\slashedAmount_i$: The total slashed amount for a given sequencer.
 		\item $s$: The slashing coefficient $0 \leq s \leq 1$.
-		\item $\stakedCollateral_i$: The amount of VOC tokens staked by a given sequencer.
+		\item $\stakedCollateral_i$: The amount of \token tokens staked by a given sequencer.
 	\end{itemize}
 \end{itemize}
 

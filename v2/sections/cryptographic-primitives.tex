@@ -14,6 +14,7 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 \label{sec:cryptographic-primitives:merkle-trees}
 
 \martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
+\martai{Sparse MTs (binary) with depth $64$. Instantiated with Poseidon hash function.}
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
@@ -43,6 +44,8 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 	\item BW6-761 curve: $\BW{E}/\F_p$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $q$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{q^{6}}$ and has order $q$ as well. 
     \item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{q^{12}}$ and has order $r$. 
     \item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), where with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{q^{12}}$ and has order $t$. 
+    \item Baby Jubjub.
+    \item Secp256k1.
 \end{itemize}
 
 \paragraph{Finite fields.}
@@ -59,7 +62,32 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
 
-\martai{Poseidon?}
+\martai{Poseidon? Specify parameters? And $p$ may actually not be $p$, and probably it will be instantiated with different curves, depending on the circuit.}
+
+\martai{Yes, Poseidon. But also MiMC-7 for hashing the public inputs and passing them between circuits (for efficiency).}
+
+We use the Poseidon~\cite{grassi21poseidon} hash function $ \hlset{\Hash} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. In particular, we make use of the \textsc{Poseidon-128} permutation \[\pi: \F_p^t\rightarrow \F_p^t,\] where $t=r+c$, with the following parameters:
+\begin{table}[H]
+	\begin{center}
+		\begin{tabular}{| c | c | c | c | c | }
+			\hline
+			Rate & Capacity  & Full rounds & Partial rounds & S-box \\
+			\hline
+			$r=4$ & $c=1$ & $R_F=8$ & $R_P=59$ & $S(x)=x^5$ \\
+			\hline		
+		\end{tabular}
+	\end{center}
+\end{table}
+
+% \begin{itemize}
+	% 	\item Rate $r=4$.
+	% 	\item Capacity $c=1$. 
+	% 	\item Full rounds $R_F = 8$.
+	% 	\item Partial rounds $R_P = 59$.
+	% 	\item S-box: $S(x) = x^5$.
+	% \end{itemize}
+
+For the sake of clarity, in our notation we admit anything as an input of $\Hash$, although it might not be parsed as a sequence of $\F_p$-elements. Any bitstring can be converted to a tuple of $\F_p$-elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
 
 \subsection{Encryption schemes}
 \label{sec:cryptographic-primitives:encryption}
@@ -113,6 +141,8 @@ Note that this scheme is additively homomorphic. That is, given two ciphertexts 
 
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
+
+ECDSA.
 
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}

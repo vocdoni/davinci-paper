@@ -68,6 +68,10 @@
 \newcommand{\BLS}[1]{\ensuremath{{#1}^{\text{\tiny \sf BLS}}}\xspace}
 \newcommand{\BN}[1]{\ensuremath{{#1}^{\text{\tiny \sf BN}}}\xspace}
 
+% Circuits
+\newcommand{\public}{{\sf\color{teal}public}\xspace}
+\newcommand{\private}{{\sf\color{red}private}\xspace}
+
 % Ballot protocol
 \newcommand{\ballotstyle}[1]{\texttt{#1}\xspace}
 \newcommand{\maxcount}{\ballotstyle{maxCount}}
@@ -88,6 +92,7 @@
 \newcommand{\encryptedballot}{\variablestyle{encryptedBallot}}
 \newcommand{\zkproof}{\variablestyle{ZKproof}}
 \newcommand{\signature}{\variablestyle{signature}}
+\newcommand{\address}{\variablestyle{address}}
 
 % State Merkle tree
 \newcommand{\censusroot}{\variablestyle{censusRoot}}
@@ -98,7 +103,7 @@
 \newcommand{\substractaccumulator}{\variablestyle{substractResultsAccumulator}}
 \newcommand{\addresses}{\variablestyle{addresses}}
 \newcommand{\nullifiers}{\variablestyle{nullifiers}}
-
+\newcommand{\weight}{\variablestyle{weight}}
 
 % Others
 \newcommand{\noi}{\noindent}
@@ -110,6 +115,7 @@
 
 % Cryptographic primitives
 \newcommand{\methodstyle}[1]{{\sf{#1}}\xspace}
+\newcommand{\Hash}{\methodstyle{Hash}}
 \newcommand{\Enc}{\methodstyle{Enc}}
 \newcommand{\Dec}{\methodstyle{Dec}}
 \newcommand{\GenerateShares}{\methodstyle{GenerateShares}}
@@ -125,8 +131,8 @@
 \newcommand{\sample}{\xleftarrow{\$}}
 
 % VOC token
+\newcommand{\token}{VOC\xspace}
 \newcommand{\vocstyle}[1]{{\sf{#1}}\xspace}
-
 \newcommand{\baseCost}{\vocstyle{baseCost}}
 \newcommand{\capacityCost}{\vocstyle{capacityCost}}
 \newcommand{\durationCost}{\vocstyle{durationCost}}
