@@ -42,8 +42,8 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 \paragraph{Elliptic curve groups.}
 \begin{itemize}
 	\item BW6-761 curve: $\BW{E}/\F_p$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $q$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{q^{6}}$ and has order $q$ as well. 
-    \item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{q^{12}}$ and has order $r$. 
-    \item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), where with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{q^{12}}$ and has order $t$. 
+    \item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{r^{12}}$ and has order $r$. 
+    \item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{t^{12}}$ and has order $t$. 
     \item Baby Jubjub.
     \item Secp256k1.
 \end{itemize}
@@ -115,7 +115,7 @@ ElGamal [CITE].
 		\begin{itemize}
 			\item[$\bullet$] $\hlset{\Dec}_{\sk}(\enc \in \J)$: \vspace{0.1cm}
 			\begin{enumerate}
-				
+
 				%From a ciphertext (C,D) calculate C′=xC, and retrieve the point Pm with Pm=D−C′=(k(xP)+Pm)−(x(kP)). Then calculate the message m with f−1(Pm).
 				
 				\item Parse $\enc = (C_1, C_2) \in \J^2$.
