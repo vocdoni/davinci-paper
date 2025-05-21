@@ -136,7 +136,6 @@ Below, we detail each component and its role in the voting process:
 \martai{It's convenient to name the proof associated to each circuit: a proof for this circuit is called [...].\\
 Answer: 1. ballotProof, 2. voteVerifier, 3. aggregator, 4. stateTransition.}
 
-\newpage
 \subsubsection{Voter circuit} 
 
 Figure~\ref{fig:circuit-voter} -- BN254.\\
@@ -185,7 +184,7 @@ Figure~\ref{fig:circuit-voter} -- BN254.\\
 				\begin{itemize}								
 					\item The commitment is correctly computed: $C = \text{Hash} (\address \conc \processid \conc s)$.
 					\item The nullifier is correctly computed: $N = \text{Hash}(C \conc s)$.
-					\item The voter knows the shared secret $s$.
+					\item The secret $s$ links the commitment and the nullifier and the voter has knowledge of such $s$.
 				\end{itemize}
 				\vspace{-0.3cm}
 		\end{spacing}

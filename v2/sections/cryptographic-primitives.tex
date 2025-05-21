@@ -2,29 +2,16 @@
 
 In this section, we detail the cryptographic primitives used in Section~\ref{sec:vocdoni-protocol}. We briefly introduce Merkle trees, the commitment and encryption schemes, proof systems, elliptic curves and hash functions used. We also specify at each step the concrete parameters with which each of the primitives is instantiated.\\
 
-\martai{This section is a mix of theoretical description and implementation details.}
-\martai{Hmm not really, it's more details. Maybe it should go under the protocol section?}
-\martai{Rethink the structure (e.g., hash functions should go before Merkle trees).}
+\martai{Maybe it should go under the protocol section?}
 
 \paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
 %Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
 %$\F_p$ denotes de finite field of order $p$, and $\F_p^* = \F_p/\{0\}$.
 
-\subsection{Merkle trees}
-\label{sec:cryptographic-primitives:merkle-trees}
-
-\martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
-\martai{Sparse MTs (binary) with depth $64$. Instantiated with Poseidon hash function.}
-
-\subsection{Zero-knowledge proof systems}
-\label{sec:cryptographic-primitives:zkp}
-
-\textit{Old text: zero-knowledge succinct non-interactive arguments of knowledge are a crucial component in ensuring the validity of the voting results. Voters generate zkSNARK proofs to prove that their encrypted votes comply with the rules and requirements of the voting process, without revealing any information about their choices. Sequencers also generate zkSNARK proofs to prove the correct aggregation of votes into the shared state that maintains the status of the voting process.}
-
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\davinci uses BW6-761 \cite{elhousni20optimized}, BLS12-377 \cite{bowe20zexe},  and BN254 \cite{jancar20bn256} curves. Below, we give the details of these curves.
+\davinci uses BW6-761~\cite{elhousni20optimized}, BLS12-377~\cite{bowe20zexe}, BN254~\cite{jancar20bn256}, BabyJubjub~\cite{belles21twisted}, and Secp256k1~\cite{brown10sec} elliptic curves. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
@@ -37,15 +24,18 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 	\item[$\bullet$] $r = \tt{0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001}$ (253-bit prime).
 	\item[$\bullet$] $s = \tt{0x2523648240000001ba344d80000000086121000000000013a700000000000013}$ (254-bit prime).
 	\item[$\bullet$] $t = \tt{\hspace{0.04cm}0x2523648240000001ba344d8000000007ff9f800000000010a10000000000000d}$ (254-bit prime).
+	\item[$\bullet$] $u = \tt{\hspace{0.01cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
+	\item[$\bullet$] $v = \tt{\hspace{0.04cm}0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f}$ (256-bit prime).
+	\item[$\bullet$] $w = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).	
 \end{itemize}
 
 \paragraph{Elliptic curve groups.}
 \begin{itemize}
 	\item BW6-761 curve: $\BW{E}/\F_p$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $q$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{q^{6}}$ and has order $q$ as well. 
-    \item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{r^{12}}$ and has order $r$. 
-    \item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{t^{12}}$ and has order $t$. 
-    \item Baby Jubjub.
-    \item Secp256k1.
+	\item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{r^{12}}$ and has order $r$. 
+	\item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{t^{12}}$ and has order $t$. 
+	\item BabyJubjub curve: $\BJ{E}/\F_t$ defined by equation $\BJ{E}: 168700 x^2 + y^2 = 1 + 168696 x^2y^2$, with subgroup $\BJ{\G}$ of prime order $u$. 
+	\item SECP256K1 curve: $\SEC{E}/\F_v$ defined by equation $\SEC{E}: y^2 = x^3 + 7$, with group $\SEC{\G}$ of prime order $w$. 
 \end{itemize}
 
 \paragraph{Finite fields.}
@@ -54,10 +44,20 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 	\item $\F_q$: scalar field of $\BW{\G}_1, \BW{\G}_2, \BW{\G}_T$ and base field of the BLS12-377 curve.
 	\item $\F_r$: scalar field of $\BLS{\G}_1, \BLS{\G}_2, \BLS{\G}_T$.
 	\item $\F_s$: base field of the BN254 curve.	
-	\item $\F_t$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$.
+	\item $\F_t$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$ and base field of the BabyJubjub curve.
+	\item $\F_u$: scalar field of $\BJ{\G}$.
+	\item $\F_v$: base field of the SECP256K1 curve.
+	\item $\F_w$: scalar field of $\SEC{\G}$.
 \end{itemize}
 
-%The primes and groups defined here will be used through the rest of the document.
+\paragraph{Generators.}
+\begin{itemize}
+	\item Generator of $\BW{\G}_1$: XXX.
+	\item Generator of $\BLS{\G}_1$: XXX.
+	\item Generator of $\BN{\G}_1$: XXX.
+	\item Generator of $\BJ{\G}$: XXX.
+	\item Generator of $\SEC{\G}$: XXX.
+\end{itemize}
 
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
@@ -88,6 +88,11 @@ We use the Poseidon~\cite{grassi21poseidon} hash function $ \hlset{\Hash} : \F_p
 	% \end{itemize}
 
 For the sake of clarity, in our notation we admit anything as an input of $\Hash$, although it might not be parsed as a sequence of $\F_p$-elements. Any bitstring can be converted to a tuple of $\F_p$-elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
+
+\subsection{Commitment schemes}
+\label{sec:cryptographic-primitives:commitments}
+
+%Pedersen commitment scheme~\cite{pedersen1991non}. 
 
 \subsection{Encryption schemes}
 \label{sec:cryptographic-primitives:encryption}
@@ -134,10 +139,6 @@ Note that this scheme is additively homomorphic. That is, given two ciphertexts 
 
 \martai{The $pk$ used to encrypt is generated by multiple parties as defined in Section~\ref{sec:cryptographic-primitives:dkg}.}
 
-\subsection{Commitment schemes}
-\label{sec:cryptographic-primitives:commitments}
-
-%Pedersen commitment scheme~\cite{pedersen1991non}. 
 
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
@@ -218,3 +219,14 @@ Participant $P_j$ uses the algorithm $\hlget{\DeriveSecretShare}$ to compute the
 \end{minipage}
 %
 \end{mdframed}
+
+\subsection{Merkle trees}
+\label{sec:cryptographic-primitives:merkle-trees}
+
+\martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
+\martai{Sparse MTs (binary) with depth $64$. Instantiated with Poseidon hash function.}
+
+\subsection{Zero-knowledge proof systems}
+\label{sec:cryptographic-primitives:zkp}
+
+\textit{Old text: zero-knowledge succinct non-interactive arguments of knowledge are a crucial component in ensuring the validity of the voting results. Voters generate zkSNARK proofs to prove that their encrypted votes comply with the rules and requirements of the voting process, without revealing any information about their choices. Sequencers also generate zkSNARK proofs to prove the correct aggregation of votes into the shared state that maintains the status of the voting process.}
