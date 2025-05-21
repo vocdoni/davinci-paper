@@ -4,10 +4,10 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="EW1sCxBa3IzSmhOEwzda-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;" parent="1" vertex="1">
+        <mxCell id="PMw66SxgLmh4I68YJgfF-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;" vertex="1" parent="1">
           <mxGeometry x="130" y="60" width="890" height="400" as="geometry" />
         </mxCell>
-        <mxCell id="EW1sCxBa3IzSmhOEwzda-2" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;" parent="1" vertex="1">
+        <mxCell id="PMw66SxgLmh4I68YJgfF-2" value="" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Courier New;" vertex="1" parent="1">
           <mxGeometry x="160" y="140" width="840" height="230" as="geometry" />
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-3" value="$$\text{Hash}(\text{address} || \text{processID} || s)$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontFamily=Courier New;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
@@ -49,29 +49,35 @@
         <mxCell id="EW1sCxBa3IzSmhOEwzda-11" value="$$C$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="1" vertex="1">
           <mxGeometry x="270" y="390" width="60" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="EW1sCxBa3IzSmhOEwzda-12" value="$$\text{protocolRulesCompliance}(\text{ballotMode}, \text{ballot})$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" parent="1" vertex="1">
+        <mxCell id="EW1sCxBa3IzSmhOEwzda-12" value="&lt;div&gt;\(\text{protocolRulesCompliance}(\text{ballotMode},\) \(\text{weight}, \text{ballot})\)&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" parent="1" vertex="1">
           <mxGeometry x="520" y="190" width="240" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="EW1sCxBa3IzSmhOEwzda-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;fontSize=11;fontFamily=Courier New;" parent="1" source="EW1sCxBa3IzSmhOEwzda-14" target="EW1sCxBa3IzSmhOEwzda-12" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="JmkZ6XpYD7EDUKb-CYlK-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="EW1sCxBa3IzSmhOEwzda-14">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="190" as="targetPoint" />
+          </mxGeometry>
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-14" value="$$\text{ballotMode}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="1" vertex="1">
-          <mxGeometry x="550" y="80" width="60" height="40" as="geometry" />
+          <mxGeometry x="530" y="80" width="60" height="40" as="geometry" />
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.165;entryY=-0.015;entryDx=0;entryDy=0;entryPerimeter=0;startArrow=oval;startFill=1;fontSize=11;fontFamily=Courier New;" parent="1" target="EW1sCxBa3IzSmhOEwzda-22" edge="1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="700" y="160" as="sourcePoint" />
+            <mxPoint x="720" y="160" as="sourcePoint" />
             <Array as="points">
-              <mxPoint x="700" y="160" />
               <mxPoint x="810" y="160" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="EW1sCxBa3IzSmhOEwzda-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.75;entryY=0;entryDx=0;entryDy=0;fontSize=11;fontFamily=Courier New;" parent="1" source="EW1sCxBa3IzSmhOEwzda-17" target="EW1sCxBa3IzSmhOEwzda-12" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="EW1sCxBa3IzSmhOEwzda-16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;fontFamily=Courier New;" parent="1" source="EW1sCxBa3IzSmhOEwzda-17" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="720" y="190" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="720" y="190" />
+            </Array>
+          </mxGeometry>
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-17" value="$$\text{ballot}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Courier New;" parent="1" vertex="1">
-          <mxGeometry x="670" y="80" width="60" height="40" as="geometry" />
+          <mxGeometry x="690" y="80" width="60" height="40" as="geometry" />
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.445;entryY=0.014;entryDx=0;entryDy=0;entryPerimeter=0;fontSize=11;fontFamily=Courier New;" parent="1" source="EW1sCxBa3IzSmhOEwzda-19" target="EW1sCxBa3IzSmhOEwzda-22" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -153,6 +159,12 @@
         </mxCell>
         <mxCell id="EW1sCxBa3IzSmhOEwzda-37" value="" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;rotation=-90;" parent="1" vertex="1">
           <mxGeometry x="867.66" y="381.59" width="20" height="218.11" as="geometry" />
+        </mxCell>
+        <mxCell id="JmkZ6XpYD7EDUKb-CYlK-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="JmkZ6XpYD7EDUKb-CYlK-1" target="EW1sCxBa3IzSmhOEwzda-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JmkZ6XpYD7EDUKb-CYlK-1" value="$$\text{weight}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" vertex="1" parent="1">
+          <mxGeometry x="610" y="80" width="60" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -464,7 +476,7 @@
         <mxCell id="gPXCQdP4MjgRAV3BPEsE-1" value="" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;rotation=-90;" parent="4ZG6TFl4bt9_09IySAMJ-1" vertex="1">
           <mxGeometry x="409.19" y="160" width="20" height="440" as="geometry" />
         </mxCell>
-        <mxCell id="iyqm4_-RWh7QM2yxefPn-0" value="$$\text{true}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="4ZG6TFl4bt9_09IySAMJ-1" vertex="1">
+        <mxCell id="iyqm4_-RWh7QM2yxefPn-0" value="$$\text{boolean}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="4ZG6TFl4bt9_09IySAMJ-1" vertex="1">
           <mxGeometry x="520" y="300" width="120" height="40" as="geometry" />
         </mxCell>
       </root>
