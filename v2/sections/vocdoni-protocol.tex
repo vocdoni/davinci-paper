@@ -28,20 +28,30 @@ A voting process involves three types of participants: the organizer, the sequen
 
 \martai{It could actually be another type of data structure. We only need to be able to get a commitment and a membership proof that can be proven in-circuit. Mention it in some way.}
 
+\martai{One way to think about it: (weight, pk).}
+
 \paragraph{State Merkle tree.} Explain what it is and the structure. Below, the original text:\\
+
+\martai{Essentially, the first "addresses" or "leaves" are reserved to those items (like processId, censusRoot, etc.), and then the voters' addresses and nullifiers are used as paths to the leave where the encrypted ballot/commitment is stored.}
 
 The State tree contains some special addresses (indices) for storing some required data regarding the voting process:
 
 \begin{itemize}
 	\item Address \texttt{0x0}: it stores \processid, a unique identifier for the voting process.
 	\item Address \texttt{0x1}: it stores \censusroot and \type, which contains the necessary information to validate vote proofs.
+	\martai{they type was a field in case the organization was using a different structure for the census than a MT.}
 	\item Address \texttt{0x2}: it stores \ballotmode, which encodes rules for validating votes, such as the maximum number of selectable options.
 	\item Address \texttt{0x3}: it stores the \epk, which is the public key used to encrypt the votes.
+	\martai{Ideally, EPK is computed before the organization sets the tree, but I am not sure how practical this is.}
 	\item Address \texttt{0x4}: it stores the \addaccumulator. That is, the aggregated encrypted voting results that need to be added.
 	\item Address \texttt{0x5}: it stores the \substractaccumulator. That is, it stores the aggregated encrypted voting results that need to be subtracted.
 	\item Any address: vote \addresses: are stored within the State tree pointing to a voter's identity commitment. Each commitment is a 32-byte hash derived from the voter's unique information and a secret.
+	\martai{(address, commitment).}
 	\item Any address: vote \nullifiers: are stored within the State tree to prevent double voting and to allow vote overwrite. Each nullifier is a 32-byte hash derived from the voter's commitment and a secret.
+	\martai{Nullifiers and addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots/commitments).}
 \end{itemize}
+
+\martai{Maybe the voteID will be included in the tree at some point.}
 
 \begin{figure}[h]
 sd	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state}}
@@ -79,12 +89,14 @@ In the \davinci system, a vote comprises several components that work together t
 \end{align*}
 \martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
 
+\martai{Actually, the address could be recomputed by the sequencer (add it as a footnote).}
+
 \martai{In the code, they call it vote, verifierVote. Alternative: envelope.}
 
 Below, we detail each component and its role in the voting process:
 \begin{itemize}
 	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
-	\martai{what does the identifier (blockchain instance) mean?}
+	\martai{the identifier is computed from the organization address, the Eth nonce, chain ID (e.g. mainnet), formatejat in a certain way.}
 	%
 	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
 	%
@@ -126,6 +138,10 @@ Below, we detail each component and its role in the voting process:
 \label{sec:vocdoni-protocol:circuits}
 
 \martai{The idea of this section is to describe the circuits. Then, in Section~\ref{sec:analysis:implementation} we give the details such as of the number of constants, framework used, etc. I haven't done this split yet.}
+
+\martai{\textbf{About the circuits: in practice (and for optimization), all public inputs $PI$ are private, and we produce a single public input $h = Hash(PI)$. Then, the verifier checks that $Hash(PI) = h$ and verifies the proof only against $h$.} For this, we use the MiMC-7 hash function.\\ \vspace{0.2cm}
+	
+In the case of the voter circuit (circuit~1), the hash $h$ is called the \texttt{voteID}, and it allows to voter to trace their vote (it's propagated through the circuits from the sequencer). Since this is an implementation detail but it is used for traceability, I propose to write this as a footnote or as an introduction to this section.}
 
 \textit{Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.}
 
@@ -198,6 +214,8 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 
 \noi Generated by the sequencer, this circuit transforms the vote proof to the BLS12-377 curve for native recursion and validates the user's eligibility in the census, as well as their signature.
 
+\martai{Hash of public inputs is in the wrong place. Well, in practice, it will be placed before the verification of the proof, but if we keep the hash of the PI as an implementation details, then it is in the right place. (I propose to keep it like this and in the footnote, mention the changes in each of the circuits).}
+
 \begin{figure}[H]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-authentication}}
 	\caption{Authentication circuit. All public values are framed in green.}
@@ -249,6 +267,10 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 
 \noi This circuit accumulates multiple authenticated votes into a single proof. It also verifies that all accumulated votes belong to the same voting process.
+
+\martai{This circuit has changed. Now, the aggregation circuit only include the authentication proof and the \texttt{voteI}D, and then circuit~4 does the "shared public inputs" check and the fact that voteID = Hash(...).}
+
+\martai{The batch, number of verification proofs, is a fixed parameter (currently set to 60). If it includes less proofs than the max size of the batch, the sequencer adds dummy proofs to the circuit.}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-aggregate}}
@@ -380,6 +402,8 @@ To validate and process state transitions, \textbf{we employ a zkSNARK circuit t
 		\end{spacing}
 	\end{minipage}
 \end{mdframed}
+
+\martai{STATE TRANSITION CIRCUIT: a potential problem is that a sequencer may know if one of their votes has been overwritten, for this reason, sequencers reencrypt a certain amount of ballots every time (already existing ballots I mean). So, the circuit should include the reencryptions: both for existing ballots and also for the new votes, which should be reencrypted (for receipt-freeness).}
 
 \subsection{Protocol flow}
 \label{sec:vocdoni-protocol:flow}
