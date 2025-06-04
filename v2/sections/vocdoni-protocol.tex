@@ -54,7 +54,7 @@ The State tree contains some special addresses (indices) for storing some requir
 \martai{Maybe the voteID will be included in the tree at some point.}
 
 \begin{figure}[h]
-sd	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state}}
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state-mermaid}}
 	\caption{Structure of the state Merkle tree (FIGURE SHOULD BE POLISHED).}
 	\label{fig:mt-state}
 \end{figure}
@@ -101,7 +101,7 @@ Below, we detail each component and its role in the voting process:
 	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
 	%
 	\item \commitment: the identity commitment is used to prevent a voter from registering multiple nullifiers and avoid collisions if different voters choose the same secret. The commitment is computed the following way:
-	\[ \commitment = \hlget{\Hash}(\address \conc \processid \conc s)\]
+	\[ \commitment = \hlget{\Poseidon}(\address \conc \processid \conc s)\]
 	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
 	{\it Old text:
 	\begin{itemize}
@@ -119,7 +119,7 @@ Below, we detail each component and its role in the voting process:
 	\end{itemize}}
 	%
 	\item \nullifier: the nullifier is a 32-byte hash used to prevent double voting. It is computed the following way:
-	\[\nullifier = \hlget{\Hash}(\commitment || s) \]
+	\[\nullifier = \hlget{\Poseidon}(\commitment || s) \]
 	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
 	That is, it ensures that each voter can either cast only one vote or overwrite their previous vote. By means of nullifiers, voters can submit a new vote with the same nullifier to replace their previous vote. Moreover, nullifiers provide users' anonymity, since nullifiers cannot be linked back to the voter's identity without knowledge of the secret $s$.
 	%
@@ -151,6 +151,12 @@ In the case of the voter circuit (circuit~1), the hash $h$ is called the \texttt
 
 \martai{It's convenient to name the proof associated to each circuit: a proof for this circuit is called [...].\\
 Answer: 1. ballotProof, 2. voteVerifier, 3. aggregator, 4. stateTransition.}
+
+\begin{figure}[h]
+	\centerline{\includegraphics[width=350pt,draft=false]{\figs/circuits-flow}}
+	\caption{Circuits flow.}
+	\label{fig:circuits-flow}
+\end{figure}
 
 \subsubsection{Voter circuit} 
 

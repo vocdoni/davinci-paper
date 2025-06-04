@@ -1,64 +1,77 @@
 % !TeX root = ../build/main.tex
 
-In this section, we detail the cryptographic primitives used in Section~\ref{sec:vocdoni-protocol}. We briefly introduce Merkle trees, the commitment and encryption schemes, proof systems, elliptic curves and hash functions used. We also specify at each step the concrete parameters with which each of the primitives is instantiated.\\
+In this section, we detail the cryptographic primitives used in Section~\ref{sec:vocdoni-protocol}. We briefly introduce elliptic curves, hash functions, Merkle trees, encryption schemes, and proof systems used in the protocol. We also specify at each step the concrete parameters with which each of the primitives is instantiated.\\
 
 \martai{Maybe it should go under the protocol section?}
 
-\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
+%\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
 %Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
 %$\F_p$ denotes de finite field of order $p$, and $\F_p^* = \F_p/\{0\}$.
 
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\martai{Include the motivation for the use of each of the curves (e.g. native arithmetic, regular Eth addresses...).}
-
-\davinci uses BW6-761~\cite{elhousni20optimized}, BLS12-377~\cite{bowe20zexe}, BN254~\cite{jancar20bn256}, BabyJubjub~\cite{belles21twisted}, and Secp256k1~\cite{brown10sec} elliptic curves. Below, we give the details of these curves.
+\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown10sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar20bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for zero-knowledge proof verification, which makes it ideal for verifying SNARK proofs on-chain with minimal gas cost. then, BabyJubjub~\cite{belles21twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe20zexe} and BW6-761~\cite{elhousni20optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger zkSNARK circuits. This pairing enables succinct verification and composability of zkSNARKs within other zkSNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
 \begin{itemize}
-	\item[$\bullet$] $p = \tt{0x122e824fb83ce0ad187c94004faff3eb926186a81d14688528275ef8087be41707ba638e584e9190}$
+	%
+	\item[$\bullet$] $p = \tt{\hspace{0.04cm}0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f}$ (256-bit prime).
+	\item[$\bullet$] $q = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).	
+	%
+	\item[$\bullet$] $r = \tt{0x2523648240000001ba344d80000000086121000000000013a700000000000013}$ (254-bit prime).
+	\item[$\bullet$] $s = \tt{\hspace{0.04cm}0x2523648240000001ba344d8000000007ff9f800000000010a10000000000000d}$ (254-bit prime).
+	\item[$\bullet$] $t = \tt{\hspace{0.01cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
+	%
+	\item[$\bullet$] $u = \tt{0x122e824fb83ce0ad187c94004faff3eb926186a81d14688528275ef8087be41707ba638e584e9190}$
 	\item[] \hspace{0.53cm} $\tt{3cebaff25b423048689c8ed12f9fd9071dcd3dc73ebff2e98a116c25667a8f8160cf8aeeaf0a437e69}$
 	\item[] \hspace{0.53cm} $\tt{13e6870000082f49d00000000008b}$ (761-bit prime).
-	\item[$\bullet$] $q = \tt{0x01ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d4430000000}$
+	\item[$\bullet$] $v = \tt{0x01ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d4430000000}$
 	\item[] \hspace{0.52cm} $\tt{8508c00000000001}$ (377-bit prime).
-	\item[$\bullet$] $r = \tt{0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001}$ (253-bit prime).
-	\item[$\bullet$] $s = \tt{0x2523648240000001ba344d80000000086121000000000013a700000000000013}$ (254-bit prime).
-	\item[$\bullet$] $t = \tt{\hspace{0.04cm}0x2523648240000001ba344d8000000007ff9f800000000010a10000000000000d}$ (254-bit prime).
-	\item[$\bullet$] $u = \tt{\hspace{0.01cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
-	\item[$\bullet$] $v = \tt{\hspace{0.04cm}0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f}$ (256-bit prime).
-	\item[$\bullet$] $w = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).	
+	\item[$\bullet$] $w = \tt{0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001}$ (253-bit prime).
+	%
 \end{itemize}
 
 \paragraph{Elliptic curve groups.}
 \begin{itemize}
-	\item BW6-761 curve: $\BW{E}/\F_p$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $q$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{q^{6}}$ and has order $q$ as well. 
-	\item BLS12-377 curve: $\BLS{E}/\F_q$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $r$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{r^{12}}$ and has order $r$. 
-	\item BN254 curve: $\BN{E}/\F_s$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $t$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{t^{12}}$ and has order $t$. 
-	\item BabyJubjub curve: $\BJ{E}/\F_t$ defined by equation $\BJ{E}: 168700 x^2 + y^2 = 1 + 168696 x^2y^2$, with subgroup $\BJ{\G}$ of prime order $u$. 
-	\item SECP256K1 curve: $\SEC{E}/\F_v$ defined by equation $\SEC{E}: y^2 = x^3 + 7$, with group $\SEC{\G}$ of prime order $w$. 
+	%
+	\item SECP256K1 curve: $\SEC{E}/\F_p$ defined by equation $\SEC{E}: y^2 = x^3 + 7$, with group $\SEC{\G}$ of prime order $q$. 
+	%
+	\item BN254 curve: $\BN{E}/\F_r$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $s$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{s^{12}}$ and has order $s$. 
+	\item BabyJubjub curve: $\BJ{E}/\F_s$ defined by equation $\BJ{E}: 168700 x^2 + y^2 = 1 + 168696 x^2y^2$, with subgroup $\BJ{\G}$ of prime order $t$. 
+	%
+	\item BW6-761 curve: $\BW{E}/\F_u$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $v$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{v^{6}}$ and has order $v$ as well. 
+	\item BLS12-377 curve: $\BLS{E}/\F_v$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $w$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{w^{12}}$ and has order~$w$. 
+	%
 \end{itemize}
 
 \paragraph{Finite fields.}
 \begin{itemize}
-	\item $\F_p$: base field of the BW6-761 curve.
-	\item $\F_q$: scalar field of $\BW{\G}_1, \BW{\G}_2, \BW{\G}_T$ and base field of the BLS12-377 curve.
-	\item $\F_r$: scalar field of $\BLS{\G}_1, \BLS{\G}_2, \BLS{\G}_T$.
-	\item $\F_s$: base field of the BN254 curve.	
-	\item $\F_t$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$ and base field of the BabyJubjub curve.
-	\item $\F_u$: scalar field of $\BJ{\G}$.
-	\item $\F_v$: base field of the SECP256K1 curve.
-	\item $\F_w$: scalar field of $\SEC{\G}$.
+	%
+	\item $\F_p$: base field of the SECP256K1 curve.
+	\item $\F_q$: scalar field of $\SEC{\G}$.
+	%
+	\item $\F_r$: base field of the BN254 curve.	
+	\item $\F_s$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$ and base field of the BabyJubjub curve.
+	\item $\F_t$: scalar field of $\BJ{\G}$.
+	%
+	\item $\F_u$: base field of the BW6-761 curve.
+	\item $\F_v$: scalar field of $\BW{\G}_1, \BW{\G}_2, \BW{\G}_T$ and base field of the BLS12-377 curve.
+	\item $\F_w$: scalar field of $\BLS{\G}_1, \BLS{\G}_2, \BLS{\G}_T$.
+	%
 \end{itemize}
 
 \paragraph{Generators.}
 \begin{itemize}
-	\item Generator of $\BW{\G}_1$: XXX.
-	\item Generator of $\BLS{\G}_1$: XXX.
+	\item Generator of $\SEC{\G}$: XXX.
+	%
 	\item Generator of $\BN{\G}_1$: XXX.
 	\item Generator of $\BJ{\G}$: XXX.
-	\item Generator of $\SEC{\G}$: XXX.
+	%
+	\item Generator of $\BW{\G}_1$: XXX.
+	\item Generator of $\BLS{\G}_1$: XXX.
+	%
 \end{itemize}
 
 \subsection{Hash functions}
@@ -66,9 +79,11 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 
 \martai{Poseidon? Specify parameters? And $p$ may actually not be $p$, and probably it will be instantiated with different curves, depending on the circuit.}
 
-\martai{Yes, Poseidon. But also MiMC-7 for hashing the public inputs and passing them between circuits (for efficiency).}
+We use three hash functions. 
 
-We use the Poseidon~\cite{grassi21poseidon} hash function $ \hlset{\Hash} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. In particular, we make use of the \textsc{Poseidon-128} permutation \[\pi: \F_p^t\rightarrow \F_p^t,\] where $t=r+c$, with the following parameters:
+\paragraph{Keccak256.} On the one side, the Keccak256~\cite{bertoni11keccak} hash function $\hlset{\Keccak} : \F_p \rightarrow \F_p$ is used to derive an Ethereum address from a public key over $\SEC{\G}$ (as described in~\cite{wood2014ethereum}).
+
+\paragraph{Poseidon.} On the other side, the hash function we use the most is Poseidon~\cite{grassi21poseidon} hash function $\hlset{\Poseidon} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. In particular, we make use of the \textsc{Poseidon-128} permutation \[\pi: \F_p^t\rightarrow \F_p^t,\] where $t=r+c$, with the following parameters:
 \begin{table}[H]
 	\begin{center}
 		\begin{tabular}{| c | c | c | c | c | }
@@ -89,10 +104,12 @@ We use the Poseidon~\cite{grassi21poseidon} hash function $ \hlset{\Hash} : \F_p
 	% 	\item S-box: $S(x) = x^5$.
 	% \end{itemize}
 
-For the sake of clarity, in our notation we admit anything as an input of $\Hash$, although it might not be parsed as a sequence of $\F_p$-elements. Any bitstring can be converted to a tuple of $\F_p$-elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
+\paragraph{MiMC-7.} Finally, we use the MiMC-7 hash function~\cite{albrecht16mimc} $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details).
 
-\subsection{Commitment schemes}
-\label{sec:cryptographic-primitives:commitments}
+For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of $\F_p$-elements. Any bitstring can be converted to a tuple of $\F_p$-elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
+
+%\subsection{Commitment schemes}
+%\label{sec:cryptographic-primitives:commitments}
 
 %Pedersen commitment scheme~\cite{pedersen1991non}. 
 
@@ -146,7 +163,40 @@ Note that this scheme is additively homomorphic. That is, given two ciphertexts 
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
 
-ECDSA.
+\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
+%
+%\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve for user authentication and vote authorization. This decision is taken to ensure that \davinci is compatible with standard Ethereum wallets, such as MetaMask~\ref{} or Ledger~\ref{}, without requiring users to generate or manage additional cryptographic keys. 
+%
+Verification of ECDSA signatures is \textit{performed inside} zero-knowledge proofs using a specialized circuit that emulates SECP256K1 arithmetic. This approach is necessary because SECP256K1 is defined over a 256-bit prime field that differs from the native field used in the ZK-SNARK circuit (see Section\ref{sec:vocdoni-protocol:circuits} for more details). Below, we describe the algorithms, which follow the standard ECDSA protocol.
+
+\begin{mdframed}
+	\begin{minipage}[t]{0.45\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\SSign}_{\sk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
+			\begin{enumerate}
+				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
+				\item\label{item:ssign-step} Select a random scalar $k \sample \Z_q^{*}$.
+				\item Compute $R = k \cdot G = (x_R, y_R) \in \SEC{\G}$.
+				\item Set $r = x_R \bmod q$. If $r = 0$, go back to step~\ref{item:ssign-step}. 
+				\item Compute $s = k^{-1} \cdot (h + r \cdot \sk) \bmod q.$ If $s = 0$, go back to step~\ref{item:ssign-step}. 
+				\item Output $\sigma = (r, s)$.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+	\begin{minipage}[t]{0.55\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\SVer}(\pk \in \SEC{\G},\msg \in \{0,1\}^\star, \sigma = (r, s)\in(\Z_q^*)^2)$: %\vspace{0.1cm}
+			\begin{enumerate}
+				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
+				\item Compute $w = s^{-1} \bmod q$.
+				\item Compute $u_1 = h \cdot w \bmod q$ and $u_2 = r \cdot w \bmod q$.
+				\item Compute $$X = u_1 \cdot G + u_2 \cdot \pk = (x_X, y_X) \in \SEC{\G}.$$
+				\item Accept if $r = x_X \bmod q$; otherwise, reject.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+\end{mdframed}
+
 
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}
