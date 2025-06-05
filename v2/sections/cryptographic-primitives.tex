@@ -77,36 +77,23 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
 
-\martai{Poseidon? Specify parameters? And $p$ may actually not be $p$, and probably it will be instantiated with different curves, depending on the circuit.}
+\Davinci uses different hash functions. On the one side, we use Keccak256~\cite{bertoni11keccak} for Ethereum address derivation, and Poseidon~\cite{grassi21poseidon}, MiMC and MiMC-7~\cite{albrecht16mimc} for arithmetic circuits within zero-knowledge proofs.
 
-We use three hash functions. 
+\paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci for computing Ethereum addresses from public keys over $\SEC{\G}$. Keccak256 takes arbitrary-length bitstrings and outputs 256-bit digests: $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. This function is not SNARK-friendly and it is used exclusively in the authentication circuit, where the verification of Ethereum-compatible signatures requires reproducing the original message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:authentication}).
 
-\paragraph{Keccak256.} On the one side, the Keccak256~\cite{bertoni11keccak} hash function $\hlset{\Keccak} : \F_p \rightarrow \F_p$ is used to derive an Ethereum address from a public key over $\SEC{\G}$ (as described in~\cite{wood2014ethereum}).
+\paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient implementation inside arithmetic circuits. It is used in \davinci for computing commitments, nullifiers, and the state Merkle tree roots. Poseidon is used as $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ is the set of tuples of $\F_s$-elements of any length, and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
 
-\paragraph{Poseidon.} On the other side, the hash function we use the most is Poseidon~\cite{grassi21poseidon} hash function $\hlset{\Poseidon} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. In particular, we make use of the \textsc{Poseidon-128} permutation \[\pi: \F_p^t\rightarrow \F_p^t,\] where $t=r+c$, with the following parameters:
-\begin{table}[H]
-	\begin{center}
-		\begin{tabular}{| c | c | c | c | c | }
-			\hline
-			Rate & Capacity  & Full rounds & Partial rounds & S-box \\
-			\hline
-			$r=4$ & $c=1$ & $R_F=8$ & $R_P=59$ & $S(x)=x^5$ \\
-			\hline		
-		\end{tabular}
-	\end{center}
-\end{table}
+\paragraph{MiMC-7.} Finally, we use the MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details).
 
-% \begin{itemize}
-	% 	\item Rate $r=4$.
-	% 	\item Capacity $c=1$. 
-	% 	\item Full rounds $R_F = 8$.
-	% 	\item Partial rounds $R_P = 59$.
-	% 	\item S-box: $S(x) = x^5$.
-	% \end{itemize}
+\martai{MiMC two instantiations: MiMC and MiMC-7, and also the curves. Check!}
 
-\paragraph{MiMC-7.} Finally, we use the MiMC-7 hash function~\cite{albrecht16mimc} $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details).
+%MiMC-7~\cite{mimc} is another hash function optimized for zero-knowledge circuits, with extremely low multiplicative complexity. It is used in \davinci for hashing public inputs inside zkSNARKs, especially when generating a unique identifier for a vote (see Section~\ref{sec:vocdoni-protocol:circuits}).
+%We use the cubic S-box S(x)=x7S(x)=x7, and instantiate MiMC-7 over the same field FpFp​ as the SNARK circuit:
+%MiMC7:Fpt→Fp
+%MiMC7:Fpt​→Fp​
+%This function is denoted Hash3Hash3 in our implementation.
 
-For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of $\F_p$-elements. Any bitstring can be converted to a tuple of $\F_p$-elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
+For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of field elements. Any bitstring can be converted to a tuple of field elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
 
 %\subsection{Commitment schemes}
 %\label{sec:cryptographic-primitives:commitments}
@@ -277,8 +264,8 @@ Participant $P_j$ uses the algorithm $\hlget{\DeriveSecretShare}$ to compute the
 \label{sec:cryptographic-primitives:merkle-trees}
 
 \martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
-\martai{Sparse MTs (binary) with depth $64$. Instantiated with Poseidon hash function.}
-\martai{Structure of spare Merkle trees from iden3.}
+\martai{Sparse MTs (binary) with depth $64$. Structure of sparse MT from iden3.}
+\martai{\textbf{(1) State MT:} Poseidon with BN254 scalar field. \textbf{(2) Census MT:} MiMC with BLS12-377 scalar field.}
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
