@@ -26,6 +26,8 @@ A voting process involves three types of participants: the organizer, the sequen
 
 \paragraph{Census Merkle tree.} Explain what it is. \\
 
+\martai{There is a whole section about the Census Merkle tree in the whitepaper -- CHECK!!}
+
 \martai{It could actually be another type of data structure. We only need to be able to get a commitment and a membership proof that can be proven in-circuit. Mention it in some way.}
 
 \martai{One way to think about it: (weight, pk).}
@@ -84,8 +86,7 @@ The State tree contains some special addresses (indices) for storing some requir
 
 In the \davinci system, a vote comprises several components that work together to ensure secure, private, and verifiable voting. These components are:
 \begin{align*}
-		\vote = [	\processid, \censuspf, \commitment, \nullifier,	
-				 	\encryptedballot, \zkproof, \signature ].
+		\vote = [	\processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ].
 \end{align*}
 \martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
 
@@ -98,33 +99,13 @@ Below, we detail each component and its role in the voting process:
 	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
 	\martai{the identifier is computed from the organization address, the Eth nonce, chain ID (e.g. mainnet), formatejat in a certain way.}
 	%
+	\item \encryptedballot: it contains the voter's selections encoded according to the ballot protocol rules. To ensure privacy, the ballot is encrypted using an homomorphic encryption scheme, which allows homomorphic combination of encrypted votes. More specifically, given the voter's choice $m$ and a random element $k$, the vote is encoded as follows:
+	\[ \encryptedballot = \hlget{\Enc}(m; k). \]
+	%
+	\item \voteid: vote identifier, tied to balbla, computed this way.
+	\[ \voteid = .\]
+	%
 	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
-	%
-	\item \commitment: the identity commitment is used to prevent a voter from registering multiple nullifiers and avoid collisions if different voters choose the same secret. The commitment is computed the following way:
-	\[ \commitment = \hlget{\Poseidon}(\address \conc \processid \conc s)\]
-	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
-	{\it Old text:
-	\begin{itemize}
-		\item Stored in state Merkle tree (SMT): indexed by the voter's address.
-		\item Prevents multiple registrations: each address can have only one commitment, ensuring a voter cannot register multiple secrets.
-		\item Collision resistance: including the address in $\commitment$ ensures that commitments are unique even if voters choose the same secret $s$.
-	\end{itemize}
-	
-	The secret $s$ can be implemented from different ways or a combination of them, such as:
-	
-	\begin{itemize}
-		\item A secure enough password introduced by the user.
-		\item A signature of a specific text.
-		\item A random input that the user must store to allow potential vote overwrite.\\
-	\end{itemize}}
-	%
-	\item \nullifier: the nullifier is a 32-byte hash used to prevent double voting. It is computed the following way:
-	\[\nullifier = \hlget{\Poseidon}(\commitment || s) \]
-	\martai{Link Hash function to function in Section\ref{sec:cryptographic-primitives}.}
-	That is, it ensures that each voter can either cast only one vote or overwrite their previous vote. By means of nullifiers, voters can submit a new vote with the same nullifier to replace their previous vote. Moreover, nullifiers provide users' anonymity, since nullifiers cannot be linked back to the voter's identity without knowledge of the secret $s$.
-	%
-	\item \encryptedballot: it contains the voter's selections encoded according to the ballot protocol rules. To ensure privacy, the ballot is encrypted using an homomorphic encryption scheme, which allows homomorphic combination of encrypted votes. More specifically, given the voter's choice $m$, the vote is encoded as follows:
-	\[ \encryptedballot = \hlget{\Enc}(m). \]
 	%
 	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
 	\[ \zkproof = \text{Prove(), Circuit()}. \]
@@ -139,9 +120,7 @@ Below, we detail each component and its role in the voting process:
 
 \martai{The idea of this section is to describe the circuits. Then, in Section~\ref{sec:analysis:implementation} we give the details such as of the number of constants, framework used, etc. I haven't done this split yet.}
 
-\martai{\textbf{About the circuits: in practice (and for optimization), all public inputs $PI$ are private, and we produce a single public input $h = Hash(PI)$. Then, the verifier checks that $Hash(PI) = h$ and verifies the proof only against $h$.} For this, we use the MiMC-7 hash function.\\ \vspace{0.2cm}
-	
-In the case of the voter circuit (circuit~1), the hash $h$ is called the \texttt{voteID}, and it allows to voter to trace their vote (it's propagated through the circuits from the sequencer). Since this is an implementation detail but it is used for traceability, I propose to write this as a footnote or as an introduction to this section.}
+\martai{\textbf{About the circuits: in practice (and for optimization), all public inputs $PI$ are private, and we produce a single public input $h = Hash(PI)$. Then, the verifier checks that $Hash(PI) = h$ and verifies the proof only against $h$.} For this, we use the MiMC-7 hash function. Since this is an implementation detail, I propose to write this as a footnote or as an introduction to this section.}
 
 \textit{Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.}
 
@@ -158,60 +137,45 @@ Answer: 1. ballotProof, 2. voteVerifier, 3. aggregator, 4. stateTransition.}
 	\label{fig:circuits-flow}
 \end{figure}
 
+\pagebreak
+
 \subsubsection{Voter circuit} 
 
 Figure~\ref{fig:circuit-voter} -- BN254.\\
 
-\noi Generated by the user when casting a vote, this circuit proves that the encrypted ballot is valid (i.e. follows the protocol rules) and that the nullifier and commitment are correctly generated.
+\noi Generated by the user when casting a vote, this circuit proves that the encrypted ballot is valid (i.e. follows the protocol rules) and that the vote identifier is correctly computed.
+
+\begin{spacing}{1.25}
+	\vspace{0.3cm}
+	\noi \textbf{Public inputs}
+	\begin{itemize}
+		\item $\public$ $\processid$: voting process identifier. 
+		\item $\public$ $\ballotmode$: ballot protocol configuration.S
+		\item $\public$ $\epk$ ($EPK$): encryption public key.
+		\item $\public$ $\address$: voter's address.
+		\item $\public$ $\weight$: voter's weight.
+		\item $\public$ $(C_1, C_2)$: encrypted ballot. 
+		\item $\public$ $\voteid$: vote's unique identifier. 
+	\end{itemize}
+	\textbf{Private inputs}
+	\begin{itemize}								
+		\item \private $\ballot$: plaintext voter's voting choice.
+		\item \private $k$: random scalar.
+	\end{itemize}
+	\textbf{Constraints}
+	\begin{itemize}								
+		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot, k).$
+		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
+		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\address \conc \processid \conc k)$.
+	\end{itemize}
+	\vspace{-0.3cm}
+\end{spacing}
 
 \begin{figure}[H]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-voter}}
 	\caption{Voter circuit. All public values are framed in green.}
 	\label{fig:circuit-voter}
 \end{figure}
-
-\begin{mdframed}
-	\begin{minipage}[H]{1\textwidth}
-		\begin{spacing}{1.25}
-			\vspace{0.3cm}
-			\begin{center}{VOTER CIRCUIT}\end{center}
-			\textbf{Public inputs}
-				\begin{itemize}
-					\item $\public$ $\processid$: voting process identifier. 
-					\item $\public$ $\ballotmode$: ballot protocol configuration.
-					\item $\public$ $\epk$ ($EPK$): encryption public key.
-					\item $\public$ $\weight$: voter's weight.
-					\item $\public$ $C$: commitment.
-					\item $\public$ $N$: nullifier.
-					\item $\public$ $(C_1, C_2)$: encrypted ballot. 
-				\end{itemize}
-			\textbf{Private inputs}
-				\begin{itemize}								
-					\item \private $\address$: voter's address.
-					\item \private $\ballot$: plaintext voter's voting choice.
-					\item \private $s$: blinder factor (secret).
-					\item \private $k$: random scalar.
-				\end{itemize}
-			\textbf{Constraints} \\ \vspace{-0.4cm}		
-				
-				\emph{Vote encryption}. 
-				\begin{itemize}								
-					\item Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot, k).$
-				\end{itemize}
-				\emph{Rules compliance}. 
-				\begin{itemize}								
-					\item The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
-				\end{itemize}
-				\emph{Vote commitment + nullification}. 
-				\begin{itemize}								
-					\item The commitment is correctly computed: $C = \text{Hash} (\address \conc \processid \conc s)$.
-					\item The nullifier is correctly computed: $N = \text{Hash}(C \conc s)$.
-					\item The secret $s$ links the commitment and the nullifier and the voter has knowledge of such $s$.
-				\end{itemize}
-				\vspace{-0.3cm}
-		\end{spacing}
-	\end{minipage}
-\end{mdframed}
 
 \newpage
 \subsubsection{Authentication circuit}
@@ -221,52 +185,36 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 
 \noi Generated by the sequencer, this circuit transforms the vote proof to the BLS12-377 curve for native recursion and validates the user's eligibility in the census, as well as their signature.
 
-\martai{Hash of public inputs is in the wrong place. Well, in practice, it will be placed before the verification of the proof, but if we keep the hash of the PI as an implementation details, then it is in the right place. (I propose to keep it like this and in the footnote, mention the changes in each of the circuits).}
+\begin{spacing}{1.25}
+	\vspace{0.3cm}
+	\noi \textbf{Public inputs}
+	\begin{itemize}
+		\item \public $\voteproof$: voter's proof.
+		\item \public $\processid$: process identifier.
+		\item \public $\ballotmode$: ballot protocol configuration.
+		\item \public $\epk$ ($EPK$): encryption public key.
+		\item \public $(C_1, C_2)$: encrypted ballot.		
+		\item \public $\voteid$: voter's identifier.
+		\item \public $\weight$: voter's weight.
+		\item \public $\censuspf$: census membership proof.
+		\item \public $\censusroot$: census Merkle tree root.
+		\item \public $\pk$: voter's public key.
+		\item \public $\signature$: voter's signature.
+	\end{itemize}
+	\textbf{Constraints}	
+	\begin{itemize}
+		\item \emph{Voter's proof verification.} The vote zkProof is valid for the inputs provided: $P.Verify().$
+		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided.
+		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key.
+	\end{itemize}
+	\vspace{-0.3cm}
+\end{spacing}
 
 \begin{figure}[H]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-authentication}}
 	\caption{Authentication circuit. All public values are framed in green.}
 	\label{fig:circuit-authentication}
 \end{figure}
-
-\begin{mdframed}
-	\begin{minipage}[H]{1\textwidth}
-		\begin{spacing}{1.25}
-			\vspace{0.3cm}
-			\begin{center}{AUTHENTICATION CIRCUIT}\end{center}
-			\textbf{Public inputs}
-			\begin{itemize}
-				\item \public $\voteproof$: voter's proof.
-				\item \public $\processid$: process identifier.
-				\item \public $\ballotmode$: ballot protocol configuration.
-				\item \public $\epk$ ($EPK$): encryption public key.
-				\item \public $(C_1, C_2)$: encrypted ballot.
-				\item \public $C$: commitment.
-				\item \public $N$: nullifier.		
-				\item \public $\weight$: voter's weight.
-				\item \public $\censuspf$: census membership proof.
-				\item \public $\censusroot$: census Merkle tree root.
-				\item \public $pk$: voter's address.
-				\item \public $\signature$: voter's signature.
-			\end{itemize}
-				\textbf{Constraints} \\ \vspace{-0.4cm}		
-			
-			\emph{Voter's proof verification.} 
-			\begin{itemize}
-				\item The vote zkProof is valid for the inputs provided: $P.Verify().$
-			\end{itemize}
-			\emph{Authentication + non-malleability.}
-			\begin{itemize}
-				\item The signature of the inputs provided is valid for the public key of the voter.
-			\end{itemize} 
-			\emph{Census membership.}
-			\begin{itemize}								
-				\item The address derived from the user public key is part of the census, and verifies the census proof with the user weight provided.
-			\end{itemize}
-			\vspace{-0.3cm}
-		\end{spacing}
-	\end{minipage}
-\end{mdframed}
 
 \newpage
 \subsubsection{Aggregation circuit}
@@ -275,48 +223,40 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 
 \noi This circuit accumulates multiple authenticated votes into a single proof. It also verifies that all accumulated votes belong to the same voting process.
 
-\martai{This circuit has changed. Now, the aggregation circuit only include the authentication proof and the \texttt{voteI}D, and then circuit~4 does the "shared public inputs" check and the fact that voteID = Hash(...).}
+\martai{Actually, the circuit only takes voteProof and the hash(PI). Circuit 4 is the one that verifies shared PI.}
 
 \martai{The batch, number of verification proofs, is a fixed parameter (currently set to 60). If it includes less proofs than the max size of the batch, the sequencer adds dummy proofs to the circuit.}
+
+\begin{spacing}{1.25}
+	\vspace{0.3cm}
+	\noi \textbf{Public inputs}
+	\begin{itemize}
+		\item \public $\text{authenticationProof}_i$: set of authentication proofs.
+		\item \public $\text{voteProof}_i$: set of authentication proofs.
+		\item \public $(C_1, C_2)$: list of voters' encrypted ballots.
+		\item \public $\voteid_i$: set of vote's identifiers.
+		\item \public $\pk_i$: list of voters' public keys.
+		\item \public $\weight_i$: Voters' weights.
+		\item \public $\text{censusProof}_i$: Voters' weights.
+		\item \public $\signature_i$: Voters' weights.
+		\item \public $\processid$: process identifier.
+		\item \public $\ballotmode$: ballot protocol configuration.
+		\item \public $EPK$: encryption public key.
+		\item \public $\censusroot$: census Merkle tree root.
+	\end{itemize}
+	\textbf{Constraints} \\ \vspace{-0.4cm}		
+	\begin{itemize}
+		\item \emph{Votes aggregation.} The accumulated authentication zkProofs are valid (for the given inputs).
+		\item \emph{Shared public inputs.} The \processid, \censusroot, \ballotmode and $EPK$ are the same for all of them.
+	\end{itemize}
+	\vspace{-0.3cm}
+\end{spacing}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-aggregate}}
 	\caption{Aggregation circuit. All public values are framed in green.}
 	\label{fig:circuit-aggregate}
 \end{figure}
-
-\begin{mdframed}
-	\begin{minipage}[H]{1\textwidth}
-		\begin{spacing}{1.25}
-			\vspace{0.3cm}
-			\begin{center}{AGGREGATION CIRCUIT}\end{center}
-			\textbf{Public inputs}
-			\begin{itemize}
-				\item \public $\text{authenticationProof}$: set of authentication proofs.
-				\item \public $C_i$: set of commitments.
-				\item \public $N_i$: set of nullifiers.		
-				\item \public $\address_i$: list of voters' addresses.
-				\item \public $(C_1, C_2)$: list of voters' encrypted ballots.
-				\item \public $\weight_i$: Voters' weights.
-				\item \public $\processid$: process identifier.
-				\item \public $EPK$: encryption public key.
-				\item \public $\ballotmode$: ballot protocol configuration.
-				\item \public $\text{censusRoot}$: census Merkle tree root.
-			\end{itemize}
-			\textbf{Constraints} \\ \vspace{-0.4cm}		
-			
-			\emph{Votes aggregation.} 
-			\begin{itemize}
-				\item The accumulated zkProofs are valid.
-			\end{itemize}
-			\emph{Shared public inputs.}
-			\begin{itemize}
-				\item The ProcessId, CensusRoot, BallotMode and EPK is the same for all of them.
-			\end{itemize}
-			\vspace{-0.3cm}
-		\end{spacing}
-	\end{minipage}
-\end{mdframed}
 
 \newpage
 \subsubsection{State transition circuit} -- BN254. \\
@@ -462,7 +402,7 @@ The organizer:
 	\item Send transaction to the Ethereum process management smart contract with all data. Note this transaction has a cost (Eth tx fees) that needs to be covered by the organizer.
 \end{enumerate}
 
-\subsubsection{Key generation process} %Voting key generation
+\subsubsection{Encryption key generation process} %Voting key generation
 \label{sec:vocdoni-protocol:dkg}
 
 The sequencer:

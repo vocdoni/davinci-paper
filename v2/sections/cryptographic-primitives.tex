@@ -112,10 +112,9 @@ ElGamal [CITE].
 \begin{mdframed}
 	\begin{minipage}[t]{0.54\textwidth}
 		\begin{itemize}
-			\item[$\bullet$] $\hlset{\Enc}_{\pk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
+			\item[$\bullet$] $\hlset{\Enc}_{\pk}(\msg \in \{0,1\}^\star; k\in\J)$:  \vspace{0.1cm}
 			\begin{enumerate}
-				\item Map $\msg$ to $\J$ via $M = mG$. (link G).
-				\item Select a random scalar $k \sample $.
+				\item Map $\msg$ to $\J$ via $M = mG$.
 				\item Compute $C_1 = k \cdot G \in \J$.
 				\item Compute $C_2 = k \cdot \pk + M \in \J$. 
 				\item Output $\enc = (C_1, C_2) \in \J^2$.
@@ -137,7 +136,7 @@ ElGamal [CITE].
 	\end{minipage}
 \end{mdframed}
 
-\martai{The group $\J$ is not the right group. This should be changed after writing the elliptic curves section. Actually, I am unsure we should specify where do all elements live.}
+\martai{The group $\J$ is not the right group. This should be changed after writing the elliptic curves section. Actually, I am unsure we should specify where do all elements live. In any case, link to G should be added.}
 
 \martai{It remains to explain how to recover $m$ from $M$. I propose to define a function $P_m$ that maps $m$ to $\J$, and then say that although it is generally not invertible, in this case the message space is small, and therefore, it can be done via brute-force search or using the baby-step giant-step algorithm [CITE].}
 
@@ -170,10 +169,11 @@ Verification of ECDSA signatures is \textit{performed inside} zero-knowledge pro
 			\end{enumerate}
 		\end{itemize}
 	\end{minipage}
-	\begin{minipage}[t]{0.55\textwidth}
+	\begin{minipage}[t]{0.54\textwidth}
 		\begin{itemize}
-			\item[$\bullet$] $\hlset{\SVer}(\pk \in \SEC{\G},\msg \in \{0,1\}^\star, \sigma = (r, s)\in(\Z_q^*)^2)$: %\vspace{0.1cm}
+			\item[$\bullet$] $\hlset{\SVer}_{\pk}(\msg \in \{0,1\}^\star, \sigma = (r, s)\in(\Z_q^*)^2)$: %\vspace{0.1cm}
 			\begin{enumerate}
+				\item Check that $\pk \in \SEC{\G}$.
 				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
 				\item Compute $w = s^{-1} \bmod q$.
 				\item Compute $u_1 = h \cdot w \bmod q$ and $u_2 = r \cdot w \bmod q$.

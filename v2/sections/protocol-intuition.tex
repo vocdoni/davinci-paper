@@ -3,12 +3,10 @@
 All the voting process is governed by the rules encoded in three smart contracts: the \textit{process management}, the \textit{sequencer registry}, and the \textit{results verification} smart contract. All these three contracts are deployed on the Ethereum blockchain, and ensure that the execution of all steps is transparent and unalterable. The protocol consists of 5 phases, as illustrated in Figure~\ref{fig:protocol-intuition}, and described below.\\
 
 \begin{figure}[h]	
-	\centerline{\includegraphics[width=300pt,draft=false]{\figs/protocol-intuition-flow}}
+	\centerline{\includegraphics[width=350pt,draft=false]{\figs/protocol-intuition-flow}}
 	\caption{Overview of the protocol flow.}
 	\label{fig:protocol-intuition}
 \end{figure}
-
-\martai{TODO: rename the phases as they will appear in Section~\ref{sec:vocdoni-protocol}.}
 
 \paragraph{$\boxed{1}$ Voting setup.}
 
@@ -22,8 +20,8 @@ Sequencers have a dual role in the protocol. In addition to generating the encry
 
 \paragraph{$\boxed{3}$ Voting.}
 
-Voters select their preferred option according to the rules established by the organizer and captured in the process management smart contract. Instead of submitting their votes directly on-chain, they send them off-chain to a sequencer of their choice for processing. To ensure privacy, votes are encrypted using the available encryption public key. Alongside the encrypted vote, each voter must also provide the following data: a proof of valid voting, demonstrating that the vote complies with the election rules; a proof of eligibility, verifying that they are registered in the census; and a proof of identity ownership, in the form of a digital signature, confirming that they are the legitimate voter and are not impersonating someone else. 
-\martai{In the above paragraph, we could include a short description about double-voting/overwriting: add the goal/idea of the commitment and the nullifier.}
+Voters select their preferred option according to the voting rules established by the organizer and captured in the process management smart contract. Instead of submitting their votes directly on-chain, they send them off-chain to a sequencer of their choice for processing. To ensure privacy, votes are encrypted using the available encryption public key. 
+Additionally, users compute a unique vote identifier that will allow them to verify that their vote has been included in the final result. Alongside the encrypted vote and the vote identifier, each voter must also provide the following data: a proof of valid voting, demonstrating that the vote complies with the election rules; a proof of eligibility, verifying that they are registered in the census; and a proof of identity ownership, in the form of a digital signature, confirming that they are the legitimate voter and are not impersonating someone else. Finally, to mitigate coercion and vote-buying, the protocol allows voters to overwrite their vote any number of times during the voting phase. 
 
 \paragraph{$\boxed{4}$ Votes collection.}
 
@@ -33,7 +31,5 @@ verify the signatures, to ensure the votes were cast by legitimate voters, they 
 Additionally, the sequencers reencrypt the votes and generate a proof of the correct reencryption computation. While this process does not alter the final tally, it prevents voters from decrypting their original vote. This step mitigates vote selling or coercion, as voters are no longer able to prove their choice to third parties. Finally, the sequencers submit the reencrypted votes along with their verification and reencryption proofs to the process management smart contract. The smart contract verifies all the proofs provided by the sequencers to check that they complied with the protocol.
 
 \paragraph{$\boxed{5}$ Results verification.}
-
-\martai{I did not look into the results decryption/verification part yet. A short description should be given here.}
-
 \textit{Old text: At the conclusion of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process. The final State is then available on-chain for verification, providing an immutable record of the voting outcome.}
+\marta{I did not look into the results decryption/verification part yet. A short description should be given here.}
