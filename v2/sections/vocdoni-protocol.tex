@@ -164,7 +164,7 @@ Figure~\ref{fig:circuit-voter} -- BN254.\\
 	\end{itemize}
 	\textbf{Constraints}
 	\begin{itemize}								
-		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot, k).$
+		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).$
 		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
 		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\address \conc \processid \conc k)$.
 	\end{itemize}
@@ -189,17 +189,20 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 	\vspace{0.3cm}
 	\noi \textbf{Public inputs}
 	\begin{itemize}
-		\item \public $\voteproof$: voter's proof.
 		\item \public $\processid$: process identifier.
 		\item \public $\ballotmode$: ballot protocol configuration.
 		\item \public $\epk$ ($EPK$): encryption public key.
 		\item \public $(C_1, C_2)$: encrypted ballot.		
 		\item \public $\voteid$: voter's identifier.
-		\item \public $\weight$: voter's weight.
-		\item \public $\censuspf$: census membership proof.
 		\item \public $\censusroot$: census Merkle tree root.
 		\item \public $\pk$: voter's public key.
-		\item \public $\signature$: voter's signature.
+	\end{itemize}
+	\textbf{Private inputs}
+	\begin{itemize}								
+		\item \private $\voteproof$: voter's proof.
+		\item \private $\weight$: voter's weight.
+		\item \private $\censuspf$: census membership proof.
+		\item \private $\signature$: voter's signature.
 	\end{itemize}
 	\textbf{Constraints}	
 	\begin{itemize}
@@ -231,23 +234,22 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 	\vspace{0.3cm}
 	\noi \textbf{Public inputs}
 	\begin{itemize}
-		\item \public $\text{authenticationProof}_i$: set of authentication proofs.
-		\item \public $\text{voteProof}_i$: set of authentication proofs.
 		\item \public $(C_1, C_2)$: list of voters' encrypted ballots.
 		\item \public $\voteid_i$: set of vote's identifiers.
 		\item \public $\pk_i$: list of voters' public keys.
-		\item \public $\weight_i$: Voters' weights.
-		\item \public $\text{censusProof}_i$: Voters' weights.
-		\item \public $\signature_i$: Voters' weights.
 		\item \public $\processid$: process identifier.
 		\item \public $\ballotmode$: ballot protocol configuration.
 		\item \public $EPK$: encryption public key.
 		\item \public $\censusroot$: census Merkle tree root.
 	\end{itemize}
+	\textbf{Private inputs}
+	\begin{itemize}								
+		\item \private $\authenticationproof_i$: set of authentication proofs.
+	\end{itemize}
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Votes aggregation.} The accumulated authentication zkProofs are valid (for the given inputs).
-		\item \emph{Shared public inputs.} The \processid, \censusroot, \ballotmode and $EPK$ are the same for all of them.
+		\item \emph{Shared public inputs.} The public inputs \processid, \ballotmode, \epk, and \censusroot are the same for all proofs.
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -261,7 +263,7 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 \newpage
 \subsubsection{State transition circuit} -- BN254. \\
 
-\noi Given the aggregated votes proof, this circuit verifies the correct inclusion of all new votes into the process's state Merkle tree. It generates the final state transition proof that will be validated by the Ethereum smart contract.
+\noi Given the aggregated votes proof, this circuit verifies the correct inclusion of all new votes into the process's state Merkle tree. It generates the final state transition proof that will be validated by the Ethereum smart contract. // This circuit verifies that a batch of votes correctly updates the global Merkle state root, including ballots, commitments, and results. It also verifies that the state transition corresponds to a valid proof aggregation and that overwritten votes are properly accounted for.
 
 \paragraph{Assertions.}
 
@@ -271,10 +273,6 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 	\item \emph{Public inputs integrity}: ProcessID, BallotMode, CensusRoot, EncryptionKey remain unchanged.
 	\item \emph{Votes counting}: Ballots are correctly counted as new or overwrites, and added to results accumulators.
 \end{itemize}
-
-\martai{The corresponding circuit figure is not done yet.}
-
-\noi \textit{Old original text, I think it will help here:}
 
 When a new voting process begins, the Sequencer initializes a new State, represented by the root hash of a Merkle tree. This tree encapsulates all essential information about the voting process, including process parameters, voter registry (census), ballot configurations, and initial results.
 
