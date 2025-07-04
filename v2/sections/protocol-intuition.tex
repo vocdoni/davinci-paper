@@ -31,5 +31,5 @@ verify the signatures, to ensure the votes were cast by legitimate voters, they 
 Additionally, the sequencers reencrypt the votes and generate a proof of the correct reencryption computation. While this process does not alter the final tally, it prevents voters from decrypting their original vote. This step mitigates vote selling or coercion, as voters are no longer able to prove their choice to third parties. Finally, the sequencers submit the reencrypted votes along with their verification and reencryption proofs to the process management smart contract. The smart contract verifies all the proofs provided by the sequencers to check that they complied with the protocol.
 
 \paragraph{$\boxed{5}$ Results verification.}
-\textit{Old text: At the conclusion of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process. The final State is then available on-chain for verification, providing an immutable record of the voting outcome.}
+\textit{At the conclusion of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process. The final state is then available on-chain for verification, providing an immutable record of the voting outcome.}
 \marta{I did not look into the results decryption/verification part yet. A short description should be given here.}
