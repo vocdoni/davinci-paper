@@ -1,6 +1,6 @@
 % !TeX root = ../build/main.tex
 
-\martai{Is the process called voting? Election, poll?}
+This section outlines the \davinci voting protocol. We introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. In Section~\ref{sec:vocdoni-protocol:merkle-trees}, we describe the census and state Merkle trees, and in Section~\ref{sec:vocdoni-protocol:smart-contracts} the Ethereum smart contracts. In Section~\ref{sec:vocdoni-protocol:circuits}, we present the zero-knowledge circuits used to enforce vote validity, authentication, aggregation, and state transitions. Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
 
 \subsection{Parties involved}
 \label{sec:vocdoni-protocol:parties}
@@ -13,18 +13,36 @@ A voting process involves three types of participants: the organizer, the sequen
  
 \paragraph{Voter.} Voters are the participants that belong the census that cast their votes in the election. 
 
-\subsection{Components}
-\label{sec:vocdoni-protocol:components}
+\subsection{Merkle trees}
+\label{sec:vocdoni-protocol:merkle-trees}
 
-\subsubsection{Merkle trees} 
+Merkle trees are used to create a cryptographic representation of both the voter registry (census) and the voting process state. 
 
-\textit{Old text: Merkle trees are employed to create a cryptographic representation of both the voter registry (census) and the voting process state:
-	\begin{itemize}
-		\item \textbf{Census}: Each voter is assigned a Merkle proof, which they use to prove their eligibility to vote. This mechanism ensures efficient and secure verification of voter eligibility.
-		\item \textbf{State}: The voting process state is represented as a Merkle tree, with new votes being added to the tree. The root of this Merkle tree is stored on Ethereum, allowing multiple sequencers to participate in the voting phase and ensuring consistency. 
-\end{itemize}}
+%\begin{itemize}
+%		\item \textbf{Census}: Each voter is assigned a Merkle proof, which they use to prove their eligibility to vote. This mechanism ensures efficient and secure verification of voter eligibility.
+%		\item \textbf{State}: The voting process state is represented as a Merkle tree, with new votes being added to the tree. The root of this Merkle tree is stored on Ethereum, allowing multiple sequencers to participate in the voting phase and ensuring consistency. 
+%\end{itemize}}
 
-\paragraph{Census Merkle tree.} Explain what it is. \\
+\subsubsection{Census Merkle tree} 
+
+The census represents the list of eligible voters and their associated voting weights. It is implemented as a binary Merkle tree using an iden3 Sparse Merkle Tree (SMT) structure with a zkSNARK-friendly hashing function to ensure compatibility with zero-knowledge circuits. Each leaf in the tree corresponds to a unique voter address (e.g., Ethereum address), and stores the associated voting weight. This construction enables efficient Merkle proofs that allow voters to prove their eligibility and weight without revealing the full census dataset.
+
+The organizer is responsible for generating the census and computing its Merkle root, which is then committed on-chain. To minimize on-chain storage, the full census is distributed off-chain—e.g., via IPFS or a trusted HTTPS endpoint—allowing verifiers and sequencers to independently access the dataset and reconstruct Merkle proofs as needed.
+
+The protocol does not prescribe a specific method for constructing the census, but supports multiple approaches to accommodate various use cases:
+
+Private datasets. Organizations with internal lists of eligible voters (e.g., membership databases or CSV files) can directly convert them into the Merkle format. This allows voter registries to remain confidential, with only the root hash made public.
+
+Self-Sovereign Identity (SSI). Voter eligibility can also be derived from SSI systems, where users control their identities. The organizer collects and aggregates this data into the census tree, enabling participation without centralized identity management.
+
+Ethereum-based tokens. Token holdings—such as ERC-20 or NFT balances—can define voter eligibility using either of two approaches:
+
+Optimistic: A snapshot of token holders at a specific Ethereum block is used to build the census off-chain. The root is submitted to the smart contract, and a dispute period allows for fraud proofs (e.g., using Ethereum storage proofs) to challenge incorrect entries.
+
+Zero-knowledge: A zkSNARK circuit verifies that the census has been constructed correctly with respect to the on-chain token balances at a given block. The proof ensures balance correctness and total supply consistency.
+
+This flexible design allows the system to support a wide range of identity and eligibility models while maintaining transparency, verifiability, and scalability.
+
 
 \martai{There is a whole section about the Census Merkle tree in the whitepaper -- CHECK!!}
 
@@ -32,7 +50,7 @@ A voting process involves three types of participants: the organizer, the sequen
 
 \martai{One way to think about it: (weight, pk).}
 
-\paragraph{State Merkle tree.} Explain what it is and the structure. Below, the original text:\\
+\subsubsection{State Merkle tree} Explain what it is and the structure. Below, the original text:\\
 
 \martai{Essentially, the first "addresses" or "leaves" are reserved to those items (like processId, censusRoot, etc.), and then the voters' addresses and nullifiers are used as paths to the leave where the encrypted ballot/commitment is stored.}
 
@@ -64,7 +82,21 @@ The State tree contains some special addresses (indices) for storing some requir
 \textbf{The Initial State}: The voting process begins with an initial state where the Merkle Tree Root is established and published on the Process Management smart contract. Predefined parameters are included, but the results are initialized to zero, and no nullifiers are present. The Process Organizer transaction, contains the initial root and the necessary Merkle proofs. These proofs verify that the initial parameters are correct according to the voting process information and that no additional information is stored. Since the `ProcessId` of the initial state is a unique identifier, there won't be duplicate roots for different processes.
 
 
-\subsubsection{Smart contracts}
+\subsection{Smart contracts}
+\label{sec:vocdoni-protocol:smart-contracts}
+
+Old text:
+	\begin{enumerate}
+		\item \textbf{Ethereum}. An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an EVM blockchain, the process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement several smart contracts.
+		\begin{itemize}
+			\item \textbf{Process management}: Responsible for the lifecycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+			\item \textbf{Results verification}: For each voting process, this smart contract maintains the integrity of the cast votes and process lifecycle. It verifies that each state transition committed by a ZK sequencer adheres to the predefined rules.			
+			\item \textbf{Sequencer registry}: This smart contract keeps track of the existing available sequencers, stores the collateral to ensure good behavior, and it's used to coordinate the distributed key generation when a new Process is created.
+		\end{itemize}
+		\item \textbf{Sequencer}. The Sequencer is a specialized component designed to handle the voting process using zero-knowledge proof mechanisms. It ensures that all transactions related to this process are validated and sequenced. The Sequencers periodically commit the state of the voting process to Ethereum.
+		\item \textbf{Frontend user interface}. The user interface serves as the primary interaction layer for voters and organizers. It provides tools and functionalities needed by organizers to set up, manage, and oversee elections. This interface simplifies the complexities involved in managing a decentralized vote.
+		\item \textbf{Data availability}. For each voting process, the system needs to keep track of the current State Merkle Tree, which contains all information of such processes. A public data availability layer, ensures that all state transitions are available and verifiable and allows the participation of multiple sequencers within the same voting process.
+	\end{enumerate}
 
 \paragraph{Process management.} This smart contract is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
 

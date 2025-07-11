@@ -11,6 +11,35 @@
 
 Make a section called \textit{properties}?
 
+From old intro:
+
+\paragraph{Design principles.}
+
+To build the \davinci stack, we adhere to the following design principles:
+
+\begin{enumerate}
+	\item \textbf{Cryptography as the source of truth}: we rely exclusively on cryptographic proofs to ensure the integrity and security of the voting process. By trusting only in cryptography, we eliminate the need for centralized authorities, making the system inherently secure and transparent.
+	
+	\item \textbf{Trustlessness}: our system operates without requiring trust in any single party. Through cryptographic protocols and decentralized infrastructure, we ensure system integrity and prevent compromise from any malicious actor.
+	
+	\item \textbf{End-to-end verifiability}: every voter can verify their ballot from casting to result computation (individual verifiability). Additionally, any third party can audit the election data to confirm results (universal verifiability) and verify that each vote comes from a uniquely registered voter (eligibility verifiability). Transparent cryptographic mechanisms make this possible.
+	
+	\item \textbf{Composability}: the system is modular, consisting of interchangeable components that can be rearranged or integrated with external systems via adaptable interfaces. This allows for redundancy, flexibility, and seamless integration with third-party applications, exemplified by our voting-as-a-service APIs.
+	
+	\item \textbf{Accessibility}: Vocdoni’s voting platform (App) is open source, universally available and user-friendly. The interface is intuitive for all users, including those less familiar with technology, and accommodates voters that use assistive technologies like screen readers.
+	
+	\item \textbf{Open source}: by releasing our code openly, we invite anyone to audit and contribute, enhancing security and fostering community engagement. Transparency prevents security through obscurity and accelerates innovation.
+	
+	\item \textbf{Resilience}: we design for robustness against hardware failures, network outages, and censorship. Infrastructure decentralization and distributed ownership enhance system availability and resistance to attacks.
+	
+	\item \textbf{Scalability}: our solution processes votes at high throughput, exceeding current requirements to accommodate future growth. The decentralized infrastructure scales organically as usage increases, ensuring consistent performance.
+	
+	\item \textbf{Receipt-freeness}: to mitigate risks of collusion, coercion, and vote-buying, the system enables voters to verify their votes without being able to prove to others how they voted, thus reducing incentives for coercion and bribery. Additionally, voters are allowed to overwrite their votes while maintaining secrecy.
+	
+	\item \textbf{Automation}: we minimize human intervention through smart contracts and cryptographic protocols, reducing costs and human error. Automation ensures consistent operation and frees resources for voter support and auditing.
+\end{enumerate}
+
+
 \subsubsection{Receipt-freeness}
 
 In democratic processes, the ability of voters to cast their votes freely, without undue influence or coercion, is crucial. A critical aspect of maintaining this freedom is ensuring receipt-freeness, preventing voters from being able to prove to third parties how they voted. \davinci implements receipt-freeness by leveraging the properties of the ElGamal cryptosystem, and zkSNARKs.

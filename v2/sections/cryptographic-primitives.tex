@@ -60,17 +60,98 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 	%
 \end{itemize}
 
-\paragraph{Generators.}
+\paragraph{Generators.}\mbox{}\\
+
+\noi We denote by $\hlget{\SEC{G}}$ the generator of $\SEC{\G}$ as defined in~\cite{brown10sec}, $\hlget{\BN{G}}$ the generator of $\BN{\G}_1$ as defined in~\cite{wood2014ethereum}, $\hlget{\BJ{G}}$ the generator of $\BJ{\G}$ as defined in~\cite{erc2494}, $\hlget{\BW{G}}$ the generator of $\BW{\G}_1$ as defined in~\cite{eip3026}, and $\hlget{\BLS{G}}$ the generator of $\BLS{\G}_1$ as defined in~\cite{eip2539}.
+
 \begin{itemize}
-	\item Generator of $\SEC{\G}$: \[\hlset{\SEC{G}} = \].
-	%
-	\item Generator of $\BN{\G}_1$: $\hlset{\BN{G}} = $.
-	\item Generator of $\BJ{\G}$: $\hlset{\BJ{G}} = $.
-	%
-	\item Generator of $\BW{\G}_1$: $\hlset{\BW{G}} = $.
-	\item Generator of $\BLS{\G}_1$: $\hlset{\BLS{G}} = $.
-	%
+	\item
+		$
+		\hlset{\SEC{G}} = 
+		(\tt{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,0x483ada7726} \allowbreak
+		\rule{1.37cm}{0pt}
+		\tt{a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8}).
+		$
+	\item 
+		$
+		\hlset{\BN{G}}\hspace{0.14cm} = \: (\tt{0x01}, \tt{0x02}).
+		$
+
+	\item
+		$
+		\hlset{\BJ{G}}\hspace{0.18cm} = 
+		\hspace{0.09cm} (\tt{0x0b9feffffffffaaabfffffffffffffffeffffffffffffffffffffffffffffff}, 
+		\tt{0x17fffffffff} \\
+		\rule{1.37cm}{0pt}
+		\tt{ffffffffffffffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}).				
+		$
+	\item 
+		$
+		\hlset{\BW{G}}\hspace{0.085cm} = 
+		\hspace{0.09cm} (\tt{0x1075b020ea190c8b277ce98a477beaee6a0cfb7551b27f0ee05c54b85f56fc779017ffac15520}\\
+		\rule{1.37cm}{0pt}
+		\tt{ac11dbfcd294c2e746a17a54ce47729b905bd71fa0c9ea097103758f9a280ca27f6750dd0356133}\\
+		\rule{1.37cm}{0pt}		
+		\tt{e82055928aca6af603f4088f3af66e5b43d, 0x58b84e0a6fc574e6fd637b45cc2a420f952589884} \\
+		\rule{1.37cm}{0pt}
+		\tt{c9ec61a7348d2a2e573a3265909f1af7e0dbac5b8fa1771b5b806cc685d31717a4c55be3fb90b6f} \\
+		\rule{1.37cm}{0pt}
+		\tt{c2cdd49f9df141b3053253b2b08119cad0fb93ad1cb2be0b20d2a1bafc8f2db4e95363)}.
+		$
+	\item 
+		$
+		\hlset{\BLS{G}}\hspace{0.07cm} = 
+		\hspace{0.06cm}(\tt{0x008848defe740a67c8fc6225bf87ff5485951e2caa9d41bb188282c8bd37cb5cd5481512ffcd3} \\
+		\rule{1.37cm}{0pt}
+		\tt{94eeab9b16eb21be9ef,0x01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d96d182ad44} \\
+		\rule{1.37cm}{0pt}
+		\tt{fb82305c2fe3d3634a9591afd82de55559c8ea6}).
+		$
 \end{itemize}
+
+%\begin{itemize}
+%	\item Generator of $\SEC{\G}$ as defined in~\cite{}: 
+%	\begin{align*}
+%		\hlset{\SEC{G}} = 
+%		(&\tt{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798},\\
+%		&\tt{0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8}).
+%	\end{align*}
+%	%
+%	\item Generator of $\BN{\G}_1$ as defined in~\cite{}:
+%	%https://ethereum.github.io/yellowpaper/paper.pdf
+%	\begin{align*}
+%		\hlset{\BN{G}} = 
+%		(\tt{0x01}, \tt{0x02}).
+%	\end{align*}
+%	% (-1, 1) o bé (1, 2)?
+%	%
+%	\item Generator of $\BJ{\G}$ as defined in~\cite{}:
+%	%https://eips.ethereum.org/EIPS/eip-2494
+%	\begin{align*}
+%		\hlset{\BJ{G}} = 
+%		(&\tt{0x0b9feffffffffaaabfffffffffffffffeffffffffffffffffffffffffffffff},\\
+%		&\tt{0x17fffffffffffffffffffffffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}).
+%	\end{align*}
+%	%
+%	\item Generator of $\BW{\G}_1$ as defined in~\cite{}:
+%	%https://eips.ethereum.org/EIPS/eip-3026
+%	\begin{align*}
+%		\hlset{\BW{G}} = 
+%		(&\tt{0x1075b020ea190c8b277ce98a477beaee6a0cfb7551b27f0ee05c54b85f56fc779017ffac15520ac11dbfcd294c2e746a17a54ce47729b905bd71fa0c9ea097103758f9a280ca27f6750dd0356133e82055928aca6af603f4088f3af66e5b43d},\\
+%		&\tt{0x58b84e0a6fc574e6fd637b45cc2a420f952589884c9ec61a7348d2a2e573a3265909f1af7e0dbac5b8fa1771b5b806cc685d31717a4c55be3fb90b6fc2cdd49f9df141b3053253b2b08119cad0fb93ad1cb2be0b20d2a1bafc8f2db4e95363}).
+%	\end{align*}
+%	%
+%	\item Generator of $\BLS{\G}_1$ as defined in~\cite{}:
+%	%https://eips.ethereum.org/EIPS/eip-2539
+%	\begin{align*}
+%		\hlset{\BLS{G}} = 
+%		(&\tt{0x008848defe740a67c8fc6225bf87ff5485951e2caa9d41bb188282c8bd37cb5cd5481512ffcd394eeab9b16eb21be9ef},\\
+%		&\tt{0x01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d96d182ad44fb82305c2fe3d3634a9591afd82de55559c8ea6}).
+%	\end{align*}
+%	%
+%\end{itemize}
+
+\pagebreak
 
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
