@@ -114,39 +114,6 @@ Old text:
 \end{figure}
 
 
-\subsubsection{Votes [I don't think this is the right place]}
-
-In the \davinci system, a vote comprises several components that work together to ensure secure, private, and verifiable voting. These components are:
-\begin{align*}
-		\vote = [	\processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ].
-\end{align*}
-\martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
-
-\martai{Actually, the address could be recomputed by the sequencer (add it as a footnote).}
-
-\martai{In the code, they call it vote, verifierVote. Alternative: envelope.}
-
-Below, we detail each component and its role in the voting process:
-\begin{itemize}
-	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
-	\martai{the identifier is computed from the organization address, the Eth nonce, chain ID (e.g. mainnet), formatejat in a certain way.}
-	%
-	\item \encryptedballot: it contains the voter's selections encoded according to the ballot protocol rules. To ensure privacy, the ballot is encrypted using an homomorphic encryption scheme, which allows homomorphic combination of encrypted votes. More specifically, given the voter's choice $m$ and a random element $k$, the vote is encoded as follows:
-	\[ \encryptedballot = \hlget{\Enc}(m; k). \]
-	%
-	\item \voteid: vote identifier, tied to balbla, computed this way.
-	\[ \voteid = .\]
-	%
-	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
-	%
-	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
-	\[ \zkproof = \text{Prove(), Circuit()}. \]
-	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
-	%
-	\item \signature: the signature authenticates the vote and ensure that was cast by a legitimate voter. The voter signs necessary components using their private key, depending on the census configuration (e.g., ECDSA, EdDSA, RSA).	
-	\[ \signature = \text{Sign(xxx)}. \]
-\end{itemize}
-
 \subsection{Circuits}
 \label{sec:vocdoni-protocol:circuits}
 
@@ -198,7 +165,7 @@ Figure~\ref{fig:circuit-voter} -- BN254.\\
 	\begin{itemize}								
 		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).$
 		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
-		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\address \conc \processid \conc k)$.
+		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\processid \conc  \address \conc k)$.
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -404,15 +371,15 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 \subsubsection{Prior to voting (only once)}
 \label{sec:vocdoni-protocol:prior-steps}
 
-\martai{Remove the first step, we assume contracts are already deployed or at least, the logic is available.}
-
-This is done only once. Then every voting will start its process from step in Section~\ref{sec:vocdoni-protocol:start}.
-
-Vocdoni:
-\begin{enumerate}
-	\item Deployment of the 3 smart contracts.
-	\item Sequencers registry starts (it doesn't end).
-\end{enumerate}
+%\martai{Remove the first step, we assume contracts are already deployed or at least, the logic is available.}
+%
+%This is done only once. Then every voting will start its process from step in Section~\ref{sec:vocdoni-protocol:start}.
+%
+%Vocdoni:
+%\begin{enumerate}
+%	\item Deployment of the 3 smart contracts.
+%	\item Sequencers registry starts (it doesn't end).
+%\end{enumerate}
 
 Sequencers (nodes validadors) -- this process is always open:
 \begin{enumerate}
@@ -434,6 +401,8 @@ The organizer:
 	\martai{In general, make use (link) to the functions defined in Section~\ref{sec:cryptographic-primitives}. For example, here the \texttt{MT.root()}.}
 	\martai{Additionally, after this step, the organizer should make a Merkle proof available to all eligible voters.}
 	\item Set voting details: duration, options, type, etc. + CENSUS MT ROOT.
+	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
+	\martai{the identifier is computed from the organization address, the Eth nonce, chain ID (e.g. mainnet), formatejat in a certain way.}
 	\item Also a timeout for the DKG ceremony + minimum number of sequencers.
 	\item Send transaction to the Ethereum process management smart contract with all data. Note this transaction has a cost (Eth tx fees) that needs to be covered by the organizer.
 \end{enumerate}
@@ -466,7 +435,7 @@ Voter:
 	\item Choose any of the available sequencers (from?? -- from the SR SC).
 	\item Fetch their census \textbf{Merkle proof} to prove eligibility (from the census registry).
 	\item Collect the process data $\epk$, $\ballotmode$, $\processid$ from the process management smart contract.
-	\item Sample a fresh random $k\in\F$ and use the $\epk$ to encrypt the voting choice: 
+	\item Sample a fresh random $k\in\F$ and use the $\epk$ to encrypt the voting choice $\ballot$: 
 		\begin{equation}
 		\label{eq-ciphertext}
 			(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).
@@ -475,14 +444,28 @@ Voter:
 	\item Use the user's own Ethereum address $\address$ and the previous $k$ to compute the $\voteid$:
 		\begin{equation}
 		\label{eq-voteid}
-			\voteid = Hash(\address \conc \processid \conc k).
+			\voteid = Hash(\processid \conc \address \conc k).
 		\end{equation}
-	\martai{Is this the right order?}
+	\martai{The hash used in votID is MultiMiMC7.}
 	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$. We call this proof \textbf{vote proof}.
-	\item Sign $\voteid$ using the user's secret key $\sk$:
+	\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
-	\item Send the encrypted vote, Merkle proof, validity proof, and identity proof to the sequencer.
-	\martai{I understand Validity proof refers to ``voter circuit"? Merkle proof is for inclusion, right? And identity proof is for example a signature??}
+	\item Send the encrypted vote, Merkle proof, validity proof, and identity proof to the sequencer:
+		\[ \vote = [	\processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ]. \]
+\end{itemize}
+
+\martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
+
+\martai{Actually, the address could be recomputed by the sequencer (add it as a footnote).}
+
+\martai{In the code, they call it vote, verifierVote. Alternative: envelope.}
+
+\begin{itemize}
+	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
+	%
+	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
+	\[ \zkproof = \text{Prove(), Circuit()}. \]
+	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
 \end{itemize}
 
 Sequencer:

@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0" version="27.2.0" pages="5">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0" version="28.0.4" pages="5">
   <diagram name="1. voter-circuit" id="-BY3RIMELlOST2Ke_Soi">
-    <mxGraphModel dx="1321" dy="780" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
+    <mxGraphModel dx="945" dy="471" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
       <root>
         <mxCell id="9w8_UW6vJWkl_njZVMp4-0" />
         <mxCell id="9w8_UW6vJWkl_njZVMp4-1" parent="9w8_UW6vJWkl_njZVMp4-0" />
@@ -108,10 +108,10 @@
             <mxPoint x="1080" y="710" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="OdLuYHqov1AF89vjBi5t-4" value="&lt;div style=&quot;font-size: 11px;&quot;&gt;$$\text{address}$$&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
+        <mxCell id="OdLuYHqov1AF89vjBi5t-4" value="$$\text{processID}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
           <mxGeometry x="1050" y="80" width="60" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="OdLuYHqov1AF89vjBi5t-5" value="$$\text{processID}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
+        <mxCell id="OdLuYHqov1AF89vjBi5t-5" value="$$\text{address}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
           <mxGeometry x="1120" y="80" width="60" height="40" as="geometry" />
         </mxCell>
         <mxCell id="OdLuYHqov1AF89vjBi5t-6" value="$$\text{voteID}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">

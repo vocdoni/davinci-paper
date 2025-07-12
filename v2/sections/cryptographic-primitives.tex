@@ -196,7 +196,7 @@ ElGamal [CITE].
 			\item[$\bullet$] $\hlset{\Enc}_{\pk}(\msg \in \{0,1\}^\star; k\in\F_t)$:  \vspace{0.1cm}
 			\begin{enumerate}
 				\item Map $\msg$ to $\BJ{\G}$ via $M = m \hlget{\BJ{G}}$.
-				\item Compute $C_1 = k \cdot \BJ{G} \in \BJ{\G}$.
+				\item Compute $C_1 = k \cdot \hlget{\BJ{G}} \in \BJ{\G}$.
 				\item Compute $C_2 = k \cdot \pk + M \in \BJ{\G}$. 
 				\item Output $\enc = (C_1, C_2) \in {(\BJ{\G})}^2$.
 			\end{enumerate}
@@ -216,8 +216,6 @@ ElGamal [CITE].
 		\end{itemize}
 	\end{minipage}
 \end{mdframed}
-
-\martai{Link $\BJ{G}$ to element from Section~\ref{sec:cryptographic-primitives:elliptic-curves}.}
 
 \martai{It remains to explain how to recover $m$ from $M$. I propose to define a function $P_m$ that maps $m$ to $\J$, and then say that although it is generally not invertible, in this case the message space is small, and therefore, it can be done via brute-force search or using the baby-step giant-step algorithm [CITE].}
 
@@ -263,13 +261,13 @@ Note that this scheme is additively homomorphic. That is, given two ciphertexts 
 Verification of ECDSA signatures is \textit{performed inside} zero-knowledge proofs using a specialized circuit that emulates SECP256K1 arithmetic. This approach is necessary because SECP256K1 is defined over a 256-bit prime field that differs from the native field used in the ZK-SNARK circuit (see Section\ref{sec:vocdoni-protocol:circuits} for more details). Below, we describe the algorithms, which follow the standard ECDSA protocol.
 
 \begin{mdframed}
-	\begin{minipage}[t]{0.45\textwidth}
+	\begin{minipage}[t]{0.46\textwidth}
 		\begin{itemize}
 			\item[$\bullet$] $\hlset{\SSign}_{\sk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
 			\begin{enumerate}
 				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
 				\item\label{item:ssign-step} Select a random scalar $k \sample \Z_q^{*}$.
-				\item Compute $R = k \cdot G = (x_R, y_R) \in \SEC{\G}$.
+				\item Compute $R = k \cdot \hlget{\SEC{G}} = (x_R, y_R) \in \SEC{\G}$.
 				\item Set $r = x_R \bmod q$. If $r = 0$, go back to step~\ref{item:ssign-step}. 
 				\item Compute $s = k^{-1} \cdot (h + r \cdot \sk) \bmod q.$ If $s = 0$, go back to step~\ref{item:ssign-step}. 
 				\item Output $\sigma = (r, s)$.
@@ -284,13 +282,14 @@ Verification of ECDSA signatures is \textit{performed inside} zero-knowledge pro
 				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
 				\item Compute $w = s^{-1} \bmod q$.
 				\item Compute $u_1 = h \cdot w \bmod q$ and $u_2 = r \cdot w \bmod q$.
-				\item Compute $$X = u_1 \cdot G + u_2 \cdot \pk = (x_X, y_X) \in \SEC{\G}.$$
+				\item Compute $$X = u_1 \cdot \hlget{\SEC{G}} + u_2 \cdot \pk = (x_X, y_X) \in \SEC{\G}.$$
 				\item Accept if $r = x_X \bmod q$; otherwise, reject.
 			\end{enumerate}
 		\end{itemize}
 	\end{minipage}
 \end{mdframed}
 
+\martai{The output of the hash does not match, CHECK!}
 
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}
