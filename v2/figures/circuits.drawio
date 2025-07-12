@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0" version="28.0.4" pages="5">
   <diagram name="1. voter-circuit" id="-BY3RIMELlOST2Ke_Soi">
-    <mxGraphModel dx="945" dy="471" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
+    <mxGraphModel dx="945" dy="517" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
       <root>
         <mxCell id="9w8_UW6vJWkl_njZVMp4-0" />
         <mxCell id="9w8_UW6vJWkl_njZVMp4-1" parent="9w8_UW6vJWkl_njZVMp4-0" />
@@ -87,7 +87,7 @@
         <mxCell id="9w8_UW6vJWkl_njZVMp4-24" value="$$\text{weight}$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
           <mxGeometry x="560" y="80" width="80" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="OdLuYHqov1AF89vjBi5t-0" value="$$\text{Hash}(\text{address} || \text{processID} || k)$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontFamily=Courier New;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
+        <mxCell id="OdLuYHqov1AF89vjBi5t-0" value="$$\text{Hash}(\text{processID} || \text{address} || k)$$" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontFamily=Courier New;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="9w8_UW6vJWkl_njZVMp4-1" vertex="1">
           <mxGeometry x="980" y="190" width="200" height="40" as="geometry" />
         </mxCell>
         <mxCell id="OdLuYHqov1AF89vjBi5t-1" value="" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=11;fontFamily=Courier New;" parent="9w8_UW6vJWkl_njZVMp4-1" source="OdLuYHqov1AF89vjBi5t-5" edge="1">
