@@ -158,9 +158,7 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 
 \Davinci uses different hash functions. On the one side, we use Keccak256~\cite{bertoni11keccak} for Ethereum address derivation, and Poseidon~\cite{grassi21poseidon}, MiMC and MiMC-7~\cite{albrecht16mimc} for arithmetic circuits within zero-knowledge proofs.
 
-\paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci for computing Ethereum addresses from public keys over $\SEC{\G}$. Keccak256 takes arbitrary-length bitstrings and outputs 256-bit digests: $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. This function is not SNARK-friendly and it is used exclusively in the authentication circuit, where the verification of Ethereum-compatible signatures requires reproducing the original message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:authentication}).
-
-\martai{And also compress messages for signing!}
+\paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci to compress messages for signing and deriving Ethereum addresses from public keys over $\SEC{\G}$. Keccak256 takes arbitrary-length bitstrings and outputs 256-bit digests: $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. This function is not SNARK-friendly and it is used exclusively in the authentication circuit, where the verification of Ethereum-compatible signatures requires reproducing the original message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:authentication}).
 
 \paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient implementation inside arithmetic circuits. It is used in \davinci for computing commitments, nullifiers, and the state Merkle tree roots. Poseidon is used as $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ is the set of tuples of $\F_s$-elements of any length, and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
 
@@ -369,9 +367,32 @@ Participant $P_j$ uses the algorithm $\hlget{\DeriveSecretShare}$ to compute the
 \subsection{Merkle trees}
 \label{sec:cryptographic-primitives:merkle-trees}
 
-\martai{I am not sure a Merkle trees section is needed, but I thought we could use it to specify the hash function used in the trees, the depth, and the -arity. We could also include some functions like \texttt{MT.Root()}, etc.}
-\martai{Sparse MTs (binary) with depth $64$. Structure of sparse MT from iden3.}
+The \davinci protocol uses sparse Merkle trees (SMTs) as defined in ~\cite{baylina19sparse}. Essentially, in this kind of trees each leaf corresponds to a key-value pair, with empty leaves explicitly represented to enable both inclusion and non-inclusion proofs. The key feature of these trees is that the hash of each entry defines a unique traversal path in the tree from root to leaf, regardless of insertion order. When inserting, the algorithm descends until it encounters an empty node or a leaf; if there is a hash prefix collision, the tree is split at the first differing bit, creating new intermediate nodes appropriately. SMTs support efficient membership and non‑membership proofs, enabling a party to prove that a given key-value is (or is not) present in the tree without revealing the content. 
+
+In \davinci, both the census (voter registry with weights) and the vote state are maintained using SMTs. The root hashes are committed on-chain, while full tree contents remain off-chain. Sequencers generate and submit Merkle proofs to the verification circuits, which reconstruct and validate the root transitions. This design allows compact, verifiable state updates and enables independent verification without relying on trusted data sources.
+
+\noi To each Merkle tree $\tree$, we associate the following functions:
+
+\begin{itemize}
+	\item ${\tree.\hlset{\MTRoot}}()$: it returns the root of the tree.
+	\item ${\tree.\hlset{\MTInsert}}()$: it inserts a new leaf in the tree. If the position is passed as an input, the element is inserted in that position. Otherwise, the new element is inserted in the first empty position. The root is updated.
+	\item ${\tree.\hlset{\MTRemove}}()$: it removes a leaf from the tree. The root is updated.
+	\item ${\tree.\hlset{\MTOpen}}()$: it returns the Merkle tree inclusion proof of the given leaf.
+	%	\item ${\MT.\Prove}_{\pp}((\leaf_i)_{i=1}^q, \pos)$. 
+	%This algorithm is run by the committer to output the value $m$ at position $i$ in $\vec{m}$, and the corresponding proof $\proof_i$.
+	%	\item ${\MT.\Verify}_{\pp}(\leaf, \pos, \root, \proof)$. 
+	%The verification algorithm accepts only if $\proof$ is a valid proof that $m_i$ is at the $i$th position of the vector commited in $\com$.
+	%	\item ${\MT.\UpdateRoot}_{\pp}({\leaf, \pos, \root})$: it updates the root - I am not sure this function is needed!
+	\item ${\tree.\hlset{\MTVerify}}
+	()$: it takes a Merkle proof and a root as an input and verifies the proof against the given root. The output is accept/reject.
+	%This algorithm is run by the committer who produced $\com$ and wants to update it by changing the $i$-th message to $m'$. The algorithm outputs a new commitment $\com'$.
+	%	\item ${\MT.\UpdateProof}_{\pp}({\leaf, \pos, \proof})$. 
+	%This algorithm produces an updated proof $\proof'$ that $m'$ (instead of $m$) is in the $i$-th position of the vector.
+\end{itemize}
+
 \martai{\textbf{(1) State MT:} Poseidon with BN254 scalar field. \textbf{(2) Census MT:} MiMC with BLS12-377 scalar field.}
+
+\martai{Sparse MTs (binary) with depth $64$. Structure of sparse MT from iden3.}
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}

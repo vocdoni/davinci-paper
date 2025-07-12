@@ -42,6 +42,14 @@
 		\bfseries #1\hfil \hbox to\@pnumwidth{\hss #2}}\par}
 \makeatother
 
+% Adds vertical space before and after \subsubsection headings and ensures body text starts on a new line
+\makeatletter
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}%
+	{-18\p@ \@plus -4\p@ \@minus -4\p@}%   % Before skip
+	{4\p@ \@plus 2\p@ \@minus 2\p@}%      % After skip
+	{\normalfont\normalsize\bfseries}}   % Font style
+\makeatother
+
 % Colours
 \definecolor{cred}{rgb}{1, 0.5, 0.5}
 \definecolor{cgreen}{rgb}{0.5, 1, 0.5}
@@ -70,9 +78,32 @@
 \newcommand{\BJ}[1]{\ensuremath{{#1}^{\text{\tiny \sf BJ}}}\xspace}
 \newcommand{\SEC}[1]{\ensuremath{{#1}^{\text{\tiny \sf SEC}}}\xspace}
 
+% Trees
+\newcommand{\tree}[1][]{\sf{MT}^{\sf{#1}}}
+\renewcommand{\root}[1][]{\sf{root}^{\sf{#1}}}
+\newcommand{\recentroots}{\sf{recentRoots}}
+\newcommand{\leaf}{\sf{leaf}}
+\newcommand{\leaves}{\sf{leaves}}
+\newcommand{\MTRoot}{\sf{Root}}
+\newcommand{\MTInsert}{\sf{Insert}}
+\newcommand{\MTRemove}{\sf{Remove}}
+\newcommand{\MTOpen}{\sf{Open}}
+\newcommand{\MTVerify}{\sf{Verify}}
+
 % Circuits
 \newcommand{\public}{{\sf\color{teal}public}\xspace}
 \newcommand{\private}{{\sf\color{red}private}\xspace}
+
+% Roles
+\definecolor{voterbg}{RGB}{200, 230, 200}  % soft, muted green
+\definecolor{organizerbg}{RGB}{245, 222, 135}  % classic mustard tone
+\definecolor{sequencerbg}{RGB}{235, 225, 250}  % soft lavender-like purple
+\definecolor{darkgrayborder}{RGB}{100, 100, 100}  % dark neutral gray
+
+\newcommand{\voter}{\fcolorbox{darkgrayborder}{voterbg}{ \textsf{voter} }\xspace}
+\newcommand{\organizer}{\fcolorbox{darkgrayborder}{organizerbg}{ \textsf{organizer} }\xspace}
+\newcommand{\sequencer}{\fcolorbox{darkgrayborder}{sequencerbg}{ \textsf{sequencer} }\xspace}
+\newcommand{\sequencers}{\fcolorbox{darkgrayborder}{sequencerbg}{ \textsf{sequencers} }\xspace}
 
 % Ballot protocol
 \newcommand{\ballotstyle}[1]{\texttt{#1}\xspace}

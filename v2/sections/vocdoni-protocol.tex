@@ -381,7 +381,7 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 %	\item Sequencers registry starts (it doesn't end).
 %\end{enumerate}
 
-Sequencers (nodes validadors) -- this process is always open:
+\sequencers -- this process is always open:
 \begin{enumerate}
 	\item Register this and that way.
 	\item Public keys?
@@ -394,7 +394,7 @@ Sequencers (nodes validadors) -- this process is always open:
 \subsubsection{Start of the voting process}
 \label{sec:vocdoni-protocol:start}
 
-The organizer:
+\organizer
 \begin{enumerate}
 	\item Prepares the census data \texttt{census\_data}.
 	\item Generates the census commitment \texttt{MT\_census.root = Com(census\_data)}.
@@ -410,7 +410,7 @@ The organizer:
 \subsubsection{Encryption key generation process} %Voting key generation
 \label{sec:vocdoni-protocol:dkg}
 
-The sequencer:
+\sequencers
 \begin{enumerate}
 	\item Download all required data from the PM smart contract which includes the census MT root to handle the new vote.
 	\item Make contributions to DKG ceremony.
@@ -426,28 +426,31 @@ After XXX time (set by the organizer in the PM contract?): all contributions to 
 	\martai{The idea here is that some sequencer makes EPK available (a.k.a. sends a transaction). Alternatively, generate a SNARK proving the EPK has been generated correctly and the SC verifies it.}
 \end{itemize}
 
+\newpage
 \subsubsection{Voting process}
 \label{sec:vocdoni-protocol:voting}
-
-Voter:
+\voter
 
 \begin{itemize}
-	\item Choose any of the available sequencers (from?? -- from the SR SC).
-	\item Fetch their census \textbf{Merkle proof} to prove eligibility (from the census registry).
-	\item Collect the process data $\epk$, $\ballotmode$, $\processid$ from the process management smart contract.
-	\item Sample a fresh random $k\in\F$ and use the $\epk$ to encrypt the voting choice $\ballot$: 
-		\begin{equation}
+	\item Choose any of the available sequencers from the sequencer registry smart contract.
+	\item Fetch from the census registry their membership proof $\censusproof$ to prove eligibility.
+	\item Collect %the process data 
+	the $\epk$, $\ballotmode$, $\processid$ from the process management smart contract.
+	\item Select their voting choice $\ballot$ according to the election rules specified by the $\ballotmode$ parameter. \item Sample a fresh random $k \in \F$ and encrypt the selected choice using the public key $\epk$:
+	\begin{equation}
 		\label{eq-ciphertext}
-			(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).
-		\end{equation}
+		(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).
+	\end{equation}
 	\martai{Actually, I would not write $(C_1, C_2)$ but rather \texttt{ciphertext}.}
 	\item Use the user's own Ethereum address $\address$ and the previous $k$ to compute the $\voteid$:
 		\begin{equation}
 		\label{eq-voteid}
 			\voteid = Hash(\processid \conc \address \conc k).
 		\end{equation}
-	\martai{The hash used in votID is MultiMiMC7.}
-	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$. We call this proof \textbf{vote proof}.
+	\martai{The hash used in voteID is MultiMiMC7.}
+	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$. We call this proof \textbf{vote proof}. 	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
+	\[ \zkproof = \text{Prove(), Circuit()}. \]
+	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
 	\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
 	\item Send the encrypted vote, Merkle proof, validity proof, and identity proof to the sequencer:
@@ -460,15 +463,7 @@ Voter:
 
 \martai{In the code, they call it vote, verifierVote. Alternative: envelope.}
 
-\begin{itemize}
-	\item \censuspf: the census proof serves as the voter's identity verification mechanism, ensuring that only eligible voters can participate. Depending on the process configuration, the voter provides either a Merkle tree-based proof showing inclusion in the census true, or a credential issued by a trusted third party (e.g. from a credential service provider).
-	%
-	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
-	\[ \zkproof = \text{Prove(), Circuit()}. \]
-	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
-\end{itemize}
-
-Sequencer:
+\noi \sequencers
 
 \begin{itemize}
 	\item Fetch current state: retrieve the current valid process state root from the Etherem smart contract and the associated data from Ethereum blobs.
@@ -502,7 +497,7 @@ SC:
 
 Once the voting is completed (I understand the timeout set by the organizer expires), the following things happen.
 
-Sequencer:
+\noi \sequencers
 
 \begin{itemize}
 	\item $t$ out of $n$ sequencers publish their shares corresponding to the EPK to the Ethereum smart contract.
