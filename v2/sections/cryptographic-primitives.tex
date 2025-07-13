@@ -162,7 +162,7 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 
 \paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient implementation inside arithmetic circuits. It is used in \davinci for computing commitments, nullifiers, and the state Merkle tree roots. Poseidon is used as $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ is the set of tuples of $\F_s$-elements of any length, and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
 
-\paragraph{MiMC-7.} Finally, we use the MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details).
+\paragraph{MiMC-7.} Finally, we use  functions from the MiMC family. On the one side, MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details). {\color{blue}On the other side, XXX.} $\hlset{\Multimimc}$.
 
 \martai{MiMC two instantiations: MiMC and MiMC-7, and also the curves. Check!}
 
@@ -375,19 +375,12 @@ In \davinci, both the census (voter registry with weights) and the vote state ar
 
 \begin{itemize}
 	\item ${\tree.\hlset{\MTRoot}}()$: it returns the root of the tree.
-	\item ${\tree.\hlset{\MTInsert}}()$: it inserts a new leaf in the tree. If the position is passed as an input, the element is inserted in that position. Otherwise, the new element is inserted in the first empty position. The root is updated.
-	\item ${\tree.\hlset{\MTRemove}}()$: it removes a leaf from the tree. The root is updated.
-	\item ${\tree.\hlset{\MTOpen}}()$: it returns the Merkle tree inclusion proof of the given leaf.
-	%	\item ${\MT.\Prove}_{\pp}((\leaf_i)_{i=1}^q, \pos)$. 
-	%This algorithm is run by the committer to output the value $m$ at position $i$ in $\vec{m}$, and the corresponding proof $\proof_i$.
-	%	\item ${\MT.\Verify}_{\pp}(\leaf, \pos, \root, \proof)$. 
-	%The verification algorithm accepts only if $\proof$ is a valid proof that $m_i$ is at the $i$th position of the vector commited in $\com$.
-	%	\item ${\MT.\UpdateRoot}_{\pp}({\leaf, \pos, \root})$: it updates the root - I am not sure this function is needed!
+	\item ${\tree.\hlset{\MTInsert}}()$: it inserts a new leaf in the tree. The root is updated.
+%	\item ${\tree.\hlset{\MTRemove}}()$: it removes a leaf from the tree. The root is updated.
+	\item ${\tree.\hlset{\MTProof}}()$: it returns the Merkle tree inclusion proof of the given leaf.
+	%	\item ${\MT.\UpdateRoot}_{\pp}({\leaf, \pos, \root})$: it updates the root.
 	\item ${\tree.\hlset{\MTVerify}}
-	()$: it takes a Merkle proof and a root as an input and verifies the proof against the given root. The output is accept/reject.
-	%This algorithm is run by the committer who produced $\com$ and wants to update it by changing the $i$-th message to $m'$. The algorithm outputs a new commitment $\com'$.
-	%	\item ${\MT.\UpdateProof}_{\pp}({\leaf, \pos, \proof})$. 
-	%This algorithm produces an updated proof $\proof'$ that $m'$ (instead of $m$) is in the $i$-th position of the vector.
+	()$: it takes a Merkle proof and a root as an input and verifies the proof against the given root. 
 \end{itemize}
 
 \martai{\textbf{(1) State MT:} Poseidon with BN254 scalar field. \textbf{(2) Census MT:} MiMC with BLS12-377 scalar field.}

@@ -384,10 +384,8 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 \sequencers -- this process is always open:
 \begin{enumerate}
 	\item Register this and that way.
-	\item Public keys?
-	\martai{Sequencers must also publish how they can be reached (either when they register or when they contribute to the DKG). They can use a URI: Uniform Resource Identifier.}
-	\item PROVIDE COLLATERAL.
-	\martai{What happens to the collateral? If done only once, then you lose it? Do you need to send a new tx with more collateral?}
+	\item Public keys? Sequencers must also publish how they can be reached (either when they register or when they contribute to the DKG). They can use a URI: Uniform Resource Identifier.
+	\item PROVIDE COLLATERAL. What happens to the collateral? If done only once, then you lose it? Do you need to send a new tx with more collateral?
 	\item Send transaction to Sequencer registry smart contract (pay for tx fee).
 \end{enumerate}
 
@@ -396,15 +394,15 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 
 \organizer
 \begin{enumerate}
-	\item Prepares the census data \texttt{census\_data}.
-	\item Generates the census commitment \texttt{MT\_census.root = Com(census\_data)}.
-	\martai{In general, make use (link) to the functions defined in Section~\ref{sec:cryptographic-primitives}. For example, here the \texttt{MT.root()}.}
+	\item Prepares the census data \censusdata and generates census Merkle tree.
+	\item Generates the census commitment: $\censusroot = \hlget{\MTRoot}()$.
 	\martai{Additionally, after this step, the organizer should make a Merkle proof available to all eligible voters.}
-	\item Set voting details: duration, options, type, etc. + CENSUS MT ROOT.
-	\item \processid: the process identifier is a unique 32-byte number that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
-	\martai{the identifier is computed from the organization address, the Eth nonce, chain ID (e.g. mainnet), formatejat in a certain way.}
-	\item Also a timeout for the DKG ceremony + minimum number of sequencers.
-	\item Send transaction to the Ethereum process management smart contract with all data. Note this transaction has a cost (Eth tx fees) that needs to be covered by the organizer.
+	\item Set voting details: {\color{blue}duration, options, type, etc. + CENSUS MT ROOT.}
+	\item Compute the process identifier \processid, which is a unique 32-byte number derived from the organizer's Ethereum address and nonce, and the chain ID.
+	%that uniquely identifies a specific voting process. This variable encapsulates essential information about the voting, such as the rules and constraints for ballots and the unique identifier of the \davinci blockchain instance.
+	\item Set security factors for DKG: a timeout for the DKG ceremony + minimum number of sequencers.
+	\item Send transaction to the Ethereum process management smart contract with all data. Note this transaction has a cost (Eth tx fees) that needs to be covered by the organizer. The transaction includes the fields:
+	\[\processid, etc.\]
 \end{enumerate}
 
 \subsubsection{Encryption key generation process} %Voting key generation
@@ -412,21 +410,14 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 
 \sequencers
 \begin{enumerate}
-	\item Download all required data from the PM smart contract which includes the census MT root to handle the new vote.
-	\item Make contributions to DKG ceremony.
+	\item Fetch the \processid, \ballotmode, and \censusroot from the process management smart contract.
+	\item Make contributions to DKG ceremony before the timeout set by the organizer.
 \end{enumerate}
 
-After XXX time (set by the organizer in the PM contract?): all contributions to DKG are done.
+\noi After the timeout, all contributions to DKG are done. The smart contract checks if minimum number of sequencers is reached. If so, the \epk ``becomes available".
 
-\martai{The organizer decides a minimum number of sequencers (security factor).}
-	
-\begin{itemize}
-	\item EPK ``becomes available".
-	\martai{I understand EPK becomes available in the SR smart contract, and that key is sent to the PM contract?}
-	\martai{The idea here is that some sequencer makes EPK available (a.k.a. sends a transaction). Alternatively, generate a SNARK proving the EPK has been generated correctly and the SC verifies it.}
-\end{itemize}
+\martai{The idea here is that some sequencer makes EPK available (a.k.a. sends a transaction). Alternatively, generate a SNARK proving the EPK has been generated correctly and the SC verifies it. It is not clear to me if it is sent to SR or PM. }
 
-\newpage
 \subsubsection{Voting process}
 \label{sec:vocdoni-protocol:voting}
 \voter
@@ -441,27 +432,22 @@ After XXX time (set by the organizer in the PM contract?): all contributions to 
 		\label{eq-ciphertext}
 		(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).
 	\end{equation}
-	\martai{Actually, I would not write $(C_1, C_2)$ but rather \texttt{ciphertext}.}
 	\item Use the user's own Ethereum address $\address$ and the previous $k$ to compute the $\voteid$:
 		\begin{equation}
 		\label{eq-voteid}
-			\voteid = Hash(\processid \conc \address \conc k).
+			\voteid = \hlget{\Multimimc}(\processid \conc \address \conc k).
 		\end{equation}
-	\martai{The hash used in voteID is MultiMiMC7.}
-	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$. We call this proof \textbf{vote proof}. 	\item \zkproof: the voter generates a ZK proof to prove the correctness of the ballot and encryption process:
-	\[ \zkproof = \text{Prove(), Circuit()}. \]
-	This proof proves the correct computation of the vote encryption, the nullifier, the commitment, and the compliance with the ballot protocol rules.
+	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$.
+	\[ \voteproof = \text{Prove(), Circuit()}.\]
 	\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
-	\item Send the encrypted vote, Merkle proof, validity proof, and identity proof to the sequencer:
-		\[ \vote = [	\processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ]. \]
+	\item Send the following data, which includes the encrypted vote, census membership proof, signature and vote proof, to the selected sequencer:
+		\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ]. \]
 \end{itemize}
 
-\martai{In the code, the struct is just: address, commitment, nullifier and ballot. Check!}
-
-\martai{Actually, the address could be recomputed by the sequencer (add it as a footnote).}
-
-\martai{In the code, they call it vote, verifierVote. Alternative: envelope.}
+\martai{\\
+	1. Add as a footnote that the address is not send because it can be recomputed from the signature.\\
+	2. In the code, they call it \textit{vote}, \textit{verifierVote}. Alternative: \textit{envelope}.}
 
 \noi \sequencers
 
