@@ -10,6 +10,7 @@ A voting process involves three types of participants: the organizer, the sequen
 \paragraph{Organizer.} The organizer is the entity responsible for defining and setting up the voting process. Its key responsibilities include defining the voting parameters and gathering the census data. The organizer ensures that the election is structured correctly but does not participate in vote collection or tallying.
 
 \paragraph{Sequencer.} Sequencers are a set of decentralized parties that facilitate the voting process. On the one hand, they collaboratively generate a public encryption key that voters use to encrypt their votes. Then, during the voting phase, they receive and verify encrypted votes from voters and reencrypt votes to prevent coercion.
+%Old text: the Sequencer is a specialized component designed to handle the voting process using zero-knowledge proof mechanisms. It ensures that all transactions related to this process are validated and sequenced. The Sequencers periodically commit the state of the voting process to Ethereum.
  
 \paragraph{Voter.} Voters are the participants that belong the census that cast their votes in the election. 
 
@@ -50,10 +51,7 @@ This flexible design allows the system to support a wide range of identity and e
 
 \martai{One way to think about it: (weight, pk).}
 
-\subsubsection{State Merkle tree} Explain what it is and the structure. Below, the original text:\\
-
-\martai{Essentially, the first "addresses" or "leaves" are reserved to those items (like processId, censusRoot, etc.), and then the voters' addresses and nullifiers are used as paths to the leave where the encrypted ballot/commitment is stored.}
-
+\subsubsection{State Merkle tree} Explain what it is and the structure. Below, the original text: 
 The State tree contains some special addresses (indices) for storing some required data regarding the voting process:
 
 \begin{itemize}
@@ -62,20 +60,15 @@ The State tree contains some special addresses (indices) for storing some requir
 	\martai{they type was a field in case the organization was using a different structure for the census than a MT.}
 	\item Address \texttt{0x2}: it stores \ballotmode, which encodes rules for validating votes, such as the maximum number of selectable options.
 	\item Address \texttt{0x3}: it stores the \epk, which is the public key used to encrypt the votes.
-	\martai{Ideally, EPK is computed before the organization sets the tree, but I am not sure how practical this is.}
 	\item Address \texttt{0x4}: it stores the \addaccumulator. That is, the aggregated encrypted voting results that need to be added.
 	\item Address \texttt{0x5}: it stores the \substractaccumulator. That is, it stores the aggregated encrypted voting results that need to be subtracted.
-	\item Any address: vote \addresses: are stored within the State tree pointing to a voter's identity commitment. Each commitment is a 32-byte hash derived from the voter's unique information and a secret.
-	\martai{(address, commitment).}
-	\item Any address: vote \nullifiers: are stored within the State tree to prevent double voting and to allow vote overwrite. Each nullifier is a 32-byte hash derived from the voter's commitment and a secret.
-	\martai{Nullifiers and addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots/commitments).}
+	\item Any address: vote \addresses: are stored within the State tree pointing to a voter's encrypted ballot. Addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots).
+	\item \textbf{voteIDs??}
 \end{itemize}
-
-\martai{Maybe the voteID will be included in the tree at some point.}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state-mermaid}}
-	\caption{Structure of the state Merkle tree (FIGURE SHOULD BE POLISHED).}
+	\caption{Structure of the state Merkle tree (FIGURE SHOULD BE udpated!).}
 	\label{fig:mt-state}
 \end{figure}
 
@@ -85,34 +78,13 @@ The State tree contains some special addresses (indices) for storing some requir
 \subsection{Smart contracts}
 \label{sec:vocdoni-protocol:smart-contracts}
 
-Old text:
-	\begin{enumerate}
-		\item \textbf{Ethereum}. An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an EVM blockchain, the process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement several smart contracts.
-		\begin{itemize}
-			\item \textbf{Process management}: Responsible for the lifecycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
-			\item \textbf{Results verification}: For each voting process, this smart contract maintains the integrity of the cast votes and process lifecycle. It verifies that each state transition committed by a ZK sequencer adheres to the predefined rules.			
-			\item \textbf{Sequencer registry}: This smart contract keeps track of the existing available sequencers, stores the collateral to ensure good behavior, and it's used to coordinate the distributed key generation when a new Process is created.
-		\end{itemize}
-		\item \textbf{Sequencer}. The Sequencer is a specialized component designed to handle the voting process using zero-knowledge proof mechanisms. It ensures that all transactions related to this process are validated and sequenced. The Sequencers periodically commit the state of the voting process to Ethereum.
-		\item \textbf{Frontend user interface}. The user interface serves as the primary interaction layer for voters and organizers. It provides tools and functionalities needed by organizers to set up, manage, and oversee elections. This interface simplifies the complexities involved in managing a decentralized vote.
-		\item \textbf{Data availability}. For each voting process, the system needs to keep track of the current State Merkle Tree, which contains all information of such processes. A public data availability layer, ensures that all state transitions are available and verifiable and allows the participation of multiple sequencers within the same voting process.
-	\end{enumerate}
+An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an Ethereum virutal machine (EVM) blockchain, the voting process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement the following three smart contracts.
 
 \paragraph{Process management.} This smart contract is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
 
-\paragraph{Sequencer registry.} For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.
+\paragraph{Sequencer registry.} This smart contract keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
 
-\paragraph{Results verification.} This smart contract keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.\\
-
-\martai{This is wrong. Explanation of SR and RV smart contracts are mixed, I don't know what I was thinking when I wrote it. We should also include a sentence about the management of sequencers.}
-
-
-\begin{figure}[h]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-inputs}}
-	\caption{Caption.}
-	\label{fig:circuit-inputs}
-\end{figure}
-
+\paragraph{Results verification.} For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.\\
 
 \subsection{Circuits}
 \label{sec:vocdoni-protocol:circuits}
@@ -138,7 +110,7 @@ Answer: 1. ballotProof, 2. voteVerifier, 3. aggregator, 4. stateTransition.}
 
 \pagebreak
 
-\subsubsection{Voter circuit} 
+\subsubsection{Ballot circuit} 
 
 Figure~\ref{fig:circuit-voter} -- BN254.\\
 
@@ -177,7 +149,7 @@ Figure~\ref{fig:circuit-voter} -- BN254.\\
 \end{figure}
 
 \newpage
-\subsubsection{Authentication circuit}
+\subsubsection{Verifier circuit}
 \label{sec:vocdoni-protocol:circuits:authentication}
 
 Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
@@ -260,7 +232,9 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 \end{figure}
 
 \newpage
-\subsubsection{State transition circuit} -- BN254. \\
+\subsubsection{State transition circuit} 
+
+Figure~\ref{fig:circuit-state-transition-v2} -- BN254. \\
 
 \noi Given the aggregated votes proof, this circuit verifies the correct inclusion of all new votes into the process's state Merkle tree. It generates the final state transition proof that will be validated by the Ethereum smart contract. // This circuit verifies that a batch of votes correctly updates the global Merkle state root, including ballots, commitments, and results. It also verifies that the state transition corresponds to a valid proof aggregation and that overwritten votes are properly accounted for.
 
@@ -300,17 +274,17 @@ To validate and process state transitions, \textbf{we employ a zkSNARK circuit t
 		\includegraphics[scale = 0.12, draft = false]{\figs/state-transition.png}}
 \end{figure}
 
-\begin{figure}[H]
-	\centering
-	\fbox{
-		\includegraphics[scale = 0.3, draft = false]{\figs/circuit-inputs.png}}
-\end{figure}
-
-\begin{figure}[H]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-state-transition}}
-	\caption{State transition circuit. All public values are framed in green.}
-	\label{fig:circuit-state-transition}
-\end{figure}
+%\begin{figure}[H]
+%	\centering
+%	\fbox{
+%		\includegraphics[scale = 0.3, draft = false]{\figs/circuit-inputs.png}}
+%\end{figure}
+%
+%\begin{figure}[H]
+%	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-state-transition}}
+%	\caption{State transition circuit. All public values are framed in green.}
+%	\label{fig:circuit-state-transition}
+%\end{figure}
 
 \begin{mdframed}
 	\begin{minipage}[H]{1\textwidth}
@@ -349,21 +323,27 @@ To validate and process state transitions, \textbf{we employ a zkSNARK circuit t
 
 \martai{STATE TRANSITION CIRCUIT: a potential problem is that a sequencer may know if one of their votes has been overwritten, for this reason, sequencers reencrypt a certain amount of ballots every time (already existing ballots I mean). So, the circuit should include the reencryptions: both for existing ballots and also for the new votes, which should be reencrypted (for receipt-freeness).}
 
+\begin{landscape}
+%\thispagestyle{empty} % removes the page number
 \begin{figure}[H]
-	\centerline{\includegraphics[width=600pt,draft=false]{\figs/circuit-state-transition-v2}}
+	\centerline{\includegraphics[width=560pt,draft=false]{\figs/circuit-state-transition-v2}}
 	\caption{State transition circuit. All public values are framed in green.}
 	\label{fig:circuit-state-transition-v2}
 \end{figure}
+\end{landscape}
+	
+\subsubsection{Results circuit}
+\label{sec:vocdoni-protocol:circuits:results}
+
+TBA.
 
 \subsection{Protocol flow}
 \label{sec:vocdoni-protocol:flow}
 
 In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 
-\martai{About the figure: layout should be fixed. In addition, the icons for the different parties are missing.}
-
-\begin{figure}[H]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/protocol-flow}}
+\begin{figure}%[H]
+	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow}}
 	\caption{Vocdoni voting process overview.}
 	\label{fig:protocol-flow}
 \end{figure}
@@ -442,7 +422,7 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 	\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
 	\item Send the following data, which includes the encrypted vote, census membership proof, signature and vote proof, to the selected sequencer:
-		\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \zkproof, \signature ]. \]
+		\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \voteproof, \signature ]. \]
 \end{itemize}
 
 \martai{\\
@@ -452,8 +432,7 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 \noi \sequencers
 
 \begin{itemize}
-	\item Fetch current state: retrieve the current valid process state root from the Etherem smart contract and the associated data from Ethereum blobs.
-	\martai{specify which SC.}
+	\item Fetch current state: retrieve the current valid process state root from the process management smart contract and the associated data from Ethereum blobs.
 	\item Generate a SK-SNARK proof of state transition proving:
 		\begin{itemize}
 			\item the validity of the ZK-SNARK proof provided by the voter,

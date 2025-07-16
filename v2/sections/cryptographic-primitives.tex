@@ -162,7 +162,7 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 
 \paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient implementation inside arithmetic circuits. It is used in \davinci for computing commitments, nullifiers, and the state Merkle tree roots. Poseidon is used as $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ is the set of tuples of $\F_s$-elements of any length, and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
 
-\paragraph{MiMC-7.} Finally, we use  functions from the MiMC family. On the one side, MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details). {\color{blue}On the other side, XXX.} $\hlset{\Multimimc}$.
+\paragraph{MiMC-7.} Finally, we use  functions from the MiMC family. On the one side, MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details). {\color{blue}On the other side, $\hlset{\Multimimc}$.}
 
 \martai{MiMC two instantiations: MiMC and MiMC-7, and also the curves. Check!}
 
@@ -172,7 +172,7 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 %MiMC7:Fpt​→Fp​
 %This function is denoted Hash3Hash3 in our implementation.
 
-For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of field elements. Any bitstring can be converted to a tuple of field elements, so this does not change the actual working of the hash computation. In this document, is implied that the proper conversion happens before feeding the input into the actual hash function.
+{\color{blue} For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of field elements. Any bitstring can be converted to a tuple of field elements, so this does not change the actual working of the hash computation. In this document, it is implied that the proper conversion happens before feeding the input into the actual hash function.}
 
 %\subsection{Commitment schemes}
 %\label{sec:cryptographic-primitives:commitments}
@@ -387,7 +387,10 @@ In \davinci, both the census (voter registry with weights) and the vote state ar
 
 \martai{Sparse MTs (binary) with depth $64$. Structure of sparse MT from iden3.}
 
+\martai{Add MT.Update, for those ciphertexts that are overwrites.}
+
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
 
+Groth16~\cite{groth2016size} with different curves. 
 \textit{Zero-knowledge succinct non-interactive arguments of knowledge are a crucial component in ensuring the validity of the voting results. Voters generate zkSNARK proofs to prove that their encrypted votes comply with the rules and requirements of the voting process, without revealing any information about their choices. Sequencers also generate zkSNARK proofs to prove the correct aggregation of votes into the shared state that maintains the status of the voting process.}
