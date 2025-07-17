@@ -374,13 +374,15 @@ In \davinci, both the census (voter registry with weights) and the vote state ar
 \noi To each Merkle tree $\tree$, we associate the following functions:
 
 \begin{itemize}
+%	\item ${\tree.\hlset{\MTGenerate}}(data)$: given a set of data, instantiate the tree.	
 	\item ${\tree.\hlset{\MTRoot}}()$: it returns the root of the tree.
-	\item ${\tree.\hlset{\MTInsert}}()$: it inserts a new leaf in the tree. The root is updated.
+	\item ${\tree.\hlset{\MTInsert}}(path, \leaf)$: efectivament, el path se segueix per it inserts a new leaf in the tree.
+	\item ${\tree.\hlset{\MTUpdate}}(\leaf[old], \leaf)$: given an old leaf in the tree, it updates the leaf content to \leaf.
 %	\item ${\tree.\hlset{\MTRemove}}()$: it removes a leaf from the tree. The root is updated.
-	\item ${\tree.\hlset{\MTProof}}()$: it returns the Merkle tree inclusion proof of the given leaf.
+	\item ${\tree.\hlset{\MTMembershipProof}}(\leaf)$: it returns the Merkle tree inclusion proof of the given \leaf.
+	\item ${\tree.\hlset{\MTNonMembershipProof}}(\leaf)$: it returns the Merkle tree non-inclusion proof of the given \leaf.
 	%	\item ${\MT.\UpdateRoot}_{\pp}({\leaf, \pos, \root})$: it updates the root.
-	\item ${\tree.\hlset{\MTVerify}}
-	()$: it takes a Merkle proof and a root as an input and verifies the proof against the given root. 
+	\item ${\tree.\hlset{\MTVerify}}(\leaf, proof, root)$: it takes a Merkle proof and a root as an input and verifies the proof of the leaf against the given root. 
 \end{itemize}
 
 \martai{\textbf{(1) State MT:} Poseidon with BN254 scalar field. \textbf{(2) Census MT:} MiMC with BLS12-377 scalar field.}
@@ -388,6 +390,8 @@ In \davinci, both the census (voter registry with weights) and the vote state ar
 \martai{Sparse MTs (binary) with depth $64$. Structure of sparse MT from iden3.}
 
 \martai{Add MT.Update, for those ciphertexts that are overwrites.}
+
+\martai{Clarify leaf -- if hash of the leaf or address as path.}
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}

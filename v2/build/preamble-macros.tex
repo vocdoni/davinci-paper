@@ -84,12 +84,18 @@
 \newcommand{\recentroots}{\sf{recentRoots}}
 \newcommand{\leaf}{\sf{leaf}}
 \newcommand{\leaves}{\sf{leaves}}
+\newcommand{\MTGenerate}{\sf{Generate}}
 \newcommand{\MTRoot}{\sf{Root}}
 \newcommand{\MTInsert}{\sf{Insert}}
 \newcommand{\MTProof}{\sf{Proof}}
+\newcommand{\MTMembershipProof}{\sf{MembershipProof}}
+\newcommand{\MTNonMembershipProof}{\sf{NonMembershipProof}}
 \newcommand{\MTRemove}{\sf{Remove}}
 \newcommand{\MTOpen}{\sf{Open}}
+\newcommand{\MTUpdate}{\sf{Update}}
 \newcommand{\MTVerify}{\sf{Verify}}
+\newcommand{\censusTree}{\sf{MT^{\census}}}
+\newcommand{\stateTree}{\sf{MT^{\state}}}
 
 % Circuits
 \newcommand{\public}{{\sf\color{teal}public}\xspace}
@@ -118,6 +124,7 @@
 
 % Voting protocol
 \newcommand{\variablestyle}[1]{\texttt{#1}\xspace}
+\newcommand{\census}{\variablestyle{census}}
 \newcommand{\censusdata}{\variablestyle{censusData}}
 \newcommand{\voteproof}{\variablestyle{voteProof}}
 \newcommand{\censusproof}{\variablestyle{censusProof}}
@@ -136,11 +143,14 @@
 
 % State Merkle tree
 \newcommand{\censusroot}{\variablestyle{censusRoot}}
+\newcommand{\stateroot}{\variablestyle{stateRoot}}
 \newcommand{\type}{\variablestyle{type}}
+%\newcommand{\path}{\variablestyle{path}}
+\newcommand{\state}{\variablestyle{state}}
 \newcommand{\ballotmode}{\variablestyle{ballotMode}}
 \newcommand{\epk}{\variablestyle{encryptionKey}}
-\newcommand{\addaccumulator}{\variablestyle{addedResultsAccumulator}}
-\newcommand{\substractaccumulator}{\variablestyle{substractResultsAccumulator}}
+\newcommand{\addaccumulator}{\variablestyle{resultsAdd}}
+\newcommand{\substractaccumulator}{\variablestyle{resultsSub}}
 \newcommand{\addresses}{\variablestyle{addresses}}
 \newcommand{\nullifiers}{\variablestyle{nullifiers}}
 \newcommand{\weight}{\variablestyle{weight}}

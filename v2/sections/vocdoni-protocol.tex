@@ -26,7 +26,12 @@ Merkle trees are used to create a cryptographic representation of both the voter
 
 \subsubsection{Census Merkle tree} 
 
+
+\martai{The Path corresponds to the voter's Address (e.g., their Ethereum address or any unique identifier). The Leaf Value stores the voting Weight assigned to that address.}
+
 The census represents the list of eligible voters and their associated voting weights. It is implemented as a binary Merkle tree using an iden3 Sparse Merkle Tree (SMT) structure with a zkSNARK-friendly hashing function to ensure compatibility with zero-knowledge circuits. Each leaf in the tree corresponds to a unique voter address (e.g., Ethereum address), and stores the associated voting weight. This construction enables efficient Merkle proofs that allow voters to prove their eligibility and weight without revealing the full census dataset.
+
+$\hlset{\censusTree}$
 
 The organizer is responsible for generating the census and computing its Merkle root, which is then committed on-chain. To minimize on-chain storage, the full census is distributed off-chain—e.g., via IPFS or a trusted HTTPS endpoint—allowing verifiers and sequencers to independently access the dataset and reconstruct Merkle proofs as needed.
 
@@ -54,17 +59,20 @@ This flexible design allows the system to support a wide range of identity and e
 \subsubsection{State Merkle tree} Explain what it is and the structure. Below, the original text: 
 The State tree contains some special addresses (indices) for storing some required data regarding the voting process:
 
+$\hlset{\stateTree}$
+
 \begin{itemize}
 	\item Address \texttt{0x0}: it stores \processid, a unique identifier for the voting process.
-	\item Address \texttt{0x1}: it stores \censusroot and \type, which contains the necessary information to validate vote proofs.
-	\martai{they type was a field in case the organization was using a different structure for the census than a MT.}
+	\item Address \texttt{0x1}: it stores the \censusroot. %and \type, which contains the necessary information to validate vote proofs.
+%	\martai{they type was a field in case the organization was using a different structure for the census than a MT.}
 	\item Address \texttt{0x2}: it stores \ballotmode, which encodes rules for validating votes, such as the maximum number of selectable options.
 	\item Address \texttt{0x3}: it stores the \epk, which is the public key used to encrypt the votes.
-	\item Address \texttt{0x4}: it stores the \addaccumulator. That is, the aggregated encrypted voting results that need to be added.
-	\item Address \texttt{0x5}: it stores the \substractaccumulator. That is, it stores the aggregated encrypted voting results that need to be subtracted.
-	\item Any address: vote \addresses: are stored within the State tree pointing to a voter's encrypted ballot. Addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots).
-	\item \textbf{voteIDs??}
+	\item Address \texttt{0x4}: it stores the \addaccumulator, which is the aggregated encrypted voting results that need to be added.
+	\item Address \texttt{0x5}: it stores the \substractaccumulator, which is the aggregated encrypted voting results that need to be subtracted.
 \end{itemize}
+
+The rest of addresses: vote \addresses: are stored within the State tree pointing to a voter's encrypted ballot. Addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots).
+And voteIDs also stored within the State tree, pointing to empty leafs.
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state-mermaid}}
@@ -72,7 +80,7 @@ The State tree contains some special addresses (indices) for storing some requir
 	\label{fig:mt-state}
 \end{figure}
 
-\textbf{The Initial State}: The voting process begins with an initial state where the Merkle Tree Root is established and published on the Process Management smart contract. Predefined parameters are included, but the results are initialized to zero, and no nullifiers are present. The Process Organizer transaction, contains the initial root and the necessary Merkle proofs. These proofs verify that the initial parameters are correct according to the voting process information and that no additional information is stored. Since the `ProcessId` of the initial state is a unique identifier, there won't be duplicate roots for different processes.
+\textbf{The Initial State}: The voting process begins with an initial state where the Merkle Tree Root is established and published on the Process Management smart contract. Predefined parameters are included, but the results are initialized to zero, and no nullifiers are present. The Process Organizer transaction, contains the initial root and the necessary Merkle proofs. These proofs verify that the initial parameters are correct according to the voting process information and that no additional information is stored. Since the \processid of the initial state is a unique identifier, there won't be duplicate roots for different processes.
 
 
 \subsection{Smart contracts}
@@ -95,15 +103,8 @@ An Ethereum compatible network is used as the source of truth for the voting sys
 
 \textit{Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.}
 
-\martai{I don't follow the above paragraph.}
-
-\martai{It is called Ballot Mode because we define some modes (like quadratic, etc.) that can be chosen by the organizer. Essentially, each of this modes has a special configuration, but in order to make it easier, the organizer only needs to choose which of the modes (configs) to apply.}
-
-\martai{It's convenient to name the proof associated to each circuit: a proof for this circuit is called [...].\\
-Answer: 1. ballotProof, 2. voteVerifier, 3. aggregator, 4. stateTransition.}
-
 \begin{figure}[h]
-	\centerline{\includegraphics[width=350pt,draft=false]{\figs/circuits-flow}}
+	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow-v2}}
 	\caption{Circuits flow.}
 	\label{fig:circuits-flow}
 \end{figure}
@@ -374,8 +375,8 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 
 \organizer
 \begin{enumerate}
-	\item Prepares the census data \censusdata and generates census Merkle tree.
-	\item Generates the census commitment: $\censusroot = \hlget{\MTRoot}()$.
+	\item Prepares the census data \censusdata and generates census Merkle tree $\hlget{\censusTree}$.
+	\item Generates the census commitment: $\censusroot = \hlget{\censusTree}.\hlget{\MTRoot}()$.
 	\martai{Additionally, after this step, the organizer should make a Merkle proof available to all eligible voters.}
 	\item Set voting details: {\color{blue}duration, options, type, etc. + CENSUS MT ROOT.}
 	\item Compute the process identifier \processid, which is a unique 32-byte number derived from the organizer's Ethereum address and nonce, and the chain ID.
@@ -418,21 +419,19 @@ In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 			\voteid = \hlget{\Multimimc}(\processid \conc \address \conc k).
 		\end{equation}
 	\item Generate ZK-SNARK of satisfiability of circuit from Fig.~\ref{fig:circuit-voter} with the proof system from Section~\ref{sec:cryptographic-primitives:zkp} to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed, and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$.
-	\[ \voteproof = \text{Prove(), Circuit()}.\]
+	\[ \voteproof = \text{Prove(), Circuit(), PublicInputs}.\]
 	\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
-	\item Send the following data, which includes the encrypted vote, census membership proof, signature and vote proof, to the selected sequencer:
+	\item Send the following data, which includes the encrypted vote, census membership proof, signature\footnote{Note that the address is not send because it can be recomputed from the signature.} and vote proof, to the selected sequencer:
 		\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \voteproof, \signature ]. \]
 \end{itemize}
-
-\martai{\\
-	1. Add as a footnote that the address is not send because it can be recomputed from the signature.\\
-	2. In the code, they call it \textit{vote}, \textit{verifierVote}. Alternative: \textit{envelope}.}
 
 \noi \sequencers
 
 \begin{itemize}
 	\item Fetch current state: retrieve the current valid process state root from the process management smart contract and the associated data from Ethereum blobs.
+	\item $\censusroot = \hlget{\censusTree}.\hlget{\MTRoot}()$.
+	\item $\stateroot = \hlget{\stateTree}.\hlget{\MTRoot}()$.
 	\item Generate a SK-SNARK proof of state transition proving:
 		\begin{itemize}
 			\item the validity of the ZK-SNARK proof provided by the voter,

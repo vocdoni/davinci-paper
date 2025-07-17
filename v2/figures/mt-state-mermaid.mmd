@@ -5,10 +5,8 @@ config:
 flowchart TB
  subgraph s1[" "]
         NInt[" "]
-        EInt[" "]
         n1[" "]
         EB["encrypted ballots [...]"]
-        A["commitments [...]"]
         V["bool"]
   end
  subgraph s2[" "]
@@ -19,28 +17,24 @@ flowchart TB
         P1["censusRoot"]
         P2["ballotMode"]
         P3["encryptionKey"]
-        P4["results add"]
-        P5["results sub"]
+        P4["resultsAdd"]
+        P5["resultsSub"]
   end
-    Root["root hash"] --> NInt & EInt & n1 & SI1 & SIA & SIB
+    Root["stateRoot"] --> NInt & n1 & SI1 & SIA & SIB
     SI1 -- 0x0 --> P0
     SI1 -- 0x1 --> P1
     SIA -- 0x2 --> P2
     SIA -- 0x3 --> P3
     SIB -- 0x4 --> P4
     SIB -- 0x5 --> P5
-    NInt -- nullifiers --> EB
-    EInt -- addresses --> A
+    NInt -- addresses --> EB
     n1 -- voteIDs --> V
     n2[" "]
     n1@{ shape: rect}
     n2@{ shape: text}
      NInt:::internal
-     EInt:::internal
      n1:::internal
      EB:::leaf
-     A:::leaf
-     A:::leaf
      V:::leaf
      V:::empty
      SI1:::internal
