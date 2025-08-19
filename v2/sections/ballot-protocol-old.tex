@@ -15,12 +15,12 @@ The responses in the ballot are represented as a sequence of natural numbers, ea
 The ballot protocol is defined by a set of configurable variables that dictate how votes must be cast. This way the protocol can accommodate a wide range of voting processes and behaviors. The list of variables is the following.
 
 \begin{enumerate}
-	\item \numfields: it defines the maximum number of fields in a ballot (max 64).
+	\item \maxcount: it defines the maximum number of fields in a ballot (max 64).
 	\item \maxvalue: it is the maximum allowable value for any field in a ballot (if greater than 0).
 	\item \minvalue: it is the minimum allowable value for any field in a ballot (default 0).
 	\item \uniquevalues: it specifies whether voters can select the same value multiple times within a ballot (default false).
-	\item \maxvaluesum: it limits the sum of all field values in a ballot (if greater than 0).
-	\item \minvaluesum: it specifies a minimum required total sum of field values in a ballot (default 0)
+	\item \maxtotalcost: it limits the sum of all field values in a ballot (if greater than 0).
+	\item \mintotalcost: it specifies a minimum required total sum of field values in a ballot (default 0)
 	\item \costexponent: it defines the exponent used to calculate the "cost" of votes for each field (default 1).
 \end{enumerate}
 
@@ -42,7 +42,7 @@ The ballot protocol is defined by a set of configurable variables that dictate h
 Consider a voting process where voters are asked to rate three candidates: Lennon, Hendrix, and Joplin. Voters rate each candidate from 0 to 5 stars, and each vote is represented as an array where each position corresponds to the candidate’s rating. The configuration of this voting would be the following:
 
 \begin{itemize}
-	\item \numfields: 3
+	\item \maxcount: 3
 	\item \maxvalue: 5
 	\item \uniquevalues: Yes
 \end{itemize}
@@ -73,9 +73,9 @@ In a scenario where voters distribute a fixed number of credits across different
 Configuration:
 
 \begin{itemize}
-	\item \numfields: 4
-	\item \maxvaluesum: 12 (credits)
-	\item \costexponent: 2 (quadratic) 
+	\item \maxcount: 4
+	\item \maxtotalcost: 12 (credits)
+	\item \costexponent: 2 (quadratic)
 \end{itemize}
 
 Ballots:

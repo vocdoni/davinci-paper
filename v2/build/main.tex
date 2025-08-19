@@ -22,16 +22,21 @@
 
 %\addcontentsline{toc}{section}{\protect\numberline{}Abstract}
 \begin{abstract}
-		\Davinci is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Leveraging recent advancements in zero-knowledge (ZK) proof systems and blockchain technology, \davinci transitions to a specialized ZK-rollup system that inherits network security from settlement layers like Ethereum mainnet. The system relies on cryptographic proofs to ensure integrity and security, eliminating the need for centralized authorities. By integrating ZK-SNARKs and threshold homomorphic encryption, \davinci enables end-to-end verifiability, privacy, and trustlessness in the voting process. The protocol employs a distributed key generation among sequencers, coordinated via Ethereum smart contracts, and uses Ethereum data blobs for data availability. With a focus on accessibility, scalability, receipt-freeness, and automation, \davinci aims to facilitate high-frequency, low-cost voting, fostering mass adoption of e-voting and simplifying civil participation. Finally, the introduction of the Vocdoni token aligns incentives among participants, ensuring the system's sustainability and enabling decentralized governance. 
+		\Davinci is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Leveraging recent advancements in zero-knowledge (ZK) proof systems and blockchain technology, \davinci transitions to a specialized ZK-rollup system that inherits network security from settlement layers like Ethereum mainnet. The system relies on cryptographic proofs to ensure integrity and security, eliminating the need for centralized authorities. By integrating ZK-SNARKs and threshold homomorphic encryption, \davinci enables end-to-end verifiability, privacy, and trustlessness in the voting process. The protocol employs a distributed key generation among sequencers, coordinated via Ethereum smart contracts, and uses Ethereum data blobs for data availability. With a focus on accessibility, scalability, receipt-freeness, and automation, \davinci aims to facilitate high-frequency and low-cost voting, fostering mass adoption of e-voting and simplifying civil participation. Moreover, the introduction of the Vocdoni token aligns incentives among participants, ensuring the system's sustainability and enabling decentralized governance. 
 		%
-		Moreover, the design of \davinci is grounded in practicality; all components are implemented using current technologies and have undergone proof-of-concept testing. This ensures that the proposed architecture is not merely theoretical but a viable solution ready for short-term deployment.
+		Finally, the design of \davinci is grounded in practicality; all components are implemented using current technologies and have undergone proof-of-concept testing. %This ensures that 
+		In sum, the proposed architecture is not merely theoretical but a viable solution ready for short-term deployment.
 		
 %	    \freefootnote{\scriptsize{Authors are listed in alphabetical order (\url{https://www.ams.org/profession/leaders/CultureStatement04.pdf}).}}
 \end{abstract}
 
-\martai{\\
-	1. Consider separating the roles of the sequencers from key generators.\\
-	2. Change $(C_1, C_2)$ to \texttt{ciphertext} (in protocol flow and figures).}
+{\color{blue}
+	\begin{itemize}
+		\item Consider separating the roles of the sequencers from key generators.
+		\item Change $(C_1, C_2)$ to \texttt{ciphertext} (in protocol flow and figures).
+		\item Notation: are voteIDs called Nullifiers?
+	\end{itemize}
+}
 
 \setcounter{tocdepth}{2}
 \makeatletter
@@ -39,6 +44,7 @@
 \renewcommand*\l@title[2]{}
 \makeatletter
 
+%\renewcommand{\contentsname}{Contents}
 \tableofcontents
 
 \newpage
@@ -60,7 +66,6 @@
 \label{sec:cryptographic-primitives}
 \input{\secs/cryptographic-primitives}
 
-\newpage
 \section{Voting protocol}
 \label{sec:vocdoni-protocol}
 \input{\secs/vocdoni-protocol}

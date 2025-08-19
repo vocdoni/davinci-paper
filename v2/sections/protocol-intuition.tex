@@ -1,12 +1,16 @@
 % !TeX root = ../build/main.tex
 
-All the voting process is governed by the rules encoded in three smart contracts: the \textit{process management}, the \textit{sequencer registry}, and the \textit{results verification} smart contract. All these three contracts are deployed on the Ethereum blockchain, and ensure that the execution of all steps is transparent and unalterable. The protocol consists of 5 phases, as illustrated in Figure~\ref{fig:protocol-intuition}, and described below.\\
+All the voting process is governed by the rules encoded in three smart contracts: the \textit{process management}, the \textit{sequencer registry}, and the \textit{results verification} smart contract. All these three contracts are deployed on the Ethereum blockchain, and ensure that the execution of all steps is transparent and unalterable. The protocol consists of 5 phases, as illustrated in Figure~\ref{fig:protocol-intuition}, and described below.
 
 \begin{figure}[h]	
 	\centerline{\includegraphics[width=350pt,draft=false]{\figs/protocol-intuition-flow}}
+	\setlength{\abovecaptionskip}{0pt} % Space between figure and caption
 	\caption{Overview of the protocol flow.}
 	\label{fig:protocol-intuition}
+	%\setlength{\belowcaptionskip}{0pt} % Space after caption
 \end{figure}
+
+\vspace{-0.5cm}
 
 \paragraph{$\boxed{1}$ Voting setup.}
 
@@ -15,7 +19,7 @@ Additionally, the organizer defines the voting parameters, including the number 
 
 \paragraph{$\boxed{2}$ Encryption key generation.}
 
-A designated group of participants, referred to as \textit{sequencers}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a distributed key generation (DKG) protocol, ensuring that no single party can control or reconstruct the corresponding private key independently. 
+A designated group of participants, referred to as \textit{sequencers}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a {distributed key generation} (DKG) protocol, ensuring that no single party can control or reconstruct the corresponding private key independently. 
 Sequencers have a dual role in the protocol. In addition to generating the encryption key, they are also responsible for collecting votes from voters during the election. Consequently, their public key and the necessary information to contact them off-chain must be registered in the sequencer registry smart contract. Once the encryption public key is securely computed and published in the sequencer registry smart contract, the voting phase can start.
 
 \paragraph{$\boxed{3}$ Voting.}
@@ -26,7 +30,7 @@ Additionally, users compute a unique vote identifier that will allow them to ver
 \paragraph{$\boxed{4}$ Votes collection.}
 
 During this phase, sequencers collect encrypted votes from multiple voters along with their corresponding proofs, and verify the validity of these submissions. That is, sequencers
-verify the signatures, to ensure the votes were cast by legitimate voters, they verify the proof of compliance, confirming that each vote adheres to the polling rules, and the census membership proofs against the commitment to the census data that was originally registered in the process management smart contract. Once the sequencers have processed and verified all votes, they must prove that these verifications were performed correctly. Instead of submitting individual verifications for each vote, they generate a single zero-knowledge (ZK) proof that attests to the correctness of all verifications.
+verify the signatures, to ensure the votes were cast by legitimate voters, they verify the proof of compliance, confirming that each vote adheres to the polling rules, and the census membership proofs against the commitment to the census data that was originally registered in the process management smart contract. Once the sequencers have processed and verified all votes, they must prove that these verifications were performed correctly. Instead of submitting individual verifications for each vote, they generate a single ZK proof that attests to the correctness of all verifications.
 %they compress multiple individual verification into one.
 Additionally, the sequencers reencrypt the votes and generate a proof of the correct reencryption computation. While this process does not alter the final tally, it prevents voters from decrypting their original vote. This step mitigates vote selling or coercion, as voters are no longer able to prove their choice to third parties. Finally, the sequencers submit the reencrypted votes along with their verification and reencryption proofs to the process management smart contract. The smart contract verifies all the proofs provided by the sequencers to check that they complied with the protocol.
 

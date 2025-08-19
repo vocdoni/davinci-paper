@@ -1,6 +1,6 @@
 % !TeX root = ../build/main.tex
 
-This section outlines the \davinci voting protocol. We introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. In Section~\ref{sec:vocdoni-protocol:merkle-trees}, we describe the census and state Merkle trees, and in Section~\ref{sec:vocdoni-protocol:smart-contracts} the Ethereum smart contracts. In Section~\ref{sec:vocdoni-protocol:circuits}, we present the zero-knowledge circuits used to enforce vote validity, authentication, aggregation, and state transitions. Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
+This section outlines the \davinci voting protocol. We introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. In Section~\ref{sec:vocdoni-protocol:merkle-trees}, we describe the census and state Merkle trees, and in Section~\ref{sec:vocdoni-protocol:smart-contracts} the Ethereum smart contracts. In Section~\ref{sec:vocdoni-protocol:circuits}, we present the ZK circuits used to enforce vote validity, authentication, aggregation, and state transitions. Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
 
 \subsection{Parties involved}
 \label{sec:vocdoni-protocol:parties}
@@ -17,105 +17,96 @@ A voting process involves three types of participants: the organizer, the sequen
 \subsection{Merkle trees}
 \label{sec:vocdoni-protocol:merkle-trees}
 
-Merkle trees are used to create a cryptographic representation of both the voter registry (census) and the voting process state. 
+Merkle trees are used to create a cryptographic representation of both the voter census registry and the voting process state. 
 
 %\begin{itemize}
 %		\item \textbf{Census}: Each voter is assigned a Merkle proof, which they use to prove their eligibility to vote. This mechanism ensures efficient and secure verification of voter eligibility.
 %		\item \textbf{State}: The voting process state is represented as a Merkle tree, with new votes being added to the tree. The root of this Merkle tree is stored on Ethereum, allowing multiple sequencers to participate in the voting phase and ensuring consistency. 
 %\end{itemize}}
 
-\subsubsection{Census Merkle tree} 
+\subsubsection{Census tree} 
 
+The census Merkle tree, denoted by $\hlget{\censusTree}$ encodes the list of eligible voters and their associated voting weights. Formally, it is implemented as a sparse Merkle tree (SMT) of fixed depth\footnote{In the present work, all circuits are instantiated using sparse Merkle trees as described above. However, the protocol does not strictly depend on this structure: any authenticated data structure that supports efficient commitments and membership proofs verifiable inside zero-knowledge circuits could be employed. Adapting the protocol to such alternatives would only require modifying the corresponding circuits, while the overall flow of the voting process would remain unchanged.}, as described in Section~\ref{sec:cryptographic-primitives:merkle-trees}. Each voter is mapped to a unique path in the tree, typically derived from their Ethereum address or another unique identifier, and the corresponding leaf stores the voting weight of that address. While the default weight is usually one, the system also supports weighted voting, where different participants may have different levels of influence.
 
-\martai{The Path corresponds to the voter's Address (e.g., their Ethereum address or any unique identifier). The Leaf Value stores the voting Weight assigned to that address.}
+To construct the census, the organizer collects the dataset of eligible voters and their weights, computes the corresponding tree, and publishes its root (\censusroot) on-chain. The full dataset does not need to be stored on-chain; instead, it is distributed off-chain (e.g., via IPFS or another content-addressed storage system), enabling verifiers and sequencers to independently reconstruct the tree and produce membership proofs when needed. This design ensures transparency and verifiability while minimizing on-chain storage requirements.
 
-The census represents the list of eligible voters and their associated voting weights. It is implemented as a binary Merkle tree using an iden3 Sparse Merkle Tree (SMT) structure with a zkSNARK-friendly hashing function to ensure compatibility with zero-knowledge circuits. Each leaf in the tree corresponds to a unique voter address (e.g., Ethereum address), and stores the associated voting weight. This construction enables efficient Merkle proofs that allow voters to prove their eligibility and weight without revealing the full census dataset.
+The census tree plays a central role during the voting phase. Voters must provide a Merkle proof showing that their address and weight are included in the tree committed by the organizer. These proofs are then verified within ZK circuits, which guarantees that only eligible participants can cast ballots without requiring the disclosure of the entire census. In this way, the census Merkle tree provides a compact, cryptographically verifiable commitment to voter eligibility that supports both privacy and scalability.
 
-$\hlset{\censusTree}$
+Although the protocol does not mandate a specific method for constructing the census tree, different instantiations are possible depending on the application context:
+%
+\begin{itemize}
+	\item \emph{Private datasets}. Organizations maintaining internal voter registries (e.g., membership databases or CSV files) can directly convert them into the Merkle format. This approach keeps the registry confidential, with only the root hash made public.
+	\item \emph{Self-sovereign identity (SSI)}. If voters manage identities through SSI systems, the organizer can aggregate these identities and build 
+	the tree accordingly. This enables participation without requiring centralized identity management.
+	\item \textit{Ethereum-based tokens}. Token balances (e.g., ERC-20 or NFTs) may also define eligibility. In this setting, the census can either be created via the optimistic approach, taking a snapshot of token balances and allowing a dispute period for fraud proofs, or through a ZK-SNARK that proves correctness directly from Ethereum storage proofs and ensures that both individual balances and the token’s total supply are consistent. 
+\end{itemize}
+%
+This flexibility allows the protocol to accommodate a wide range of use cases, from private associations to decentralized communities, while maintaining the same security and verifiability guarantees.
 
-The organizer is responsible for generating the census and computing its Merkle root, which is then committed on-chain. To minimize on-chain storage, the full census is distributed off-chain—e.g., via IPFS or a trusted HTTPS endpoint—allowing verifiers and sequencers to independently access the dataset and reconstruct Merkle proofs as needed.
+\subsubsection{State tree} 
 
-The protocol does not prescribe a specific method for constructing the census, but supports multiple approaches to accommodate various use cases:
+The state Merkle tree, denoted by $\hlget{\stateTree}$, represents the evolving state of the voting process. Like the census tree, it is implemented as a SMT of fixed depth, as described in Section~\ref{sec:cryptographic-primitives:merkle-trees}. In contrast to the census tree, which remains static once the election begins, the state tree is dynamic: it is updated throughout the process as new votes are cast, validated, and incorporated by the sequencers.
 
-Private datasets. Organizations with internal lists of eligible voters (e.g., membership databases or CSV files) can directly convert them into the Merkle format. This allows voter registries to remain confidential, with only the root hash made public.
+The leaves of the state tree store the global process parameters, the encrypted ballots, and the set of vote identifiers, as illustrated in Figure~\ref{fig:mt-state}. More specifically:
 
-Self-Sovereign Identity (SSI). Voter eligibility can also be derived from SSI systems, where users control their identities. The organizer collects and aggregates this data into the census tree, enabling participation without centralized identity management.
-
-Ethereum-based tokens. Token holdings—such as ERC-20 or NFT balances—can define voter eligibility using either of two approaches:
-
-Optimistic: A snapshot of token holders at a specific Ethereum block is used to build the census off-chain. The root is submitted to the smart contract, and a dispute period allows for fraud proofs (e.g., using Ethereum storage proofs) to challenge incorrect entries.
-
-Zero-knowledge: A zkSNARK circuit verifies that the census has been constructed correctly with respect to the on-chain token balances at a given block. The proof ensures balance correctness and total supply consistency.
-
-This flexible design allows the system to support a wide range of identity and eligibility models while maintaining transparency, verifiability, and scalability.
-
-
-\martai{There is a whole section about the Census Merkle tree in the whitepaper -- CHECK!!}
-
-\martai{It could actually be another type of data structure. We only need to be able to get a commitment and a membership proof that can be proven in-circuit. Mention it in some way.}
-
-\martai{One way to think about it: (weight, pk).}
-
-\subsubsection{State Merkle tree} Explain what it is and the structure. Below, the original text: 
-The State tree contains some special addresses (indices) for storing some required data regarding the voting process:
-
-$\hlset{\stateTree}$
+\paragraph{Reserved addresses for metadata.} The first six addresses are reserved for the process parameters as follows:
 
 \begin{itemize}
-	\item Address \texttt{0x0}: it stores \processid, a unique identifier for the voting process.
-	\item Address \texttt{0x1}: it stores the \censusroot. %and \type, which contains the necessary information to validate vote proofs.
-%	\martai{they type was a field in case the organization was using a different structure for the census than a MT.}
-	\item Address \texttt{0x2}: it stores \ballotmode, which encodes rules for validating votes, such as the maximum number of selectable options.
-	\item Address \texttt{0x3}: it stores the \epk, which is the public key used to encrypt the votes.
-	\item Address \texttt{0x4}: it stores the \addaccumulator, which is the aggregated encrypted voting results that need to be added.
-	\item Address \texttt{0x5}: it stores the \substractaccumulator, which is the aggregated encrypted voting results that need to be subtracted.
+	\item \texttt{0x0}: it stores a unique identifier for the voting process (\processid).
+	\item \texttt{0x1}: it stores the committed census root (\censusroot). %and \type, a field in case the organization was using a different structure for the census than a MT.
+	\item \texttt{0x2}: it stores the ballot mode configuration, which is the set of rules for validating votes (\ballotmode). 
+	\item \texttt{0x3}: it stores the encryption public key used to encrypt the votes (\epk).
+	\item \texttt{0x4}: it stores an accumulator of the encrypted votes that need to be added to the tally (\addaccumulator). 
+	\item \texttt{0x5}: it stores an accumulator of the encrypted votes that need to be substracted from the tally because they have been overwritten (\substractaccumulator).	
 \end{itemize}
 
-The rest of addresses: vote \addresses: are stored within the State tree pointing to a voter's encrypted ballot. Addresses are used as indexes (i.e. path to the leaf that stores encrypted ballots).
-And voteIDs also stored within the State tree, pointing to empty leafs.
+\paragraph{Encrypted ballots.} Each voter’s encrypted ballot is stored in the state tree at a leaf whose path corresponds to their Ethereum address (or another unique identifier). The leaf value is the ciphertext corresponding to the ballot generated under the election’s public encryption key. If the voter later overwrites their ballot, the same path is updated with the new ciphertext.
+
+\paragraph{Vote identifiers.}  In addition to storing ballots, the state tree also tracks the set of vote identifiers. Each vote identifier \voteid, which is derived from the \processid, the voter’s address, and fresh randomness, determines the path to a dedicated leaf. Initially empty, these leaves are filled when the corresponding \voteid is used, thereby recording that it has been consumed. This enables efficient non-membership proofs: before accepting a new ballot, the sequencer checks that the corresponding \voteid path is still empty, and upon inclusion, the leaf is marked as used to prevent reuse. \\
+
+%Figure~\ref{fig:mt-state} illustrates the structure of the state tree, showing the reserved slots for process parameters as well as the leaves used for ballots and vote identifiers.
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=400pt,draft=false]{\figs/mt-state-mermaid}}
-	\caption{Structure of the state Merkle tree (FIGURE SHOULD BE udpated!).}
+	\caption{Structure of the state Merkle tree. The first leaves are reserved for global process parameters while subsequent leaves store encrypted ballots indexed by voter addresses and vote identifiers.}
 	\label{fig:mt-state}
 \end{figure}
 
-\textbf{The Initial State}: The voting process begins with an initial state where the Merkle Tree Root is established and published on the Process Management smart contract. Predefined parameters are included, but the results are initialized to zero, and no nullifiers are present. The Process Organizer transaction, contains the initial root and the necessary Merkle proofs. These proofs verify that the initial parameters are correct according to the voting process information and that no additional information is stored. Since the \processid of the initial state is a unique identifier, there won't be duplicate roots for different processes.
+At the beginning of the election, the state tree is initialized with the process parameters and empty accumulators, and its root ($\stateroot$) is published on-chain. As the voting progresses, sequencers update the tree whenever new votes are received, producing a new root for each transition. To guarantee correctness, each update is accompanied by a ZK-SNARK proof attesting that the transition from the previous root to the new root respects all protocol constraints: ballots are well-formed and comply with the voting rules, voters are eligible according to the census, the \voteid non-membership condition prevents double voting (or overwrites are handled correctly), and encrypted results are aggregated consistently. In addition, sequencers reencrypt stored ciphertexts, including both newly submitted and already included ballots. This mechanism refreshes the randomness of the encrypted votes without altering their underlying content, ensuring receipt-freeness and concealing whether a particular ballot has been overwritten or simply re-randomized.
 
+In this way, the state tree provides a compact and tamper-proof commitment to the current status of the election. At the end of the process, the final state root together with the on-chain verification of all transitions serves as a complete cryptographic record of the election, encapsulating both the tally and the integrity of the entire voting procedure.
 
 \subsection{Smart contracts}
 \label{sec:vocdoni-protocol:smart-contracts}
 
 An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an Ethereum virutal machine (EVM) blockchain, the voting process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement the following three smart contracts.
 
-\paragraph{Process management.} This smart contract is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+\paragraph{Process management smart contract.} It is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
 
-\paragraph{Sequencer registry.} This smart contract keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
+\paragraph{Sequencer registry smart contract.} It keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
 
-\paragraph{Results verification.} For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.\\
+\paragraph{Results verification smart contract.} For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.\\
 
 \subsection{Circuits}
 \label{sec:vocdoni-protocol:circuits}
 
-\martai{The idea of this section is to describe the circuits. Then, in Section~\ref{sec:analysis:implementation} we give the details such as of the number of constants, framework used, etc. I haven't done this split yet.}
-
-\martai{\textbf{About the circuits: in practice (and for optimization), all public inputs $PI$ are private, and we produce a single public input $h = Hash(PI)$. Then, the verifier checks that $Hash(PI) = h$ and verifies the proof only against $h$.} For this, we use the MiMC-7 hash function. Since this is an implementation detail, I propose to write this as a footnote or as an introduction to this section.}
-
-\textit{Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.}
+At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the voting process. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies voter eligibility and census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the ZK-SNARK proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}.  
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow-v2}}
-	\caption{Circuits flow.}
+	\caption{
+		Overview of the circuit flow in \davinci.}
 	\label{fig:circuits-flow}
 \end{figure}
 
-\pagebreak
+For clarity, the circuits are described in this section with their full set of public inputs explicitly listed. In the actual implementation, however, we apply an optimization: rather than exposing all public inputs individually, we compute a single commitment $h = Hash(PI)$ and use $h$ as the only public input. The proof verifier then checks that $Hash(PI) = h$, ensuring that the original public inputs are consistent while reducing both proof size and verification cost. In \davinci, this commitment is computed using the MiMC-7 hash function {\color{blue}(use hlget to point "Hash" to MiMC-7)}. Note that this optimization does not alter the semantics of the circuits but significantly reduces verifier complexity and on-chain verification costs. Other implementation aspects such as the exact number of constraints and the proving frameworks used are deferred to Section~\ref{sec:analysis:implementation}.
+
+% Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.
 
 \subsubsection{Ballot circuit} 
+\label{sec:vocdoni-protocol:circuits:ballot}
 
-Figure~\ref{fig:circuit-voter} -- BN254.\\
-
-\noi Generated by the user when casting a vote, this circuit proves that the encrypted ballot is valid (i.e. follows the protocol rules) and that the vote identifier is correctly computed.
+The ballot circuit, illustrated in Figure~\ref{fig:circuit-ballot}, is generated locally by the voter at the time of casting a ballot. Its purpose is twofold: first, to prove that the encrypted ballot is valid and complies with the protocol rules defined by the organizer; and second, to prove that the vote identifier (\voteid) has been correctly derived. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve. We call the resulting proof \textit{ballot proof} and denote it as $\hlset{\ballotproof}$. We detail below the inputs and constraints of the ballot circuit. 
 
 \begin{spacing}{1.25}
 	\vspace{0.3cm}
@@ -138,24 +129,21 @@ Figure~\ref{fig:circuit-voter} -- BN254.\\
 	\begin{itemize}								
 		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).$
 		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
-		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\processid \conc  \address \conc k)$.
+		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\processid \conc  \address \conc k).$
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
 
 \begin{figure}[H]
-	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-voter}}
-	\caption{Voter circuit. All public values are framed in green.}
-	\label{fig:circuit-voter}
+	\centerline{\includegraphics[width=420pt,draft=false]{\figs/circuit-voter}}
+	\caption{Ballot circuit. All public values are framed in green.}
+	\label{fig:circuit-ballot}
 \end{figure}
 
-\newpage
 \subsubsection{Verifier circuit}
-\label{sec:vocdoni-protocol:circuits:authentication}
+\label{sec:vocdoni-protocol:circuits:verifier}
 
-Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
-
-\noi Generated by the sequencer, this circuit transforms the vote proof to the BLS12-377 curve for native recursion and validates the user's eligibility in the census, as well as their signature.
+The verifier circuit, illustrated in Figure~\ref{fig:circuit-verifier}, is generated by the sequencer when processing a vote. This circuit verifies the ballot's proof generated by the voter and it also validates the voter’s eligibility in the census and the correctness of their digital signature. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BLS12-377 curve. We call the resulting proof the \textit{authentication proof} and denote it as $\hlset{\authenticationproof}$. We detail below the inputs and constraints of this circuit. {\color{blue}-- Authentication of verification proof?}
 
 \begin{spacing}{1.25}
 	\vspace{0.3cm}
@@ -171,16 +159,19 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 	\end{itemize}
 	\textbf{Private inputs}
 	\begin{itemize}								
-		\item \private $\voteproof$: voter's proof.
+		\item \private $\ballotproof$: voter's ballot proof.
 		\item \private $\weight$: voter's weight.
 		\item \private $\censuspf$: census membership proof.
 		\item \private $\signature$: voter's signature.
 	\end{itemize}
 	\textbf{Constraints}	
 	\begin{itemize}
-		\item \emph{Voter's proof verification.} The vote zkProof is valid for the inputs provided: $P.Verify().$
-		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided.
-		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key.
+		\item \emph{Voter's proof verification.} The vote zkProof is valid for the inputs provided: 
+			  $$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \weight)\right).$$
+		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided:
+			  $$ \hlget{\censusTree}.\hlget{\MTMembershipProof}(\weight, \address = \hlget{\Keccak}(\pk), \censuspf, \censusroot). $$
+		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key:
+			  $$ \hlget{\SVer}_{\pk}(\voteid, \signature). $$
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -188,19 +179,13 @@ Figure~\ref{fig:circuit-authentication} -- BLS12-377.\\
 \begin{figure}[H]
 	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-authentication}}
 	\caption{Authentication circuit. All public values are framed in green.}
-	\label{fig:circuit-authentication}
+	\label{fig:circuit-verifier}
 \end{figure}
 
-\newpage
 \subsubsection{Aggregation circuit}
+\label{sec:vocdoni-protocol:circuits:aggregation}
 
-Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
-
-\noi This circuit accumulates multiple authenticated votes into a single proof. It also verifies that all accumulated votes belong to the same voting process.
-
-\martai{Actually, the circuit only takes voteProof and the hash(PI). Circuit 4 is the one that verifies shared PI.}
-
-\martai{The batch, number of verification proofs, is a fixed parameter (currently set to 60). If it includes less proofs than the max size of the batch, the sequencer adds dummy proofs to the circuit.}
+The aggregation circuit, illustrated in Figure~\ref{fig:circuit-aggregate}, is generated by the sequencer to combine multiple authenticated votes into a single proof. Its purpose is to reduce verification overhead by recursively aggregating individual authentication proofs, while ensuring that all aggregated votes belong to the same voting process.  The batch size, i.e., the maximum number of proofs aggregated in a single execution, is a fixed parameter (currently set to 60). If fewer proofs are available, the sequencer pads the batch with dummy proofs so that the circuit always operates on a fixed-size input. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BW6-761 curve. We call the resulting proof the \textit{aggregation proof} and denote it as $\hlset{\aggregationproof}$. We detail below the inputs and constraints of the aggregation circuit.  
 
 \begin{spacing}{1.25}
 	\vspace{0.3cm}
@@ -220,7 +205,8 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 	\end{itemize}
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
-		\item \emph{Votes aggregation.} The accumulated authentication zkProofs are valid (for the given inputs).
+		\item \emph{Votes aggregation.} The accumulated authentication proofs are valid (for the given inputs). For every $i$:
+		$$\hlget{\PVerify}(\authenticationproof, PI = ((C_1, C_2)_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)).$$
 		\item \emph{Shared public inputs.} The public inputs \processid, \ballotmode, \epk, and \censusroot are the same for all proofs.
 	\end{itemize}
 	\vspace{-0.3cm}
@@ -232,12 +218,12 @@ Figure~\ref{fig:circuit-aggregate} -- BW6-761.\\
 	\label{fig:circuit-aggregate}
 \end{figure}
 
-\newpage
 \subsubsection{State transition circuit} 
+\label{sec:vocdoni-protocol:circuits:state-transition}
 
-Figure~\ref{fig:circuit-state-transition-v2} -- BN254. \\
+The state transition circuit, illustrated in Figure~\ref{fig:circuit-state-transition-v2}, is generated by the sequencer to update the global state of the voting process. Its purpose is to verify that a batch of aggregated votes has been correctly incorporated into the state Merkle tree, that overwrites and vote identifiers are handled consistently, and that the accumulators of encrypted results are updated accordingly. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve, which is supported by Ethereum’s native precompiles for proof verification. We call the resulting proof the \textit{state proof} and denote it as $\hlset{\stateproof}$. This proof is submitted on-chain and verified by the process management smart contract, ensuring that every accepted state transition complies with the protocol rules.
 
-\noi Given the aggregated votes proof, this circuit verifies the correct inclusion of all new votes into the process's state Merkle tree. It generates the final state transition proof that will be validated by the Ethereum smart contract. // This circuit verifies that a batch of votes correctly updates the global Merkle state root, including ballots, commitments, and results. It also verifies that the state transition corresponds to a valid proof aggregation and that overwritten votes are properly accounted for.
+\pagebreak
 
 \paragraph{Assertions.}
 
@@ -340,6 +326,8 @@ TBA.
 
 \subsection{Protocol flow}
 \label{sec:vocdoni-protocol:flow}
+
+\martai{Rename steps: 1. voting setup, 2. encryption key generation, 3. votes collection, 4. results validation.}
 
 In Figure~\ref{fig:protocol-flow} we describe the protocol flow.
 

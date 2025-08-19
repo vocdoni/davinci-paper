@@ -27,6 +27,10 @@
 	\let\thefootnote\svthefootnote%
 }
 
+% Footnote spaces
+\setlength{\skip\footins}{20pt}      % space between text and footnotes
+\setlength{\footnotesep}{1em}        % space between individual footnotes
+
 % Table of contents style
 % Make section entries bold in ToC
 \makeatletter
@@ -114,12 +118,12 @@
 
 % Ballot protocol
 \newcommand{\ballotstyle}[1]{\texttt{#1}\xspace}
-\newcommand{\maxcount}{\ballotstyle{maxCount}}
+\newcommand{\numfields}{\ballotstyle{numFields}}
 \newcommand{\maxvalue}{\ballotstyle{maxValue}}
 \newcommand{\minvalue}{\ballotstyle{minValue}}
 \newcommand{\uniquevalues}{\ballotstyle{uniqueValues}}
-\newcommand{\maxtotalcost}{\ballotstyle{maxTotalCost}}
-\newcommand{\mintotalcost}{\ballotstyle{minTotalCost}}
+\newcommand{\maxvaluesum}{\ballotstyle{maxValueSum}}
+\newcommand{\minvaluesum}{\ballotstyle{minValueSum}}
 \newcommand{\costexponent}{\ballotstyle{costExponent}}
 
 % Voting protocol
@@ -127,8 +131,10 @@
 \newcommand{\census}{\variablestyle{census}}
 \newcommand{\censusdata}{\variablestyle{censusData}}
 \newcommand{\voteproof}{\variablestyle{voteProof}}
+\newcommand{\ballotproof}{\variablestyle{ballotProof}}
 \newcommand{\censusproof}{\variablestyle{censusProof}}
 \newcommand{\authenticationproof}{\variablestyle{authenticationProof}}
+\newcommand{\aggregationproof}{\variablestyle{aggregationProof}}
 \newcommand{\voteid}{\variablestyle{voteID}}
 \newcommand{\ballot}{\variablestyle{ballot}}
 \newcommand{\vote}{\variablestyle{vote}}
@@ -140,6 +146,7 @@
 \newcommand{\zkproof}{\variablestyle{ZKproof}}
 \newcommand{\signature}{\variablestyle{signature}}
 \newcommand{\address}{\variablestyle{address}}
+\newcommand{\stateproof}{\variablestyle{stateProof}}
 
 % State Merkle tree
 \newcommand{\censusroot}{\variablestyle{censusRoot}}
@@ -175,8 +182,12 @@
 \newcommand{\ReEnc}{\methodstyle{ReEnc}}
 \newcommand{\SSign}{\methodstyle{S.Sign}}
 \newcommand{\SVer}{\methodstyle{S.Verify}}
+\newcommand{\PProve}{\methodstyle{P.Prove}}
+\newcommand{\PVerify}{\methodstyle{P.Verify}}
 \newcommand{\GenerateShares}{\methodstyle{GenerateShares}}
 \newcommand{\VerifyShare}{\methodstyle{VerifyShare}}
+\newcommand{\GenerateEncryptedShares}{\methodstyle{GenerateEncryptedShares}}
+\newcommand{\VerifyEncryptedShare}{\methodstyle{VerifyEncryptedShare}}
 \newcommand{\DerivePublicKey}{\methodstyle{DerivePublicKey}}
 \newcommand{\DeriveSecretShare}{\methodstyle{DeriveSecretShare}}
 
