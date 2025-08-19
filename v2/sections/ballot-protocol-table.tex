@@ -1,0 +1,17 @@
+% !TeX root = ../build/main.tex
+
+\begin{table}[h]
+	\centering
+	\caption{A simple table example}
+	\label{tab:simple}
+	\begin{tabular}{|c|c| c| c|c|c|c|c|c|c| c|c c c c c| c|c|}
+		\hline
+		\textbf{Name} & \textbf{Description} & \textbf{Example} & \numfields & \minvalue & \maxvalue & \uniquevalues & \costexponent & \minvaluesum & \maxvaluesum & \multicolumn{8}{c|}{Ballots example} \\  
+		\hline
+		&&&&&&&&&&& 1 & 2 & 3 & 4 & 5 & \totalvaluesum & \validvote \\
+		\hline
+		&&&&&&&&&& ballot & 0 & 1 & 0 & 1 & 1 & 3 & 1 \\	
+		Approval voting &&&&&&&&&& ballot & 1 & 1 & 1 & 1 & 1 & 5 & 1 \\			
+		\hline
+	\end{tabular}
+\end{table}
