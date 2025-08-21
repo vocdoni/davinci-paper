@@ -28,6 +28,7 @@ Each ballot is defined as an array of integer values subject to a set of configu
 		\includegraphics[scale = 0.4, draft = false]{\figs/ballot-variables.png}}
 	\caption{Schematic representation of the parameters that define a ballot in \davinci{ }{\color{blue}(variable names are outdated)}.}
 \end{figure}
+\vspace{-1cm}
 
 \paragraph{General mechanism.}
 A ballot is valid if and only if all the above constraints are satisfied. Invalid ballots are rejected at the circuit level and do not contribute to the tally. Valid ballots are aggregated into a results array, where each entry is the sum of all votes cast for the corresponding field across all voters. Voter weights, defined in the census tree (see Section~\ref{sec:vocdoni-protocol:merkle-trees:census}), are taken into account when computing these sums. By default, all voters have the same weight, but the protocol also supports weighted voting, where different participants may contribute proportionally to their assigned voting power. In this case, \maxvaluesum\ reflects the maximum weight assigned to each voter, and the ballot and verifier circuits enforce that the correct weight is being used (see Sections~\ref{sec:vocdoni-protocol:circuits:ballot} and~\ref{sec:vocdoni-protocol:circuits:verifier} for further details).
