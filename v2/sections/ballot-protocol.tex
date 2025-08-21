@@ -1,39 +1,44 @@
 % !TeX root = ../build/main.tex
 
-The ballot protocol provides a unified and parametric way to represent a wide range of voting systems within \davinci. Instead of designing a separate circuit for each voting rule, the protocol defines ballots as fixed-length arrays of integers, subject to a small set of configurable parameters. These parameters constrain the values that can appear in each field of the ballot and the aggregate properties of the ballot as a whole. By adjusting these parameters, the same circuit can implement approval voting, ranking, quadratic voting, multiple choice, and many other schemes.
-
-This abstraction has two key advantages. First, it allows a broad variety of voting systems to be supported with a minimal circuit design, avoiding conditional logic that would otherwise increase constraint counts. Second, it provides a common interface for tallying, since all ballots are aggregated into a single results array regardless of the voting mode.
+The ballot protocol provides a unified and parametric way to represent a wide range of voting systems within \davinci. Instead of designing a separate circuit for each voting rule, the protocol defines ballots as fixed-length arrays of integers, subject to a small set of configurable parameters. These parameters constrain the values that can appear in each field of the ballot and the aggregate properties of the ballot as a whole. By adjusting these parameters, the same circuit can implement approval voting, ranking, quadratic voting, multiple choice, and many other schemes. In the protocol we refer to the different configurations as the \emph{ballot mode} ($\ballotmode$). This abstraction has two key advantages. First, it allows a broad variety of voting systems to be supported with a minimal circuit design, avoiding conditional logic that would otherwise increase constraint counts. Second, it provides a common interface for tallying, since all ballots are aggregated into a single results array regardless of the voting mode. 
 
 \paragraph{Definition of parameters.} 
-Each ballot is defined as an array of integer values subject to the following configurable parameters:
+%Each ballot is defined as an array of integer values subject to the following configurable parameters:
+Each ballot is defined as an array of integer values subject to a set of configurable parameters. These parameters are defined as follows:
 \begin{itemize}
-	\item \numfields: the maximum number of fields (i.e., options) in the ballot.
-	\item \minvalue, \maxvalue: the allowable range for each field value.
-	\item \uniquevalues: a Boolean flag specifying whether all field values must be distinct (as in ranking systems).
-	\item \costexponent: the exponent applied when computing the cost of casting votes in a field; this parameter enables quadratic or higher-order voting rules.
-	\item \minvaluesum, \maxvaluesum: bounds on the total sum of all field values in a ballot (e.g., to enforce a budget of credits).
+	\item \numfields: the maximum number of fields (i.e., options) in the ballot.  
+	\item \minvalue: the minimum value that each field in the ballot can take.  
+	\item \maxvalue: the maximum value that each field in the ballot can take.  
+	\item \uniquevalues: a Boolean flag indicating whether all field values must be distinct (as in ranking systems).  
+	\item \costexponent: the exponent applied when computing the cost of casting votes in a field. This parameter enables quadratic or higher-order voting rules.  
+	\item \minvaluesum: the minimum total sum of all field values in a ballot.  
+	\item \maxvaluesum: the maximum total sum of all field values in a ballot (e.g., to enforce a budget of credits).  
 \end{itemize}
+%\begin{itemize}
+%	\item \numfields: the maximum number of fields (i.e., options) in the ballot.
+%	\item \minvalue, \maxvalue: the allowable range for each field value.
+%	\item \uniquevalues: a Boolean flag specifying whether all field values must be distinct (as in ranking systems).
+%	\item \costexponent: the exponent applied when computing the cost of casting votes in a field; this parameter enables quadratic or higher-order voting rules.
+%	\item \minvaluesum, \maxvaluesum: bounds on the total sum of all field values in a ballot (e.g., to enforce a budget of credits).
+%\end{itemize}
 
 \begin{figure}[H]
 	\centering
 	\fbox{
 		\includegraphics[scale = 0.4, draft = false]{\figs/ballot-variables.png}}
+	\caption{Schematic representation of the parameters that define a ballot in \davinci{ }{\color{blue}(variable names are outdated)}.}
 \end{figure}
 
 \paragraph{General mechanism.}
-A ballot is valid if and only if all the above constraints are satisfied. Invalid ballots are rejected at the circuit level and do not contribute to the tally. Valid ballots are aggregated into a results array, where each entry is the sum of all votes cast for the corresponding field across all voters. This unified representation ensures that tallying can be performed efficiently, independently of the chosen voting system, and that verification inside zero-knowledge circuits remains simple. 
+A ballot is valid if and only if all the above constraints are satisfied. Invalid ballots are rejected at the circuit level and do not contribute to the tally. Valid ballots are aggregated into a results array, where each entry is the sum of all votes cast for the corresponding field across all voters. Voter weights, defined in the census tree (see Section~\ref{sec:vocdoni-protocol:merkle-trees:census}), are taken into account when computing these sums. By default, all voters have the same weight, but the protocol also supports weighted voting, where different participants may contribute proportionally to their assigned voting power. In this case, \maxvaluesum\ reflects the maximum weight assigned to each voter, and the ballot and verifier circuits enforce that the correct weight is being used (see Sections~\ref{sec:vocdoni-protocol:circuits:ballot} and~\ref{sec:vocdoni-protocol:circuits:verifier} for further details).
 
-Figure~\ref{fig:ballot-modes} illustrates several concrete instantiations of this protocol, showing how different voting systems can be realized by selecting appropriate parameter values.
-%The examples in Table~\ref{tab:ballot-modes} are not exhaustive. Other systems, such as cumulative voting, weighted scoring, or variations of ranked-choice voting, can be instantiated within the same framework by adjusting the protocol parameters accordingly. This flexibility illustrates the expressiveness of the ballot protocol and its suitability as a general-purpose abstraction for representing diverse voting rules in a unified way.
-
-\martai{It is called Ballot Mode because we define some modes (like quadratic, etc.) that can be chosen by the organizer. Essentially, each of this modes has a special configuration, but in order to make it easier, the organizer only needs to choose which of the modes (configs) to apply.}
+\paragraph{Ballot modes.} 
+Ballot modes correspond to different voting systems, each adjusted with the variables above ballot configurations. For usability, the organizer does not need to set every parameter manually: instead, they simply select one of the predefined ballot modes (e.g., quadratic voting, ranking, approval), each corresponding to a fixed parameter configuration. Some representative modes are shown in Figure~\ref{fig:ballot-modes}, which illustrate the expressiveness of the ballot protocol. For example, in \emph{approval voting}, each field is binary and voters can approve or reject multiple options simultaneously. In \emph{ranking}, fields must form a permutation of the integers from $1$ to $N$, enforcing uniqueness of values. In \emph{quadratic voting}, voters allocate credits across options, and the cost is quadratic in the number of credits used, captured by setting \costexponent$=2$. Other systems such as single-choice or multiple-choice elections are special cases of the same framework. The figure also illustrates examples of voters' ballots, with the last column indicating whether each ballot is valid or invalid under the rules of the selected mode.
 
 %\begin{landscape}
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/ballot-protocol-table.png}}
-	\caption{Table showing various voting models using different ballot configurations.}
+	\caption{Table showing various voting models using different ballot configurations. Each row corresponds to a voting system specified by a fixed configuration of the ballot parameters (\numfields, \minvalue, \maxvalue, \uniquevalues, \costexponent, \minvaluesum, \maxvaluesum). The table also includes example ballots for each mode, illustrating how the constraints are enforced in practice. The last column indicates whether a ballot is valid (1) or invalid (0) under the rules of the selected mode.}
 	\label{fig:ballot-modes}
 \end{figure}
 %\end{landscape}
-
-\martai{Mention the weight! Which is maxValueSum!}
