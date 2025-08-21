@@ -69,6 +69,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 
 \noi \sequencers Upon receiving votes, a sequencer does the following:
 \begin{enumerate}
+	{\color{blue}
 	\item Retrieve the current state root $\stateroot$ and census root $\censusroot$ from the process management smart contract and the associated data from the Ethereum data blobs.  
 	\item Verify each submission by generating a state transition proof (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), ensuring:
 	\begin{itemize}
@@ -79,6 +80,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 		\item consistency between data blobs and the on-chain state.  
 	\end{itemize}
 	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
+	}
 \end{enumerate}
 
 Sequencers repeat this process until the voting deadline set by the organizer.
