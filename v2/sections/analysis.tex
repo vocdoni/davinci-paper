@@ -1,122 +1,36 @@
 % !TeX root = ../build/main.tex
 
-\martai{THE PROTOCOL (does note reveal the vote but it) REVEALS IF SOMEONE HAS VOTED OR NOT.}
+The \davinci protocol was designed according to a set of guiding principles: cryptography is the sole source of truth; no single entity must be trusted; the system should be modular, open source, and resilient; and it should remain scalable, automated, and accessible to a wide range of users. Building on these principles, we now discuss the concrete security properties of the protocol, followed by implementation details and performance results. -- {\color{blue}This whole section is still [WIP]}.\\
 
-\martai{Check EthResearch post:  \tiny\url{https://ethresear.ch/t/vocdoni-protocol-enabling-decentralized-voting-for-the-masses-with-zk-technology/21036}.}
-
-\martai{This section is old text, it needs to be reviewed.}
+\noi {\color{blue}$\rightarrow$ check \scriptsize
+	\url{https://ethresear.ch/t/vocdoni-protocol-enabling-decentralized-voting-for-the-masses-with-zk-technology/21036}.}
 
 \subsection{Security discussion}
 \label{sec:analysis:security}
 
-Make a section called \textit{properties}?
+Based on the above principles, the protocol provides a number of concrete security properties that ensure the integrity, confidentiality, and verifiability of voting events. In what follows we discuss how \davinci achieves these properties, with particular emphasis on receipt-freeness, privacy, unlinkability, and robustness against quantum threats.
 
-From old intro:
-
-\paragraph{Design principles.}
-
-To build the \davinci stack, we adhere to the following design principles:
-
-\begin{enumerate}
-	\item \textbf{Cryptography as the source of truth}: we rely exclusively on cryptographic proofs to ensure the integrity and security of the voting process. By trusting only in cryptography, we eliminate the need for centralized authorities, making the system inherently secure and transparent.
-	
-	\item \textbf{Trustlessness}: our system operates without requiring trust in any single party. Through cryptographic protocols and decentralized infrastructure, we ensure system integrity and prevent compromise from any malicious actor.
-	
-	\item \textbf{End-to-end verifiability}: every voter can verify their ballot from casting to result computation (individual verifiability). Additionally, any third party can audit the election data to confirm results (universal verifiability) and verify that each vote comes from a uniquely registered voter (eligibility verifiability). Transparent cryptographic mechanisms make this possible.
-	
-	\item \textbf{Composability}: the system is modular, consisting of interchangeable components that can be rearranged or integrated with external systems via adaptable interfaces. This allows for redundancy, flexibility, and seamless integration with third-party applications, exemplified by our voting-as-a-service APIs.
-	
-	\item \textbf{Accessibility}: Vocdoni’s voting platform (App) is open source, universally available and user-friendly. The interface is intuitive for all users, including those less familiar with technology, and accommodates voters that use assistive technologies like screen readers.
-	
-	\item \textbf{Open source}: by releasing our code openly, we invite anyone to audit and contribute, enhancing security and fostering community engagement. Transparency prevents security through obscurity and accelerates innovation.
-	
-	\item \textbf{Resilience}: we design for robustness against hardware failures, network outages, and censorship. Infrastructure decentralization and distributed ownership enhance system availability and resistance to attacks.
-	
-	\item \textbf{Scalability}: our solution processes votes at high throughput, exceeding current requirements to accommodate future growth. The decentralized infrastructure scales organically as usage increases, ensuring consistent performance.
-	
-	\item \textbf{Receipt-freeness}: to mitigate risks of collusion, coercion, and vote-buying, the system enables voters to verify their votes without being able to prove to others how they voted, thus reducing incentives for coercion and bribery. Additionally, voters are allowed to overwrite their votes while maintaining secrecy.
-	
-	\item \textbf{Automation}: we minimize human intervention through smart contracts and cryptographic protocols, reducing costs and human error. Automation ensures consistent operation and frees resources for voter support and auditing.
-\end{enumerate}
-
-
-\subsubsection{Receipt-freeness}
-
-In democratic processes, the ability of voters to cast their votes freely, without undue influence or coercion, is crucial. A critical aspect of maintaining this freedom is ensuring receipt-freeness, preventing voters from being able to prove to third parties how they voted. \davinci implements receipt-freeness by leveraging the properties of the ElGamal cryptosystem, and zkSNARKs.
-
-\paragraph{Ballor re-encryption.}
-
-The ElGamal cryptosystem over elliptic curves supports additive homomorphism, allowing operations to be performed on ciphertexts that translate to addition on the underlying plaintexts. Re-encryption is a process that refreshes the randomness of a ciphertext without changing the underlying plaintext message. This makes computationally infeasible to link the original and re-encrypted ciphertexts.
-
-\paragraph{Handling receipts.}
-
-To prevent voters from being able to prove how they voted, \davinci employs re-encryption of ballots by the Sequencers. When a voter submits an encrypted ballot, the Sequencer re-encrypts it before storing it in the state Merkle tree.
-
-This way, the system ensures that voters cannot produce a receipt of their vote by revealing r since the stored ciphertext no longer corresponds to r. This prevents vote-buying and coercion by third parties.
-
-\paragraph{Handling collusion.}
-
-To further enhance receipt-freeness and mitigate the risk of collusion between voters and Sequencers, \davinci allows voters to overwrite their votes. A voter can submit multiple votes, with each new submission replacing the previous one.
-
-When a Sequencer receives a new vote from a voter who has already voted, it performs the following steps:
-
-\begin{enumerate}
-	\item \textbf{Detect overwrite}: The Sequencer checks the state Merkle tree using the voter's nullifier to determine if the voter has previously cast a vote.
-	\item \textbf{Subtract previous vote}: The Sequencer takes the existing encrypted ballot and adds it to a "Subtractive Results" accumulator. This effectively negates the previous vote in the final tally.
-	\item \textbf{Add new vote}: The new encrypted ballot is added to the "Results" accumulator.
-	\item \textbf{Update state Merkle tree}: The Sequencer re-encrypts the new ballot and updates the state Merkle tree with this re-encrypted ballot.
-\end{enumerate}
-
-\paragraph{Concealing vote overwrites.}
-
-To prevent observers from detecting when overwrites occur, the Sequencers regularly re-encrypt a random subset of ballots in the state Merkle tree during each state update. This process obscures the occurrence of overwrites, as re-encryptions are indistinguishable from standard re-randomizations performed for privacy enhancement.
-
-By re-encrypting random ballots, the system increases the entropy and makes it statistically improbable for an adversary to determine if a specific ballot was overwritten or simply re-randomized.
-
-\subsubsection{Privacy}
-
-\Davinci ensures user anonymity by anonymizing both the ballot and the voter's identity, employing cryptographic techniques that maintain privacy even in the face of future quantum computing threats. The system uses the ElGamal homomorphic encryption scheme to encrypt ballots, allowing for the aggregation of votes without revealing individual choices. Since encrypted ballots are stored in public repositories like Ethereum blobs—which, although removed after some weeks, may still be accessible—it is crucial to prevent any association between decrypted ballots and voter identities. By decoupling the voter's identity from their encrypted ballot through the use of secrets and cryptographic hashes, even if an adversary decrypts the ballots in the future, they cannot link them back to individual voters.
-
-The identity anonymization acts as a double security factor, enhancing long-term privacy. While the Sequencer processing the vote can identify the voter (since voters submit proofs of eligibility and commitments), there is no incentive for the Sequencer to make this information public, and the Sequencer cannot decrypt the voter's ballot because they do not possess the private decryption keys. This ensures that voter choices remain confidential.
-
-We have adopted this partial identity anonymization because generating fully anonymous proofs using zkSNARKs directly from digital signatures (e.g., ECDSA/EdDSA or RSA) is computationally intensive for client-side devices like browsers and smartphones. Our priority is to support a wide range of devices, making the system accessible to as many voters as possible. In the future, as cryptographic technology advances and client devices become more powerful, we anticipate being able to generate such zero-knowledge proofs efficiently on the client side. This would enable us to fully anonymize the client's identity in addition to the ballot, further enhancing user privacy without compromising accessibility or user experience.
-
-\subsubsection{Quantum resistance}
-
-As quantum computing technology advances, it poses significant challenges to classical cryptographic schemes that underpin the security of digital systems, including voting platforms like \davinci. Ensuring that the system remains secure in the face of quantum threats is crucial for its longevity and trustworthiness.
-
-Quantum computers have the potential to solve certain mathematical problems exponentially faster than classical computers. Notably, Shor's algorithm allows quantum computers to efficiently factor large integers and compute discrete logarithms, undermining the security of widely used cryptographic schemes such as RSA, DSA, ECDSA, and the ElGamal cryptosystem.
-
-However, the design of \davinci incorporates mechanisms that preserve voter anonymity even in the face of future quantum attacks:
-
+\paragraph{Receipt-freeness.} Receipt-freeness prevents voters from proving to others how they voted, thereby mitigating coercion and vote-buying. In \davinci this is achieved through re-encryption, ballot overwrites, and randomized state updates.
 \begin{itemize}
-	\item Detachment of identity and encrypted Ballot: The voter's identity and their encrypted ballot are decoupled through the use of a secret in the nullifier. The nullifier is computed as:
-	$$ N = \text{Hash}(\processid \conc s) $$	
-	where is a secret known only to the voter. This means that even if an adversary decrypts the encrypted ballots using a quantum computer, they cannot link a decrypted vote back to a voter's identity in the census without knowledge of the secret $s$.
-	\martai{Instead of ``detachment", I propose ``unlinkability": identity unlinkability.}
-	\item Quantum-resistant hash functions: the \nullifier and \commitment are computed using cryptographic hash functions that are believed to be resistant to quantum attacks (e.g., SHA-3). While Grover's algorithm can provide a quadratic speedup in searching for preimages, using sufficiently long hash outputs (e.g., 256 bits) mitigates this risk.
+	\item \textit{Ballot re-encryption}: since our encryption scheme supports re-randomization, that is, a ciphertext can be refreshed with new randomness without changing the underlying message, sequencers exploit this by re-encrypting the received ballots before committing them to the state Merkle tree, making it computationally infeasible to link a submitted ciphertext with the stored one {\color{blue}(give details of what does \textit{computationally infeasible} mean here)}.
+	\item \textit{Handling receipts}: because ballots are re-randomized, voters cannot generate a receipt by revealing the randomness $r$ used in encryption, since the ciphertext on-chain no longer corresponds to their $r$. This blocks vote-selling and coercion.
+	\item \textit{Overwrites}: voters may cast a new ballot at any time, replacing their earlier submission. This ensures that even if coercion occurs, a voter can subsequently change their vote as many times as desired, preserving their ability to express their true choice. When an overwrite occurs, the sequencer substracts the previous ballot from the subtractive accumulator, adds the new ballot to the additive accumulator, and re-encrypts the updated ballot before storing it in the state tree. 
+	\item \textit{Concealing overwrites}: to prevent observers from distinguishing overwrites from routine re-randomizations, sequencers periodically re-encrypt a random subset of stored ballots. This obfuscation ensures that overwrites remain indistinguishable from normal re-randomizations, strengthening receipt-freeness.
 \end{itemize}
 
-To further safeguard against quantum threats, the following measures can be implemented in the future:
 
-\begin{enumerate}
-	\item Adopt post-quantum signature schemes. Replace ECDSA/EdDSA with quantum-resistant algorithms such as CRYSTALS-Dilithium, Falcon, or Rainbow, which are based on hard lattice problems.
-	
-	\item Explore lattice-based homomorphic encryption schemes. Replace ElGamal cryptosystem with quantum-resistant alternatives such as the Brakerski-Gentry-Vaikuntanathan (BGV) or the Brakerski/Fan-Vercauteren (BFV) schemes.
-	
-	\item Adopt quantum-resistant zero-knowledge proof systems, such as zkSNARK constructions based on post-quantum assumptions or \textbf{zkSTARKs}.
-\end{enumerate}
+\paragraph{Privacy.} Ballots remain secret even though encrypted ballots are publicly stored and processed. Ballot secrecy is preserved through ElGamal encryption, which allows votes to be aggregated without decryption. Encrypted ballots are stored in public repositories (e.g., Ethereum blobs). Because of DKG sequencers cannot decrypt individual ballots themselves. {\color{blue}The protocol does not reveal the ballot but it does reveal if someone has voted or not.}
 
-\martai{Citations to protocols are missing.}
+\paragraph{Quantum resistance.} Quantum computers threaten discrete-logarithm-based cryptography such as ECDSA and ElGamal. For this reason, \davinci is designed in a modular way that would allow to migrate to post-quantum primitives in the longer term. For example,use CRYSTALS-Dilithium, Falcon, or Rainbow, for signature schemes, Brakerski-Gentry-Vaikuntanathan (BGV) or Brakerski/Fan-Vercauteren (BFV) which are lattice-based homomorphic encryption schemes, and ZK-STARKs for post-quantum zero-knowledge proofs. {\color{blue} Add citations to protocols.}
 
-\martai{If it is not quantum resistant, I would leave it to future work. Although unconventional, we could also make a ``protocol weaknesses'' section.}
+\paragraph{Data availability.} Ballots and state updates are stored in Ethereum blobs. Since these blobs may eventually be pruned from the blockchain, ensuring long-term data availability is an open problem. Possible solutions include decentralized storage networks or dedicated data-availability layers. This remains an active area of research.
 
-\subsubsection{Data availability}
+\paragraph{End-to-end verifiability.} Voters can check that their own ballot was included correctly, while anyone can audit the entire process to verify the final tally. Every voter can verify their ballot from casting to result computation (individual verifiability). Additionally, any third party can audit the election data to confirm results (universal verifiability) and verify that each vote comes from a uniquely registered voter (eligibility verifiability). Transparent cryptographic mechanisms make this possible.
 
 \subsection{Implementation}
 \label{sec:analysis:implementation}
 
-\martai{Link to repos, etc. + details such as circuits have been implemented using \texttt{circom}, this and that.}
+{\color{blue} The system is modular, consisting of interchangeable components that can be rearranged or integrated with external systems via adaptable interfaces. This allows for redundancy, flexibility, and seamless integration with third-party applications, exemplified by our voting-as-a-service APIs. Vocdoni’s voting platform (App) is open source, universally available and user-friendly. The interface is intuitive for all users, including those less familiar with technology, and accommodates voters that use assistive technologies like screen readers. By releasing our code openly, we invite anyone to audit and contribute, enhancing security and fostering community engagement. Transparency prevents security through obscurity and accelerates innovation. We minimize human intervention through smart contracts and cryptographic protocols, reducing costs and human error. Automation ensures consistent operation and frees resources for voter support and auditing. Add link to repositories and details of the software used.}
 
 \paragraph{Circuits.}
 \begin{itemize}
@@ -129,4 +43,4 @@ To further safeguard against quantum threats, the following measures can be impl
 \subsection{Performance evaluation}
 \label{sec:analysis:performance-evaluation}
 
-\martai{E.g. circuit constraints benchmarks.}
+{\color{blue} Work in progress.}
