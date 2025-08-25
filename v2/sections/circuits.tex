@@ -204,7 +204,8 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 					\[\stateroot^{new} = \stateTree.\hlget{\MTRoot}().\]
 					\item Reencrypt all leafs of the tree (both old and new ones). {\color{blue}New are ok, but for those that are old, also verify MTProofs of membership?}.
 					\[newLeafContent = \hlget{\ReEnc}_{\epk}((C_1, C_2)_i, k), \quad k = Hash(k).\]
-					\item Data blob commitment.
+					\item Data blob commitment. Calculation of the commitment to all leafs that changed in the tree after all transition states were applied. 
+					\[ \blobcomm = Commitment(\text{all leaves that changed}).\]
 				\end{itemize}
 	\end{itemize}
 	\vspace{-0.3cm}
