@@ -4,15 +4,16 @@ The ballot protocol provides a unified and parametric way to represent a wide ra
 
 \paragraph{Definition of parameters.} 
 %Each ballot is defined as an array of integer values subject to the following configurable parameters:
-Each ballot is defined as an array of integer values subject to a set of configurable parameters. These parameters are defined as follows:
+Each ballot is defined as an array of integer values subject to a set of configurable parameters, illustrated in Figure~\ref{fig:ballot-variables}. These parameters are defined as follows:
 \begin{itemize}
 	\item \numfields: the maximum number of fields (i.e., options) in the ballot.  
 	\item \minvalue: the minimum value that each field in the ballot can take.  
 	\item \maxvalue: the maximum value that each field in the ballot can take.  
 	\item \uniquevalues: a Boolean flag indicating whether all field values must be distinct (as in ranking systems).  
 	\item \costexponent: the exponent applied when computing the cost of casting votes in a field. This parameter enables quadratic or higher-order voting rules.  
-	\item \minvaluesum: the minimum total sum of all field values in a ballot.  
-	\item \maxvaluesum: the maximum total sum of all field values in a ballot (e.g., to enforce a budget of credits).  
+	\item \minvaluesum: the minimum allowed total sum of a ballot, computed as $\sum_{i=1}^{\numfields} v_i^{\costexponent}$, 
+	where $v_i$ are the field values.  
+	\item \maxvaluesum: the maximum allowed total sum of a ballot, computed as $\sum_{i=1}^{\numfields} v_i^{\costexponent}$, where $v_i$ are the field values (e.g., to enforce a budget of credits).  
 \end{itemize}
 %\begin{itemize}
 %	\item \numfields: the maximum number of fields (i.e., options) in the ballot.
@@ -22,11 +23,12 @@ Each ballot is defined as an array of integer values subject to a set of configu
 %	\item \minvaluesum, \maxvaluesum: bounds on the total sum of all field values in a ballot (e.g., to enforce a budget of credits).
 %\end{itemize}
 
+\vspace{-0.5cm}
 \begin{figure}[H]
 	\centering
-	\fbox{
-		\includegraphics[scale = 0.4, draft = false]{\figs/ballot-variables.png}}
-	\caption{Schematic representation of the parameters that define a ballot in \davinci{ }{\color{blue}(variable names are outdated)}.}
+	\includegraphics[scale = 0.5, draft = false]{\figs/ballot-variables.png}
+	\caption{Schematic representation of the parameters that define a ballot in \davinci.}
+	\label{fig:ballot-variables}
 \end{figure}
 \vspace{-1cm}
 

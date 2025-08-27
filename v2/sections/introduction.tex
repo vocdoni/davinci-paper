@@ -31,6 +31,8 @@ To coordinate protocol execution, \davinci includes a set of Ethereum smart cont
 \subsection{Paper organization}
 \label{sec:introduction:organization}
 
+%The rest of the paper is organized as follows. Section~\ref{sec:background} introduces the necessary background. Section~\ref{sec:protocol-intuition} provides a high-level overview of a voting process, omitting technical details for clarity. Section~\ref{sec:cryptographic-primitives} presents the cryptographic primitives used in the protocol, together with the concrete instantiations adopted in our design. Section~\ref{sec:vocdoni-protocol} describes the full voting process, while Section~\ref{sec:ballot-protocol} specifies the ballot protocol, whose rules are enforced by the process management smart contract. Section~\ref{sec:token} discusses the role of the Vocdoni token within the incentive structure of the system. Section~\ref{sec:analysis} analyzes the protocol, covering its security properties, implementation details, and performance evaluation. Finally, Section~\ref{sec:conclusions} concludes the paper with final remarks.
+
 \begin{itemize}
 	\item Section~\ref{sec:background}: background.
 	\item Section~\ref{sec:protocol-intuition}: high overview of the election process. We omit technical details.
@@ -41,5 +43,3 @@ To coordinate protocol execution, \davinci includes a set of Ethereum smart cont
 	\item Section~\ref{sec:analysis}: analysis of the proposed protocols. It includes a security discussion of the properties of the protocol, implementation details, and a performance evaluation.
 	\item Section~\ref{sec:conclusions}: we finish with some last remarks.
 \end{itemize}
-
-%Mention that the spec can be tailored to the needs of the specific vote. So, here we present some default configuration, but some of the pieces can be changed (specially the cryptographic schemes or curves). For this reason, we tried to make this document modular (like the code), to facilitate the changes and analysis.

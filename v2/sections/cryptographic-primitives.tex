@@ -1,6 +1,12 @@
 % !TeX root = ../build/main.tex
 
-In this section, we detail the cryptographic primitives used in Section~\ref{sec:vocdoni-protocol}. We briefly introduce elliptic curves, hash functions, Merkle trees, encryption schemes, and proof systems used in the protocol. We also specify at each step the concrete parameters with which each of the primitives is instantiated.
+%hash-based commitments: trees
+%authentication: signatures
+%confidentiality: encryption
+%decentralized trust: DKG
+%verifiability: ZKPs
+
+In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; distributed key generation (DKG) for decentralizing trust in the election keys; and zero-knowledge proofs (zkSNARKs) for verifiability of computations. For each primitive we also specify the concrete choice of parameters used.
 
 %\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
 %Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
@@ -177,6 +183,76 @@ In this section, we detail the cryptographic primitives used in Section~\ref{sec
 
 %Pedersen commitment scheme~\cite{pedersen1991non}. 
 
+\subsection{Merkle trees}
+\label{sec:cryptographic-primitives:merkle-trees}
+
+The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data structure for maintaining off-chain state. Following the construction in~\cite{baylina19sparse}, these are full binary trees of fixed depth in which each leaf encodes a key-value pair and empty leaves are explicitly represented, allowing for both inclusion and non-inclusion proofs. A key property of SMTs is that the hash of each key determines a unique traversal path from the root to the leaf, regardless of insertion order. When inserting a new key, the tree descends until it encounters either an empty node or a leaf. In case of a path collision, the algorithm splits at the first differing bit, creating intermediate nodes accordingly. 
+%SMTs support efficient membership and non‑membership proofs, enabling a party to prove that a given key-value is (or is not) present in the tree without revealing the content. 
+
+In \davinci, SMTs are used to represent two core data structures: the census tree, which encodes the list of eligible voters along with their respective voting weights, and the state tree, which encodes the current status of submitted votes. Both trees have fixed depth 64. The census tree is instantiated with the MiMC hash function over the BLS12-377 scalar field, while the state tree uses Poseidon over the BN254 scalar field. Only the root hash of each tree is published on-chain, ensuring verifiability with minimal on-chain storage. 
+%
+To support state transitions and circuit verification, each tree $\tree$ has the following functions associated:
+
+\begin{itemize}
+	\item $\tree.\hlset{\MTRoot}()$: it returns the current Merkle root of the tree.
+	\item $\tree.\hlset{\MTInsert}(path, \leaf)$: it inserts a new leaf $\leaf$ at the position defined by the given path.
+	\item $\tree.\hlset{\MTUpdate}(\leaf_{old}, \leaf)$: it updates an existing leaf in the tree.
+	\item $\tree.\hlset{\MTMembershipProof}(\leaf)$: it returns a Merkle proof of inclusion for the given leaf.
+	\item $\tree.\hlset{\MTNonMembershipProof}(\leaf)$: it returns a proof that the given leaf is not included in the tree.
+	\item $\tree.\hlset{\MTVerify}(\leaf, proof, root)$: it verifies that the given proof corresponds to the claimed root and leaf.
+\end{itemize}
+
+These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Section~\ref{sec:vocdoni-protocol:merkle-trees}.
+
+\subsection{Digital signature schemes}
+\label{sec:cryptographic-primitives:signatures}
+
+\Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
+%
+%\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve for user authentication and vote authorization. This decision is taken to ensure that \davinci is compatible with standard Ethereum wallets, such as MetaMask~\ref{} or Ledger~\ref{}, without requiring users to generate or manage additional cryptographic keys. 
+%
+Verification of ECDSA signatures is performed inside zero-knowledge proofs using a specialized circuit that emulates SECP256K1 arithmetic. This approach is necessary because SECP256K1 is defined over a 256-bit prime field that differs from the native field used in the ZK-SNARK circuit (see Section\ref{sec:vocdoni-protocol:circuits} for more details). Below, we describe the algorithms, which follow the standard ECDSA protocol.
+%
+{\color{blue} (The output of the hash does not match -- check where variables live.)}
+
+\begin{mdframed}
+	\begin{minipage}[t]{0.46\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\SSign}_{\sk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
+			\begin{enumerate}
+				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
+				\item\label{item:ssign-step} Select a random scalar $k \sample \Z_q^{*}$.
+				\item Compute $R = k \cdot \hlget{\SEC{G}} = (x_R, y_R) \in \SEC{\G}$.
+				\item Set $r = x_R \bmod q$. 
+				\begin{itemize}
+					\item If $r = 0$, go back to step~\ref{item:ssign-step}. 
+					\item Else, continue.
+				\end{itemize}
+				\item Compute $s = k^{-1} \cdot (h + r \cdot \sk) \bmod q.$ 
+				\begin{itemize}
+					\item If $s = 0$, go back to step~\ref{item:ssign-step}. 
+					\item Else, continue.
+				\end{itemize}
+				\item Output $\sigma = (r, s)$.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+	\begin{minipage}[t]{0.54\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\SVer}_{\pk}(\msg \in \{0,1\}^\star, \sigma = (r, s)\in(\Z_q^*)^2)$: %\vspace{0.1cm}
+			\begin{enumerate}
+				\item Check that $\pk \in \SEC{\G}$.
+				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
+				\item Compute $w = s^{-1} \bmod q$.
+				\item Compute $u_1 = h \cdot w \bmod q$.
+				\item Compute $u_2 = r \cdot w \bmod q$.
+				\item Compute $$X = u_1 \cdot \hlget{\SEC{G}} + u_2 \cdot \pk = (x_X, y_X) \in \SEC{\G}.$$
+				\item Accept if $r = x_X \bmod q$; otherwise, reject.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+\end{mdframed}
+
 \subsection{Encryption schemes}
 \label{sec:cryptographic-primitives:encryption}
 
@@ -240,56 +316,6 @@ Since the plaintext message space is typically small, recovering $m$ from $M$ is
 \end{mdframed}
 
 In the protocol, re-encryption is applied not only to newly submitted ballots but also to ballots already stored in the state tree. By refreshing the randomness of both new and existing ciphertexts, sequencers ensure that it is indistinguishable whether a ballot has been overwritten or merely re-randomized. This mechanism is essential for guaranteeing receipt-freeness: voters cannot produce a verifiable receipt of their choice, and adversaries cannot detect or prove whether a particular vote has been replaced (see Section~\ref{sec:analysis}).
-
-
-\subsection{Digital signature schemes}
-\label{sec:cryptographic-primitives:signatures}
-
-\Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
-%
-%\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve for user authentication and vote authorization. This decision is taken to ensure that \davinci is compatible with standard Ethereum wallets, such as MetaMask~\ref{} or Ledger~\ref{}, without requiring users to generate or manage additional cryptographic keys. 
-%
-Verification of ECDSA signatures is performed inside zero-knowledge proofs using a specialized circuit that emulates SECP256K1 arithmetic. This approach is necessary because SECP256K1 is defined over a 256-bit prime field that differs from the native field used in the ZK-SNARK circuit (see Section\ref{sec:vocdoni-protocol:circuits} for more details). Below, we describe the algorithms, which follow the standard ECDSA protocol.
-%
-{\color{blue} (The output of the hash does not match -- check where variables live.)}
-
-\begin{mdframed}
-	\begin{minipage}[t]{0.46\textwidth}
-		\begin{itemize}
-			\item[$\bullet$] $\hlset{\SSign}_{\sk}(\msg \in \{0,1\}^\star)$:  \vspace{0.1cm}
-			\begin{enumerate}
-				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
-				\item\label{item:ssign-step} Select a random scalar $k \sample \Z_q^{*}$.
-				\item Compute $R = k \cdot \hlget{\SEC{G}} = (x_R, y_R) \in \SEC{\G}$.
-				\item Set $r = x_R \bmod q$. 
-					\begin{itemize}
-						\item If $r = 0$, go back to step~\ref{item:ssign-step}. 
-						\item Else, continue.
-					\end{itemize}
-				\item Compute $s = k^{-1} \cdot (h + r \cdot \sk) \bmod q.$ 
-					\begin{itemize}
-						\item If $s = 0$, go back to step~\ref{item:ssign-step}. 
-						\item Else, continue.
-					\end{itemize}
-				\item Output $\sigma = (r, s)$.
-			\end{enumerate}
-		\end{itemize}
-	\end{minipage}
-	\begin{minipage}[t]{0.54\textwidth}
-		\begin{itemize}
-			\item[$\bullet$] $\hlset{\SVer}_{\pk}(\msg \in \{0,1\}^\star, \sigma = (r, s)\in(\Z_q^*)^2)$: %\vspace{0.1cm}
-			\begin{enumerate}
-				\item Check that $\pk \in \SEC{\G}$.
-				\item Compute $h = \hlget{\Keccak}(\msg) \bmod q$.
-				\item Compute $w = s^{-1} \bmod q$.
-				\item Compute $u_1 = h \cdot w \bmod q$.
-				\item Compute $u_2 = r \cdot w \bmod q$.
-				\item Compute $$X = u_1 \cdot \hlget{\SEC{G}} + u_2 \cdot \pk = (x_X, y_X) \in \SEC{\G}.$$
-				\item Accept if $r = x_X \bmod q$; otherwise, reject.
-			\end{enumerate}
-		\end{itemize}
-	\end{minipage}
-\end{mdframed}
 
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}
@@ -359,30 +385,10 @@ After collecting valid encrypted shares, each sequencer $P_j$ can recover their 
 
 This approach ensures that the encryption public key is securely generated in a decentralized way, that each sequencer learns only their own secret share, and that the correctness of the entire DKG procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
 
-\subsection{Merkle trees}
-\label{sec:cryptographic-primitives:merkle-trees}
-
-The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data structure for maintaining off-chain state. Following the construction in~\cite{baylina19sparse}, these are full binary trees of fixed depth in which each leaf encodes a key-value pair and empty leaves are explicitly represented, allowing for both inclusion and non-inclusion proofs. A key property of SMTs is that the hash of each key determines a unique traversal path from the root to the leaf, regardless of insertion order. When inserting a new key, the tree descends until it encounters either an empty node or a leaf. In case of a path collision, the algorithm splits at the first differing bit, creating intermediate nodes accordingly. 
-%SMTs support efficient membership and non‑membership proofs, enabling a party to prove that a given key-value is (or is not) present in the tree without revealing the content. 
-
-In \davinci, SMTs are used to represent two core data structures: the census tree, which encodes the list of eligible voters along with their respective voting weights, and the state tree, which encodes the current status of submitted votes. Both trees have fixed depth 64. The census tree is instantiated with the MiMC hash function over the BLS12-377 scalar field, while the state tree uses Poseidon over the BN254 scalar field. Only the root hash of each tree is published on-chain, ensuring verifiability with minimal on-chain storage. 
-%
-To support state transitions and circuit verification, each tree $\tree$ has the following functions associated:
-
-\begin{itemize}
-	\item $\tree.\hlset{\MTRoot}()$: it returns the current Merkle root of the tree.
-	\item $\tree.\hlset{\MTInsert}(path, \leaf)$: it inserts a new leaf $\leaf$ at the position defined by the given path.
-	\item $\tree.\hlset{\MTUpdate}(\leaf_{old}, \leaf)$: it updates an existing leaf in the tree.
-	\item $\tree.\hlset{\MTMembershipProof}(\leaf)$: it returns a Merkle proof of inclusion for the given leaf.
-	\item $\tree.\hlset{\MTNonMembershipProof}(\leaf)$: it returns a proof that the given leaf is not included in the tree.
-	\item $\tree.\hlset{\MTVerify}(\leaf, proof, root)$: it verifies that the given proof corresponds to the claimed root and leaf.
-\end{itemize}
-
-These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Section~\ref{sec:vocdoni-protocol:merkle-trees}.
-
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
 
 {Zero-knowledge succinct non-interactive arguments of knowledge (ZK-SNARKs)} are a crucial component in ensuring the integrity of the voting process. Voters generate ZK-SNARK proofs to demonstrate that their encrypted ballots comply with the rules and constraints defined by the election parameters, without revealing any information about their choices. Similarly, sequencers produce proofs to certify the correctness of vote aggregation and state transitions throughout the protocol. {\color{blue}\hlset{\PProve}(), \hlset{\PVerify}(proof, PI) -- pkey, vkey.}
 
 All ZK circuits in \davinci are compiled using the Groth16 proof system~\cite{groth2016size}, a widely adopted ZK-SNARK construction known for its succinctness, efficient verification, and minimal proof size. Although all circuits rely on the same proving system, they are instantiated with different elliptic curves depending on the cryptographic requirements of each phase. Specifically, the vote validity circuit is compiled over the BN254 curve, the census-related circuit uses BLS12-377, and the aggregation circuit is instantiated over BW6-761. Finally, the last circuit used by the sequencer—responsible for generating the final proof of correct tallying and result—is compiled over BN254 as well, since this is the proof that is verified on-chain by the smart contract using Ethereum’s native precompiles. Further details on the circuits are provided in Section~\ref{sec:vocdoni-protocol:circuits} and a summary of the instantiations can be found in Figure~\ref{fig:circuits-flow}.
+

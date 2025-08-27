@@ -62,19 +62,22 @@
 %	    \freefootnote{\scriptsize{Authors are listed in alphabetical order (\url{https://www.ams.org/profession/leaders/CultureStatement04.pdf}).}}
 \end{abstract}
 
-{\color{blue}
-	
-\noi Pieces of text marked in \textbf{blue} are heavily work in progress. Additionally, there are these general tasks left:
+{\color{blue}\fbox{\parbox{0.93\textwidth}{
+
+\vspace{0.2cm}
+
+\noi Pieces of text marked in \textbf{blue} are heavily work in progress. In addition, there are these general tasks:
 
 \begin{itemize}
 	\item Consider separating the roles of the sequencers from key generators.
 	\item Change $(C_1, C_2)$ to \texttt{ciphertext} (in protocol flow and figures).
 	\item Notation: are voteIDs called Nullifiers?
-	\item Consider the scenario with deterministic signature (no Eth compatible) that can be used as nullifier.
+	\item Consider scenario where deterministic signature (no Eth compatible) can be used as nullifier.
 	\item Do new circuit1 + circuit2.
 	\item Do last results circuit.
+	\item Add citations.
 \end{itemize}
-}
+}}}
 
 \setcounter{tocdepth}{2}
 \makeatletter
@@ -119,7 +122,7 @@
 \label{sec:ballot-protocol}
 \input{\secs/ballot-protocol}
 
-\section{The Vocdoni token}
+\section{Vocdoni token} %Protocol incentives
 \label{sec:token}
 \input{\secs/token}
 
