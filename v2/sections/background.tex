@@ -1,31 +1,57 @@
 % !TeX root = ../build/main.tex
 
+The \davinci protocol builds on several decentralized technologies and advanced cryptographic tools. In this section we give a high-level overview of these components and their role in the system. We first introduce the interplanetary file system (IPFS), which serves as a decentralized storage layer for distributing large datasets off-chain. We then describe Ethereum, the settlement layer where commitments are published, rules are enforced through smart contracts, and state data is managed using recent mechanisms such as data blobs. Finally, we present the zero-knowledge (ZK) proof systems that underpin the protocol’s integrity and security, focusing on ZK-SNARKs and arithmetic circuits, which allow participants to prove compliance with protocol rules without revealing sensitive information.
+
+%The \davinci protocol builds on several decentralized technologies and cryptographic primitives: IPFS for off-chain data distribution, Ethereum for settlement and smart contract execution (including recent extensions such as data blobs), and ZK proofs, specifically ZK-SNARKs over arithmetic circuits, for verifiable yet privacy-preserving enforcement of protocol rules. In this section we give a high-level overview of these components
+
 \subsection{Interplanetary file system}
 \label{sec:background:ipfs}
 
-\begin{itemize}
-	\item Brief introduction to IPFS.
-\end{itemize}
+The interplanetary file system (IPFS) is a peer-to-peer distributed storage network designed to make the web more resilient, permanent, and decentralized. Unlike traditional client-server architectures that retrieve data from a specific location (e.g., a URL pointing to a server), IPFS retrieves data based on its content. Every file stored in IPFS is split into blocks, each block is hashed, and the resulting cryptographic hash is used as its unique identifier. This property, known as content addressing, ensures that data is tamper-evident: if the file changes, so does its hash. 
+%
+IPFS also provides deduplication (the same content is only stored once across the network), versioning (content identifiers can point to immutable snapshots of data), and distributed availability (data can be fetched from any node that stores it). Together, these features allow IPFS to function as a decentralized content delivery network.
+
+In the context of the \davinci voting protocol, IPFS is particularly useful for off-chain data distribution. Large datasets such as the full census (eligible voters and their weights) or intermediate state updates of the voting process do not need to be stored directly on Ethereum. Instead, they are stored in IPFS, and only their content hashes are published on-chain. This approach ensures transparency and verifiability—anyone can fetch the dataset from IPFS and recompute the hash to confirm its integrity—while keeping on-chain storage costs low. Sequencers and voters can therefore rely on IPFS to access the data required for generating and verifying Merkle proofs, without burdening the blockchain with large amounts of data.
 
 \subsection{Ethereum}
 \label{sec:background:ethereum}
 
-\begin{itemize}
-	\item Ethereum blockchain (say transactions have a fee cost).
-	\item Ethereum smart contracts.
-	
-	\textit{Ethereum smart contracts are employed to orchestrate the voting process, manage state transitions, and store critical data, such as the current state root and encryption public keys. These smart contracts provide a trustless environment, ensuring that all participants can be confident that the voting process rules are correctly enforced.}
-	
-	\item Ethereum data blobs.
-	
-	\textit{EIP-4844 is used for data availability, enabling the storage of state transition data in the form of Ethereum data blobs. This mechanism allows sequencers to collaborate on the construction and verification of the voting process state, ensuring efficient and decentralized data availability.}
-	
-\end{itemize}
+Ethereum is a decentralized blockchain platform that supports programmable transactions through its built-in execution environment, the Ethereum Virtual Machine (EVM). All interactions with the Ethereum network take the form of transactions, which must be broadcast to the network, validated by consensus, and permanently recorded on-chain. Every transaction requires the payment of a fee (gas), denominated in ETH, to compensate validators for computation and storage. This fee model ensures that resources are used efficiently and prevents denial-of-service attacks by making large or complex operations costly. In the context of \davinci, Ethereum serves as the settlement layer where critical commitments are published, ensuring transparency and immutability.
+
+\paragraph{Smart contracts.} Smart contracts are programs deployed on the Ethereum blockchain that execute deterministically in response to transactions. Once deployed, they cannot be altered, and their execution is guaranteed by the consensus of the network. In \davinci, smart contracts orchestrate the voting process by managing state transitions and storing critical data such as the current state root and the encryption public key. They enforce the protocol rules in a trustless environment, ensuring that no single participant can manipulate the process. By anchoring these rules in Ethereum smart contracts, \davinci guarantees that the election logic is applied consistently and verifiably across all participants.
+
+% Original text: Ethereum smart contracts are employed to orchestrate the voting process, manage state transitions, and store critical data, such as the current state root and encryption public keys. These smart contracts provide a trustless environment, ensuring that all participants can be confident that the voting process rules are correctly enforced.
+
+\paragraph{Data blobs.} Data availability is a key requirement for decentralized protocols. Ethereum’s recent EIP-4844 introduces data blobs as a mechanism for publishing large volumes of off-chain data alongside transactions at a lower cost than traditional storage. These blobs are not permanently stored on-chain, but they are guaranteed to remain available for a sufficient period of time for verification. In \davinci, sequencers use data blobs to share state transition data efficiently. By publishing state updates in blobs, sequencers allow other participants to reconstruct and verify the evolution of the voting process without overloading Ethereum’s permanent storage. This ensures scalable, decentralized data availability while retaining verifiability.
+
+% Original text: EIP-4844 is used for data availability, enabling the storage of state transition data in the form of Ethereum data blobs. This mechanism allows sequencers to collaborate on the construction and verification of the voting process state, ensuring efficient and decentralized data availability.
 
 \subsection{Zero-knowledge proofs}
 \label{sec:background:zkp}
 
-\begin{itemize}
-	\item Introduce ZK-SNARKs.
-	\item Introduce arithmetic circuits (arithmetic circuit satisfiability).
-\end{itemize}
+Zero-knowledge (ZK) proofs are cryptographic protocols that allow one party (the prover) to convince another (the verifier) that a certain statement is true, without revealing any information beyond the validity of the statement itself. In the context of voting, this enables participants to prove that their encrypted ballot is well-formed and complies with the election rules, without disclosing their actual choice.
+
+\paragraph{ZK-SNARKs.} 
+We focus on a specific type of proof systems called zero-knowledge succinct non-interactive arguments of knowledge (ZK-SNARKs). 
+%, which are particularly suited for blockchain settings. 
+Informally, while a ZK proof convinces the verifier that a valid witness exists, an argument of knowledge additionally ensures that the prover actually knows such a witness, except with negligible probability. ZK-SNARKs extend this notion with two crucial properties: they are non-interactive, requiring only a single message from prover to verifier, and succinct, meaning that proof size and verification cost remain small regardless of the size of the underlying statement. For instance, Groth16 proofs~\cite{groth2016size}, which rely on pairing-based cryptography over elliptic curves, %to achieve short proofs and fast verification [Gro16, GWC19]. 
+are only about 200 bytes long and can be verified in a few milliseconds. These properties make ZK-SNARKs particularly well-suited for blockchain applications, where verification cost and data size are critical. In \davinci, ZK-SNARKs are used at multiple stages of the protocol: voters generate proofs to show that their encrypted ballots are correct and sequencers use recursive ZK-SNARKs allow multiple proofs to be aggregated efficiently and generate proofs to attest to valid state transitions. In essence, ZK-SNARKs enable both voters and sequencers to produce compact proofs that can be checked on-chain, ensuring that all protocol rules are followed without requiring trust in any party.
+
+\paragraph{Trusted setup.}
+A limitation of some ZK-SNARK protocols is their reliance on a common reference string (CRS) generated during a so-called trusted setup. The CRS is built from random values that must not be known to either the prover or the verifier. To achieve this, the CRS can be created by a trusted third party or, more robustly, via a secure multi-party computation (MPC) protocol [Can01]. In an MPC setup, it suffices that at least one participant discards their secret contribution to ensure the integrity of the whole ceremony. {\color{blue}For \davinci, we run an MPC for each of the circuits, see Sections~\ref{sec:cryptographic-primitives:zkp} and~\ref{sec:analysis:implementation}.}
+% By anchoring these proofs on Ethereum, the protocol ensures that every step of the voting process is publicly verifiable, while preserving voter privacy.
+
+%In general, zk-SNARKs for circuit satisfiability (CSAT) require arithmetic circuits to be expressed in a more algebraic form. A common representation is the rank-1 constraint system (R1CS) [GGPR13], which encodes computations as a set of quadratic constraints. A zk-SNARK proof then demonstrates, without revealing any private values, that the prover knows an assignment to all wires of the circuit that satisfies the R1CS. Tooling such as circom provides a high-level language to write arithmetic circuits while still exposing full control over the signals and constraints of the resulting R1CS.
+
+\paragraph{Arithmetic circuits.} In general, ZK-SNARKs operate by proving the satisfiability of an arithmetic circuit. 
+An arithmetic circuit (from now on also called circuit or ZK circuit) is a directed acyclic graph where nodes represent addition or multiplication gates over a finite field. The inputs and outputs of the circuit correspond to the public inputs and private witnesses of the computation, while the intermediate wires carry intermediate values. Any deterministic computation, from verifying an encryption to checking Merkle proofs, can be compiled into an arithmetic circuit. 
+%The most widely studied language in the context of ZK-SNARK proofs is the NP-complete language of circuit satisfiability [BCC+ 16, PHGR13, BSCTV14b].
+%zk-SNARKs prove statements about the satisfiability of arithmetic circuits. An arithmetic circuit is a directed acyclic graph consisting of addition and multiplication gates defined over a finite field. Such circuits are a convenient model for computation: any program or verification logic can be compiled into an arithmetic circuit, with its inputs, outputs, and intermediate constraints expressed as field operations.
+In practice, proving with ZK-SNARKs means showing knowledge of a secret witness (e.g., a plaintext ballot or encryption randomness) that satisfies all the equations encoded in the circuit. For example, the ballot circuit in \davinci encodes the constraints that a ciphertext is well-formed, that the vote identifier is correctly derived, and that the ballot complies with the rules of the voting mode. The prover generates a proof of satisfiability, while the verifier only checks the proof against the public inputs, without learning the secret witness.
+By building complex protocol logic from arithmetic circuits, and using ZK-SNARKs to prove their satisfiability, \davinci ensures that every step of the election process, from ballot submission to state transitions, is enforced cryptographically and publicly verifiable. % is verifiable in zero-knowledge. 
+
+%In \davinci, arithmetic circuits form the backbone of all zk-SNARK proofs: voters use them to generate ballot proofs, sequencers use them to prove state transitions, and aggregation circuits recursively combine multiple proofs. Together, these circuits ensure that every step of the protocol is enforced cryptographically and can be verified succinctly on-chain.
+
+%The gates of an arithmetic circuit consist on additions and multiplications modulo p, where p is typically a large prime number of approximately 254 bits [WBB20]. The wires of an arithmetic circuit, often called signals, can carry any value from the prime finite field Fp. As with electronic circuits, depending on how signals are connected to the gates, we can distinguish between input, intermediate, and output signals. Usually, there is a set of public signals known both to prover and verifier, and the prover proves that, with that public information, he knows a valid assignment to the rest of signals that makes the circuit satisfiable. From now on, we extend the meaning of the word witness to an assignment to all signals of a the circuit, both public and private.
+
+%High-level languages such as Circom compile developer-written code into R1CS constraints, giving developers both expressiveness and fine-grained control. In \davinci, arithmetic circuits form the backbone of all zk-SNARK proofs: voters use them to generate ballot proofs, sequencers use them to prove state transitions, and aggregation circuits recursively combine multiple proofs. Together, these circuits ensure that every step of the protocol is enforced cryptographically and can be verified succinctly on-chain.
