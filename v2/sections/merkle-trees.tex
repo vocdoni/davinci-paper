@@ -1,6 +1,8 @@
 % !TeX root = ../build/main.tex
 
-Merkle trees are used to create a cryptographic representation of both the voter census registry and the voting process state. 
+{\color{blue}Consider removing this section and creating new sections \textbf{1. Census} and \textbf{2. State tree}.}\\
+
+\noi Merkle trees are used to create a cryptographic representation of both the voter census registry and the election state. 
 
 %\begin{itemize}
 %		\item \textbf{Census}: Each voter is assigned a Merkle proof, which they use to prove their eligibility to vote. This mechanism ensures efficient and secure verification of voter eligibility.
@@ -37,7 +39,7 @@ The leaves of the state tree store the global process parameters, the encrypted 
 \paragraph{Reserved addresses for metadata.} The first six addresses are reserved for the process parameters as follows:
 
 \begin{itemize}
-	\item \texttt{0x0}: it stores a unique identifier for the voting process (\processid).
+	\item \texttt{0x0}: it stores a unique identifier for the election (\processid).
 	\item \texttt{0x1}: it stores the committed census root (\censusroot). %and \type, a field in case the organization was using a different structure for the census than a MT.
 	\item \texttt{0x2}: it stores the ballot mode configuration, which is the set of rules for validating votes (\ballotmode). 
 	\item \texttt{0x3}: it stores the encryption public key used to encrypt the votes (\epk).
@@ -45,7 +47,7 @@ The leaves of the state tree store the global process parameters, the encrypted 
 	\item \texttt{0x5}: it stores an accumulator of the encrypted votes that need to be substracted from the tally because they have been overwritten (\substractaccumulator).	
 \end{itemize}
 
-\paragraph{Encrypted ballots.} Each voter’s encrypted ballot is stored in the state tree at a leaf whose path corresponds to their Ethereum address (or another unique identifier). The leaf value is the ciphertext corresponding to the ballot generated under the election’s public encryption key. If the voter later overwrites their ballot, the same path is updated with the new ciphertext.
+\paragraph{Encrypted ballots.} Each voter’s encrypted ballot is stored in the state tree at a leaf whose path corresponds to their Ethereum address (or another unique identifier). The leaf value is the ciphertext corresponding to the ballot encrypted under the election’s encryption public key. If the voter later overwrites their ballot, the same path is updated with the new ciphertext.
 
 \paragraph{Vote identifiers.}  In addition to storing ballots, the state tree also tracks the set of vote identifiers. Each vote identifier \voteid, which is derived from the \processid, the voter’s address, and fresh randomness, determines the path to a dedicated leaf. Initially empty, these leaves are filled when the corresponding \voteid is used, thereby recording that it has been consumed. This enables efficient non-membership proofs: before accepting a new ballot, the sequencer checks that the corresponding \voteid path is still empty, and upon inclusion, the leaf is marked as used to prevent reuse. \\
 
@@ -57,6 +59,8 @@ The leaves of the state tree store the global process parameters, the encrypted 
 	\label{fig:mt-state}
 \end{figure}
 
-At the beginning of the election, the state tree is initialized with the process parameters and empty accumulators, and its root ($\stateroot$) is published on-chain. As the voting progresses, sequencers update the tree whenever new votes are received, producing a new root for each transition. To guarantee correctness, each update is accompanied by a ZK-SNARK proof attesting that the transition from the previous root to the new root respects all protocol constraints: ballots are well-formed and comply with the voting rules, voters are eligible according to the census, the \voteid non-membership condition prevents double voting (or overwrites are handled correctly), and encrypted results are aggregated consistently. In addition, sequencers reencrypt stored ciphertexts, including both newly submitted and already included ballots. This mechanism refreshes the randomness of the encrypted votes without altering their underlying content, ensuring receipt-freeness and concealing whether a particular ballot has been overwritten or simply re-randomized.
+\paragraph{Initial state.} At the beginning of the election, the state tree is initialized with the process parameters and empty accumulators, and its root ($\stateroot$) is published on-chain. 
+
+\paragraph{State transitions.} As the voting progresses, sequencers update the tree whenever new votes are received, producing a new root for each transition. To guarantee correctness, each update is accompanied by a \ac{ZK-SNARK} proof attesting that the transition from the previous root to the new root respects all protocol constraints: ballots are well-formed and comply with the voting rules, voters are eligible according to the census, the \voteid non-membership condition prevents double voting (or overwrites are handled correctly), and encrypted results are aggregated consistently. In addition, sequencers reencrypt stored ciphertexts, including both newly submitted and already included ballots. This mechanism refreshes the randomness of the encrypted votes without altering their underlying content, ensuring receipt-freeness and concealing whether a particular ballot has been overwritten or simply re-randomized.
 
 In this way, the state tree provides a compact and tamper-proof commitment to the current status of the election. At the end of the process, the final state root together with the on-chain verification of all transitions serves as a complete cryptographic record of the election, encapsulating both the tally and the integrity of the entire voting procedure.

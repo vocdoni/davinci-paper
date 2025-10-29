@@ -1,11 +1,15 @@
 % !TeX root = ../build/main.tex
 
-In this section we describe the overall flow of the \davinci voting protocol. The process is structured into four main phases: voting setup, encryption key generation, votes collection, and results validation. Each phase specifies the interactions between the organizer, voters, sequencers, and the smart contracts that coordinate the voting process. An overview of the complete process is shown in Figure~\ref{fig:protocol-flow}.
+In this section we describe the overall flow of the \davinci voting protocol. The process is structured into five main phases: election setup, encryption key generation, voting period, decryption key generation, and tally finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Figure~\ref{fig:protocol-flow}.
 
-\subsubsection{Voting setup}
+\subsubsection{Election setup}
 \label{sec:vocdoni-protocol:setup}
 
 In this phase, sequencers register and the organizer sets the election up.\\
+
+\rogeri{I'd put this outside of the "voting process". I think adding a section "System setup and operation"-like before this one and rename this one as "voting process flow" (or simply "voting process") could ease the explanation.}
+
+\martai{This section is outdated. Sequencers do not register, and we should remove the colours and boxes.}
 
 \noi \sequencers 
 Sequencers must first register in the sequencer registry smart contract, a process that remains open continuously. Registration involves publishing their identity, network endpoint (e.g., URI), and a collateral deposit to ensure honest participation. The collateral can later be slashed in case of misbehavior. \\
@@ -14,29 +18,31 @@ Sequencers must first register in the sequencer registry smart contract, a proce
 \begin{enumerate}
 	\item Prepare the census data \censusdata\ and generate the census Merkle tree $\censusTree$ with that data.
 	\item Compute the census commitment $\censusroot = \censusTree.\hlget{\MTRoot}()$.
-	\item Define the election details, including duration, options, and the ballot mode $\ballotmode$.
+	\item Prepare the voting form (ballot / set of questions), upload it to IPFS, compute commitment.
+	\item Define the election details, including duration, options, and the ballot rules $\ballotmode$ (see Section~\ref{sec:ballot-protocol}).
 	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived from the organizer’s Ethereum address, nonce, and the chain ID.
 	\item Set security parameters for the %forthcoming
 	DKG ceremony (e.g., timeout, minimum number of sequencers).
-	\item Submit all this information in a transaction to the process management smart contract {\color{blue}(pay tx fees)}.
+	\item Submit all this information in a transaction to the process management smart contract {\color{blue}(pay tx fees)}:
+	\[ tx_{org} = (\censusroot, ballotCommitment, \ballotmode, electionMetadata, \processid, dkgParameters).\]
 \end{enumerate}
 
 \subsubsection{Encryption key generation}
 \label{sec:vocdoni-protocol:keygen}
 
-In this phase, sequencers collectively generate the public encryption key.\\
+In this phase, \keywardens collectively generate the public encryption key.\\
 
-\noi \sequencers 
-Sequencers fetch the process parameters ($\processid$, $\ballotmode$, $\censusroot$) from the process management smart contract and participate in a DKG protocol before the timeout set by the organizer expires. If the minimum number of sequencer contributions is reached, the public encryption key $\epk$ is derived and made available on-chain. This ensures that no single party controls the secret key, and that decryption later requires threshold participation {\color{blue}(give more details)}.\\
+\noi \Keywardens fetch the process parameters ($\processid$, $\ballotmode$, $\censusroot$) from the process management smart contract and participate in a DKG protocol before the timeout set by the organizer expires. If the minimum number of contributions is reached, the public encryption key $\epk$ is derived and made available on-chain. This ensures that no single party controls the secret key, and that decryption later requires threshold participation {\color{blue}(give more details)}.\\
 
 \noi {\color{blue} Alternatively, generate a SNARK proving the EPK has been generated correctly and the contract verifies it.}
 
-\subsubsection{Votes collection}
+\subsubsection{Voting period}
 \label{sec:vocdoni-protocol:votes}
 
-In this phase, voters cast their ballots and send them to the sequencers, who collect them. \\
+In this phase, voters cast their ballots and send them to the sequencers, who collect and process them. \\
 
-\noi \voter To cast a ballot, a voter does the following:
+\noi \textbf{(a) Vote casting.} To cast a ballot, a voter does the following:
+
 \begin{enumerate}
 	\item Select a sequencer from the sequencer registry smart contract.  
 	\item Retrieve their census membership proof $\censusproof$ to prove eligibility.  
@@ -66,8 +72,8 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 %\item Send the following data, which includes the encrypted vote, census membership proof, signature\footnote{Note that the address is not send because it can be recomputed from the signature.} and vote proof, to the selected sequencer:
 %\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \voteproof, \signature ]. \]
 
+\noi \textbf{(b) Vote batching.} Upon receiving votes, a sequencer does the following:
 
-\noi \sequencers Upon receiving votes, a sequencer does the following:
 \begin{enumerate}
 	{\color{blue}
 	\item Retrieve the current state root $\stateroot$ and census root $\censusroot$ from the process management smart contract and the associated data from the Ethereum data blobs.  
@@ -81,27 +87,31 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\end{itemize}
 	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
 	}
+	\martai{If \stateroot changed, repeat last circuit.}
 \end{enumerate}
 
 Sequencers repeat this process until the voting deadline set by the organizer.
 
-\subsubsection{Results validation}
+\subsubsection{Decryption key generation}
+\label{sec:vocdoni-protocol:deckey-gen}
+
+\subsubsection{Tally finalization}
 \label{sec:vocdoni-protocol:results}
 
 {\color{blue} After the voting period expires, $t$ out of $n$ sequencers publish their decryption shares of the election private key. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
 
-Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share.
+Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share (INCENTIVATION MECHANISM).
 
 At this point:
 \begin{itemize}
-	\item Anyone can verify the correctness of the final results by checking the zkSNARK state proofs and on-chain commitments.  
-	\item The combination of the final state root, the decryption of the accumulators, and the publicly verifiable zkSNARK proofs guarantees the integrity of the entire voting process.  
+	\item Anyone can verify the correctness of the final results by checking the \ac{ZK-SNARK} state proofs and on-chain commitments.  
+	\item The combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire voting process.  
 \end{itemize}
 
 The process is considered finalized once the decrypted tally is available and all state transition proofs have been verified on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.}
 
 \begin{figure}%[H]
 	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow}}
-	\caption{Vocdoni voting process overview.}
+	\caption{Vocdoni voting process overview. {\color{blue}Figure is OUTDATED.}}
 	\label{fig:protocol-flow}
 \end{figure}

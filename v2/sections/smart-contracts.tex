@@ -1,9 +1,17 @@
 % !TeX root = ../build/main.tex
 
-An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an Ethereum virutal machine (EVM) blockchain, the voting process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement the following three smart contracts.
+An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an Ethereum virutal machine (EVM) blockchain, the voting process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement the following three smart contracts.\\
 
-\paragraph{Process management smart contract.} It is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+\noi {\color{blue}\textbf{TODO}: add methods and state variables. Smart contracts are outdated.}
 
-\paragraph{Sequencer registry smart contract.} It keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
+\subsubsection{Process management} 
 
-\paragraph{Results verification smart contract.} For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.\\
+It is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+
+\subsubsection{Sequencer registry} 
+
+It keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
+
+\subsubsection{Results verification}
+
+For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.

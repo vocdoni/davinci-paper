@@ -1,6 +1,8 @@
 % !TeX root = ../build/main.tex
 
-At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the voting process. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies voter eligibility and census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the ZK-SNARK proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}.  
+\rogeri{consider using paragraph as in S5.3 "Smart contracts" for readability}
+
+At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the voting process. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies the voter's census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the \ac{ZK-SNARK} proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}.  
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow-v2}}
@@ -9,21 +11,21 @@ At the core of \davinci lie a set of arithmetic circuits that enforce the correc
 	\label{fig:circuits-flow}
 \end{figure}
 
-For clarity, the circuits are described in this section with their full set of public inputs explicitly listed. In the actual implementation, however, we apply an optimization: rather than exposing all public inputs individually, we compute a single commitment $h = Hash(PI)$ and use $h$ as the only public input. The proof verifier then checks that $Hash(PI) = h$, ensuring that the original public inputs are consistent while reducing both proof size and verification cost. In \davinci, this commitment is computed using the MiMC-7 hash function {\color{blue}(use hlget to point "Hash" to MiMC-7)}. Note that this optimization does not alter the semantics of the circuits but significantly reduces verifier complexity and on-chain verification costs. Other implementation aspects such as the exact number of constraints and the proving frameworks used are deferred to Section~\ref{sec:analysis:implementation}.
+For clarity, the circuits are described in this section with their full set of public inputs explicitly listed. In the actual implementation, however, we apply an optimization: rather than exposing all public inputs $PI$ individually, we compute a single commitment $h = Hash(PI)$ and use $h$ as the only public input. The proof verifier then checks that $Hash(PI) = h$, ensuring that the original public inputs are consistent while reducing both proof size and verification cost. In \davinci, this commitment is computed using the MiMC-7 hash function {\color{blue}(use hlget to point "Hash" to MiMC-7)}. Note that this optimization does not alter the semantics of the circuits but significantly reduces verifier complexity and on-chain verification costs. Other implementation aspects such as the exact number of constraints and the proving frameworks used are deferred to Section~\ref{sec:analysis:implementation}.
 
 % Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.
 
 \subsubsection{Ballot circuit} 
 \label{sec:vocdoni-protocol:circuits:ballot}
 
-The ballot circuit, illustrated in Figure~\ref{fig:circuit-ballot}, is generated locally by the voter at the time of casting a ballot. Its purpose is twofold: first, to prove that the encrypted ballot is valid and complies with the protocol rules defined by the organizer; and second, to prove that the vote identifier (\voteid) has been correctly derived. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve. We call the resulting proof \textit{ballot proof} and denote it as $\hlset{\ballotproof}$. We detail below the inputs and constraints of the ballot circuit. 
+The ballot circuit, illustrated in Figure~\ref{fig:circuit-ballot}, is generated locally by the voter at the time of casting a ballot. Its purpose is twofold: first, to prove that the encrypted ballot is valid and complies with the protocol rules defined by the organizer; and second, to prove that the vote identifier (\voteid) has been correctly derived. The correctness of this circuit is attested by a \ac{ZK} proof generated using the \ac{ZK-SNARK} protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve. We call the resulting proof \textit{ballot proof} and denote it as $\hlset{\ballotproof}$. We detail below the inputs and constraints of the ballot circuit. 
 
 \begin{spacing}{1.25}
 	\vspace{0.3cm}
 	\noi \textbf{Public inputs}
 	\begin{itemize}
 		\item $\public$ $\processid$: voting process identifier. 
-		\item $\public$ $\ballotmode$: ballot protocol configuration.S
+		\item $\public$ $\ballotmode$: ballot protocol configuration.
 		\item $\public$ $\epk$ ($EPK$): encryption public key.
 		\item $\public$ $\address$: voter's address.
 		\item $\public$ $\weight$: voter's weight.
@@ -76,12 +78,12 @@ The verifier circuit, illustrated in Figure~\ref{fig:circuit-verifier}, is gener
 	\end{itemize}
 	\textbf{Constraints}	
 	\begin{itemize}
-		\item \emph{Voter's proof verification.} The vote zkProof is valid for the inputs provided: 
-		$$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \weight)\right).$$
+		\item \emph{Voter's proof verification.} The voter's submitted proof is valid for the inputs provided: 
+		$$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \weight)\right) = \true.$$
 		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided:
-		$$ \hlget{\censusTree}.\hlget{\MTMembershipProof}(\weight, \address = \hlget{\Keccak}(\pk), \censuspf, \censusroot). $$
+		$$ \hlget{\censusTree}.\hlget{\MTVerify}\left(\weight, \address = \hlget{\Keccak}(\pk), \censuspf, \censusroot\right) = \true. $$
 		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key:
-		$$ \hlget{\SVer}_{\pk}(\voteid, \signature). $$
+		$$ \hlget{\SVer}_{\pk}(\voteid, \signature) = \true. $$
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -95,7 +97,7 @@ The verifier circuit, illustrated in Figure~\ref{fig:circuit-verifier}, is gener
 \subsubsection{Aggregation circuit}
 \label{sec:vocdoni-protocol:circuits:aggregation}
 
-The aggregation circuit, illustrated in Figure~\ref{fig:circuit-aggregate}, is generated by the sequencer to combine multiple authenticated votes into a single proof. Its purpose is to reduce verification overhead by recursively aggregating individual authentication proofs, while ensuring that all aggregated votes belong to the same voting process.  The batch size, i.e., the maximum number of proofs aggregated in a single execution, is a fixed parameter (currently set to 60). If fewer proofs are available, the sequencer pads the batch with dummy proofs so that the circuit always operates on a fixed-size input. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BW6-761 curve. We call the resulting proof the \textit{aggregation proof} and denote it as $\hlset{\aggregationproof}$. We detail below the inputs and constraints of the aggregation circuit.  
+The aggregation circuit, illustrated in Figure~\ref{fig:circuit-aggregate}, is generated by the sequencer to combine multiple authenticated votes into a single proof. Its purpose is to reduce verification overhead by recursively aggregating individual authentication proofs, while ensuring that all aggregated votes belong to the same voting process.  The batch size, i.e., the maximum number of proofs aggregated in a single execution, is a fixed parameter (currently set to 60). If fewer proofs are available, the sequencer pads the batch with dummy proofs so that the circuit always operates on a fixed-size input. The correctness of this circuit is attested by a ZK proof generated using the \ac{ZK-SNARK} protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BW6-761 curve. We call the resulting proof the \textit{aggregation proof} and denote it as $\hlset{\aggregationproof}$. We detail below the inputs and constraints of the aggregation circuit.  
 
 \begin{spacing}{1.25}
 	\vspace{0.3cm}
@@ -116,7 +118,7 @@ The aggregation circuit, illustrated in Figure~\ref{fig:circuit-aggregate}, is g
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Votes aggregation.} The accumulated authentication proofs are valid (for the given inputs). For every $i$:
-		$$\hlget{\PVerify}(\authenticationproof, PI = ((C_1, C_2)_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)).$$
+		$$\hlget{\PVerify}\left(\authenticationproof, PI = ((C_1, C_2)_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)\right) = \true.$$
 		\item \emph{Shared public inputs.} The public inputs \processid, \ballotmode, \epk, and \censusroot are the same for all proofs.
 	\end{itemize}
 	\vspace{-0.3cm}
@@ -131,7 +133,7 @@ The aggregation circuit, illustrated in Figure~\ref{fig:circuit-aggregate}, is g
 \subsubsection{State transition circuit} 
 \label{sec:vocdoni-protocol:circuits:state-transition}
 
-The state transition circuit, illustrated in Figure~\ref{fig:circuit-state-transition-v2}, is generated by the sequencer to update the global state of the voting process. Its purpose is to verify that a batch of aggregated votes has been correctly incorporated into the state Merkle tree, that overwrites and vote identifiers are handled consistently, and that the accumulators of encrypted results are updated accordingly. The correctness of this circuit is attested by a ZK proof generated using the ZK-SNARK protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve, which is supported by Ethereum’s native precompiles for proof verification. We call the resulting proof the \textit{state proof} and denote it as $\hlset{\stateproof}$. This proof is submitted on-chain and verified by the process management smart contract, ensuring that every accepted state transition complies with the protocol rules.
+The state transition circuit, illustrated in Figure~\ref{fig:circuit-state-transition-v2}, is generated by the sequencer to update the global state of the voting process. Its purpose is to verify that a batch of aggregated votes has been correctly incorporated into the state Merkle tree, that overwrites and vote identifiers are handled consistently, and that the accumulators of encrypted results are updated accordingly. The correctness of this circuit is attested by a \ac{ZK} proof generated using the \ac{ZK-SNARK} protocol described in Section~\ref{sec:cryptographic-primitives:zkp}, instantiated over the BN254 curve, which is supported by Ethereum’s native precompiles for proof verification. We call the resulting proof the \textit{state proof} and denote it as $\hlset{\stateproof}$. This proof is submitted on-chain and verified by the process management smart contract, ensuring that every accepted state transition complies with the protocol rules.
 
 To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$), of which $n$ are new submissions and $m = N-n$ are overwrites of previously cast ballots. In the following, we describe the inputs and constraints of the state transition circuit in detail.
 
@@ -211,11 +213,20 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 	\vspace{-0.3cm}
 \end{spacing}
 
+{\color{blue}Mention that an advantage of splitting the circuits of the sequencers in 3 is that if the stateRoot changes in the meantime, the sequencer only needs to rerun the last circuit and not all three of them.}\\
+
+\martai{\numvotes and \numoverwrites are part of the smart contract state.}
 
 \subsubsection{Results circuit}
 \label{sec:vocdoni-protocol:circuits:results}
 
 {\color{blue}{It needs to be done.}}
+
+\begin{figure}[h]
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-results}}
+	\caption{Results circuit. All public values are framed in green.}
+	\label{fig:circuit-results}
+\end{figure}
 
 %%% STATE-TRANSITION CIRCUIT
 \begin{landscape}

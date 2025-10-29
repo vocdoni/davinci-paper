@@ -9,7 +9,7 @@ Each ballot is defined as an array of integer values subject to a set of configu
 	\item \numfields: the maximum number of fields (i.e., options) in the ballot.  
 	\item \minvalue: the minimum value that each field in the ballot can take.  
 	\item \maxvalue: the maximum value that each field in the ballot can take.  
-	\item \uniquevalues: a Boolean flag indicating whether all field values must be distinct (as in ranking systems).  
+	\item \uniquevalues: a Boolean flag indicating whether all field values must be different (as in ranking systems).  
 	\item \costexponent: the exponent applied when computing the cost of casting votes in a field. This parameter enables quadratic or higher-order voting rules.  
 	\item \minvaluesum: the minimum allowed total sum of a ballot, computed as $\sum_{i=1}^{\numfields} v_i^{\costexponent}$, 
 	where $v_i$ are the field values.  
@@ -31,6 +31,15 @@ Each ballot is defined as an array of integer values subject to a set of configu
 	\label{fig:ballot-variables}
 \end{figure}
 \vspace{-1cm}
+
+\paragraph{(Ballot mode) circuit constraints.} Given a ballot with $n$ fields and each field filled with a value $v_i$ for $i = 1, \dots, n$, we enforce the following constraints (captured in Figure~\ref{fig:ballot-variables}):
+
+\begin{itemize}
+	\item $\numfields = n$,
+	\item If $\uniquevalues = \true$, then $v_i \neq v_j$ for all $i\neq j$.
+	\item $\minvalue \leq v_i \leq \maxvalue$ for all $i\in\{1, \dots, n\}$.
+	\item $\minvaluesum \leq \sum_{i=1}^n v_i^{\costexponent} \leq \maxvaluesum$.
+\end{itemize}
 
 \paragraph{General mechanism.}
 A ballot is valid if and only if all the above constraints are satisfied. Invalid ballots are rejected at the circuit level and do not contribute to the tally. Valid ballots are aggregated into a results array, where each entry is the sum of all votes cast for the corresponding field across all voters. Voter weights, defined in the census tree (see Section~\ref{sec:vocdoni-protocol:merkle-trees:census}), are taken into account when computing these sums. By default, all voters have the same weight, but the protocol also supports weighted voting, where different participants may contribute proportionally to their assigned voting power. In this case, \maxvaluesum\ reflects the maximum weight assigned to each voter, and the ballot and verifier circuits enforce that the correct weight is being used (see Sections~\ref{sec:vocdoni-protocol:circuits:ballot} and~\ref{sec:vocdoni-protocol:circuits:verifier} for further details).

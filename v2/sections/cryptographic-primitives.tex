@@ -6,7 +6,7 @@
 %decentralized trust: DKG
 %verifiability: ZKPs
 
-In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; distributed key generation (DKG) for decentralizing trust in the election keys; and zero-knowledge proofs (zkSNARKs) for verifiability of computations. For each primitive we also specify the concrete choice of parameters used.
+In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; distributed key generation (DKG) for decentralizing trust in the election keys; and zero-knowledge proofs (\acp{ZK-SNARK}) for verifiability of computations. For each primitive, we also specify the concrete choice of parameters used.
 
 %\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
 %Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
@@ -15,7 +15,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown10sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar20bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it ideal for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles21twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe20zexe} and BW6-761~\cite{elhousni20optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
+\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown10sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar20bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles21twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe20zexe} and BW6-761~\cite{elhousni20optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
@@ -184,6 +184,8 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Merkle trees}
 \label{sec:cryptographic-primitives:merkle-trees}
 
+{\color{blue}\textbf{TODO}: Add description of Incremental Merkle trees.}\\
+
 The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data structure for maintaining off-chain state. Following the construction in~\cite{baylina19sparse}, these are full binary trees of fixed depth in which each leaf encodes a key-value pair and empty leaves are explicitly represented, allowing for both inclusion and non-inclusion proofs. A key property of SMTs is that the hash of each key determines a unique traversal path from the root to the leaf, regardless of insertion order. When inserting a new key, the tree descends until it encounters either an empty node or a leaf. In case of a path collision, the algorithm splits at the first differing bit, creating intermediate nodes accordingly. 
 %SMTs support efficient membership and non‑membership proofs, enabling a party to prove that a given key-value is (or is not) present in the tree without revealing the content. 
 
@@ -318,9 +320,9 @@ In the protocol, re-encryption is applied not only to newly submitted ballots bu
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}
 
-To ensure that no single entity controls the decryption key, DAVINCI employs a distributed key generation (DKG) protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{}. Sequencers who participate in the DKG ceremony are each identified by a unique index $i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the sequencers. Only a threshold number $t$ out of $n$ sequencers can later collaborate to decrypt the tally. Unlike classical DKG protocols where shares are exchanged in the clear, our construction uses encrypted shares and ZK-SNARK proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
+To ensure that no single entity controls the decryption key, DAVINCI employs a distributed key generation (DKG) protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{todocitaton}. Participants who contribute to the DKG ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical DKG protocols where shares are exchanged in the clear, our construction uses encrypted shares and ZK-SNARK proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
 
-{\color{blue} Let $t$ be the threshold parameter and $n$ the number of sequencers, with $t\leq n$. Let $G$ be a generator of the elliptic curve group of order $q$. Each participant $P_i$ runs the following procedure.
+{\color{blue} Let $t$ be the threshold parameter and $n$ the number of \keywardens, with $t\leq n$. Let $G$ be a generator of the elliptic curve group of order $q$. Each participant $P_i$ runs the following procedure.
 
 \begin{mdframed}
 		\begin{itemize}
@@ -330,7 +332,7 @@ To ensure that no single entity controls the decryption key, DAVINCI employs a d
 				\item Select random scalars $a_{i,0},\dots,a_{i,t-1} \sample \Z_q$.
 				\item Define the polynomial $f_i(x) = \sum_{j=0}^{t-1} a_{i,j} x^j$.
 				\item For each $j \in \{0,\dots,t-1\}$, compute public commitments $C_{i,j} = a_{i,j}\cdot G$.
-				\item For each sequencer $P_\ell$ with index
+				\item For each participant $P_\ell$ with index
 				$\ell \in \{1,\dots,n\}$, compute the secret share $s_{i,\ell} = f_i(\ell)$.
 				\item Encrypt each $s_{i,\ell}$ under $P_\ell$'s public key using a simplified version of the EC integrated encryption scheme (ECIES), obtaining $EncECIES(s_{i,\ell})$.
 				\item Output $\{C_{i,j}\}_{j=0}^{t-1}$ and $\{EncECIES(s_{i,\ell})\}_{\ell=1}^n$, together with a ZK-SNARK proof attesting that the encrypted values are consistent with the commitments.
@@ -353,7 +355,7 @@ The smart contract verifies the encrypted shares.
 		\end{itemize}
 \end{mdframed}
 
-After collecting valid encrypted shares, each sequencer $P_j$ can recover their secret share $s_j$ by decrypting all contributions addressed to them:}
+After collecting valid encrypted shares, each participant $P_j$ can recover their secret share $s_j$ by decrypting all contributions addressed to them:}
 
 \begin{mdframed}
 	\begin{itemize}
@@ -381,7 +383,7 @@ After collecting valid encrypted shares, each sequencer $P_j$ can recover their 
 	\end{itemize}
 \end{mdframed}
 
-This approach ensures that the encryption public key is securely generated in a decentralized way, that each sequencer learns only their own secret share, and that the correctness of the entire DKG procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
+This approach ensures that the encryption public key is securely generated in a decentralized way, that each \keywarden learns only their own secret share, and that the correctness of the entire DKG procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}

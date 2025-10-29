@@ -4,6 +4,8 @@
 \setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
 % Set the first-level itemize label to use math mode \bullet
 \setlist[itemize,1]{label=$\bullet$}
+% The second-level enumerates (enumerate,2) should only show (a) when referenced (not (3a)).
+\setlist[enumerate,2]{label=(\alph*),ref=\alph*}
 
 % Working directory
 \newcommand{\definedir}[2]{\newcommand{#1}{#2}}
@@ -14,10 +16,10 @@
 % Comments
 \newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
 \newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
-\newcommand{\pau}[1]{\todo[size=\small, color=blue!40]{\textbf{Pau}: #1}}
-\newcommand{\paui}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Pau}: #1}}
-\newcommand{\jordi}[1]{\todo[size=\small, color=green!40]{\textbf{Jordi}: #1}}
-\newcommand{\jordii}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Jordi}: #1}}
+\newcommand{\pau}[1]{\todo[size=\small, color=green!40]{\textbf{Pau}: #1}}
+\newcommand{\paui}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Pau}: #1}}
+\newcommand{\roger}[1]{\todo[size=\small, color=blue!40]{\textbf{Roger}: #1}}
+\newcommand{\rogeri}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Roger}: #1}}
 
 % Freefootnote
 \let\svthefootnote\thefootnote
@@ -127,8 +129,10 @@
 \newcommand{\costexponent}{\ballotstyle{costExponent}}
 \newcommand{\totalvaluesum}{\ballotstyle{totalValueSum}}
 \newcommand{\validvote}{\ballotstyle{validVote}}
+
 % Voting protocol
 \newcommand{\variablestyle}[1]{\texttt{#1}\xspace}
+\newcommand{\true}{\variablestyle{true}}
 \newcommand{\census}{\variablestyle{census}}
 \newcommand{\censusdata}{\variablestyle{censusData}}
 \newcommand{\voteproof}{\variablestyle{voteProof}}
@@ -231,6 +235,10 @@
 % Misc
 \newcommand{\davinci}{DAVINCI\xspace}
 \newcommand{\Davinci}{DAVINCI\xspace}
+\newcommand{\keywarden}{key warden\xspace}
+\newcommand{\Keywarden}{Key warden\xspace}
+\newcommand{\keywardens}{key wardens\xspace}
+\newcommand{\Keywardens}{Key wardens\xspace}
 
 % Draft watermark
 %\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
