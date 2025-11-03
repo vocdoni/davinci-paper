@@ -15,7 +15,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown10sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar20bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles21twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe20zexe} and BW6-761~\cite{elhousni20optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
+\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown2010sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar2020bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles2021twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe2020zexe} and BW6-761~\cite{elhousni2020optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
@@ -68,7 +68,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 
 \paragraph{Generators.}\mbox{}\\
 
-\noi We denote by $\hlget{\SEC{G}}$ the generator of $\SEC{\G}$ as defined in~\cite{brown10sec}, $\hlget{\BN{G}}$ the generator of $\BN{\G}_1$ as defined in~\cite{wood2014ethereum}, $\hlget{\BJ{G}}$ the generator of $\BJ{\G}$ as defined in~\cite{erc2494}, $\hlget{\BW{G}}$ the generator of $\BW{\G}_1$ as defined in~\cite{eip3026}, and $\hlget{\BLS{G}}$ the generator of $\BLS{\G}_1$ as defined in~\cite{eip2539}.
+\noi We denote by $\hlget{\SEC{G}}$ the generator of $\SEC{\G}$ as defined in~\cite{brown2010sec}, $\hlget{\BN{G}}$ the generator of $\BN{\G}_1$ as defined in~\cite{wood2014ethereum}, $\hlget{\BJ{G}}$ the generator of $\BJ{\G}$ as defined in~\cite{erc2494}, $\hlget{\BW{G}}$ the generator of $\BW{\G}_1$ as defined in~\cite{eip3026}, and $\hlget{\BLS{G}}$ the generator of $\BLS{\G}_1$ as defined in~\cite{eip2539}.
 
 \begin{itemize}
 	\item
@@ -160,7 +160,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
 
-\Davinci uses different hash functions. On the one side, we use Keccak256~\cite{bertoni11keccak} for Ethereum address derivation, and Poseidon~\cite{grassi21poseidon}, MiMC and MiMC-7~\cite{albrecht16mimc} for arithmetic circuits within zero-knowledge proofs.
+\Davinci uses different hash functions. On the one side, we use Keccak256~\cite{bertoni2011keccak} for Ethereum address derivation, and Poseidon~\cite{grassi2021poseidon}, MiMC and MiMC-7~\cite{albrecht2016mimc} for arithmetic circuits within zero-knowledge proofs.
 
 \paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci to compress messages for signing and deriving Ethereum addresses from public keys over $\SEC{\G}$. Keccak256 takes arbitrary-length bitstrings and outputs 256-bit digests: $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. This function is not SNARK-friendly and it is used exclusively in the authentication circuit, where the verification of Ethereum-compatible signatures requires reproducing the original message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:verifier}).
 
@@ -186,7 +186,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 
 {\color{blue}\textbf{TODO}: Add description of Incremental Merkle trees.}\\
 
-The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data structure for maintaining off-chain state. Following the construction in~\cite{baylina19sparse}, these are full binary trees of fixed depth in which each leaf encodes a key-value pair and empty leaves are explicitly represented, allowing for both inclusion and non-inclusion proofs. A key property of SMTs is that the hash of each key determines a unique traversal path from the root to the leaf, regardless of insertion order. When inserting a new key, the tree descends until it encounters either an empty node or a leaf. In case of a path collision, the algorithm splits at the first differing bit, creating intermediate nodes accordingly. 
+The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data structure for maintaining off-chain state. Following the construction in~\cite{baylina2019sparse}, these are full binary trees of fixed depth in which each leaf encodes a key-value pair and empty leaves are explicitly represented, allowing for both inclusion and non-inclusion proofs. A key property of SMTs is that the hash of each key determines a unique traversal path from the root to the leaf, regardless of insertion order. When inserting a new key, the tree descends until it encounters either an empty node or a leaf. In case of a path collision, the algorithm splits at the first differing bit, creating intermediate nodes accordingly. 
 %SMTs support efficient membership and non‑membership proofs, enabling a party to prove that a given key-value is (or is not) present in the tree without revealing the content. 
 
 In \davinci, SMTs are used to represent two core data structures: the census tree, which encodes the list of eligible voters along with their respective voting weights, and the state tree, which encodes the current status of submitted votes. Both trees have fixed depth 64. The census tree is instantiated with the MiMC hash function over the BLS12-377 scalar field, while the state tree uses Poseidon over the BN254 scalar field. Only the root hash of each tree is published on-chain, ensuring verifiability with minimal on-chain storage. 
@@ -207,7 +207,7 @@ These functions are used by sequencers to construct proofs that certify the vali
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
 
-\Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
+\Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson2001ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
 %
 %\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve for user authentication and vote authorization. This decision is taken to ensure that \davinci is compatible with standard Ethereum wallets, such as MetaMask~\ref{} or Ledger~\ref{}, without requiring users to generate or manage additional cryptographic keys. 
 %
@@ -256,7 +256,7 @@ Verification of ECDSA signatures is performed inside zero-knowledge proofs using
 \subsection{Encryption schemes}
 \label{sec:cryptographic-primitives:encryption}
 
-To preserve ballot secrecy while enabling tallying, \davinci employs a threshold variant of the ElGamal cryptosystem instantiated over the BabyJubjub curve~\cite{sutikno98implementation}. This scheme offers two properties crucial for the protocol: \emph{additive homomorphism}, which allows the aggregation of encrypted votes without decryption, and \emph{re-encryption}, which enables ciphertext randomization without altering the underlying plaintext. Together, these properties allow sequencers to tally votes while preventing voters from producing receipts that could be used for coercion or vote selling. The corresponding public key is generated collectively by the sequencers via the distributed key generation protocol described in Section~\ref{sec:cryptographic-primitives:dkg}, ensuring that no single entity can decrypt ballots unilaterally.
+To preserve ballot secrecy while enabling tallying, \davinci employs a threshold variant of the ElGamal cryptosystem instantiated over the BabyJubjub curve~\cite{sutikno1998implementation}. This scheme offers two properties crucial for the protocol: \emph{additive homomorphism}, which allows the aggregation of encrypted votes without decryption, and \emph{re-encryption}, which enables ciphertext randomization without altering the underlying plaintext. Together, these properties allow sequencers to tally votes while preventing voters from producing receipts that could be used for coercion or vote selling. The corresponding public key is generated collectively by the sequencers via the distributed key generation protocol described in Section~\ref{sec:cryptographic-primitives:dkg}, ensuring that no single entity can decrypt ballots unilaterally.
 
 \paragraph{Encryption and decryption.}
 Given a message $m$, the ElGamal encryption algorithm maps it into a group element $M$ of $\BJ{\G}$ and outputs a ciphertext as follows:
@@ -285,7 +285,7 @@ Given a message $m$, the ElGamal encryption algorithm maps it into a group eleme
 	\end{minipage}
 \end{mdframed}
 
-Since the plaintext message space is typically small, recovering $m$ from $M$ is efficient: although the mapping $m \mapsto M$ is not generally invertible, it can be reversed by brute-force search or optimized techniques such as baby-step giant-step~\cite{blake95elliptic}.%Blake: section V.4. 
+Since the plaintext message space is typically small, recovering $m$ from $M$ is efficient: although the mapping $m \mapsto M$ is not generally invertible, it can be reversed by brute-force search or optimized techniques such as baby-step giant-step~\cite{blake1995elliptic}.%Blake: section V.4. 
 
 \paragraph{Homomorphic addition and reencryption.} ElGamal encryption is additively homomorphic. Given two ciphertexts $(C_1, C_2)$ and $(C_1', C_2')$, their component-wise addition yields another valid ciphertext $(C_1 + C_1',\, C_2 + C_2')$. The resulting ciphertext decrypts to the sum of the two underlying messages. This property allows sequencers to aggregate encrypted ballots directly. Moreover, to prevent linkability and ensure receipt-freeness, sequencers also re-randomize ciphertexts. Re-encryption exploits this property by adding to a ciphertext an encryption of zero. This operation yields a fresh ciphertext of the same message under new randomness, making it computationally infeasible to link the re-encrypted ballot with the original submission.
 
