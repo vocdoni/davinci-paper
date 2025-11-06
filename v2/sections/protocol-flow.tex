@@ -1,6 +1,6 @@
 % !TeX root = ../build/main.tex
 
-In this section we describe the overall flow of the \davinci voting protocol. The process is structured into five main phases: election setup, encryption key generation, voting period, decryption key generation, and tally finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Figure~\ref{fig:protocol-flow}.
+In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, decryption key generation, and tally finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Figure~\ref{fig:protocol-flow}.
 
 \subsubsection{Election setup}
 \label{sec:vocdoni-protocol:setup}
@@ -105,10 +105,10 @@ Rewards and penalties for sequencers are managed according to their correct part
 At this point:
 \begin{itemize}
 	\item Anyone can verify the correctness of the final results by checking the \ac{ZK-SNARK} state proofs and on-chain commitments.  
-	\item The combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire voting process.  
+	\item The combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire election.  
 \end{itemize}
 
-The process is considered finalized once the decrypted tally is available and all state transition proofs have been verified on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.}
+The election is considered finalized once the decrypted tally is available and all state transition proofs have been verified on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.}
 
 \begin{figure}%[H]
 	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow}}

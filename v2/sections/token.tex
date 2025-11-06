@@ -10,18 +10,18 @@ The token serves multiple utility functions that align the incentives of all par
 \begin{itemize}
 	\item \emph{Collateral for sequencers.} Sequencers must stake \token tokens as collateral to participate. This serves as a safeguard to ensure responsible participation. Misbehavior or failure to meet obligations can result in penalties, including partial or total loss of the stake.
 	\item \emph{Incentive mechanism.} Sequencers earn rewards in \token tokens based on their contribution to processing valid votes and maintaining the network. Rewards are proportional to the number of valid votes successfully added to the shared state.
-	\item \emph{Payment for voting processes.} Organizers pay fees in \token tokens to create and manage voting events. These fees depend on factors such as registry size, voting duration, and desired security level.
+	\item \emph{Payment for elections.} Organizers pay fees in \token tokens to create and manage elections. These fees depend on factors such as registry size, voting duration, and desired security level.
 	\item \emph{Governance.} Token holders can participate in the decentralized governance of the project, influencing protocol upgrades, ecosystem development, and other initiatives. This ensures that the project evolves in a transparent, community-driven manner.
 \end{itemize}
 
 \subsection{Economics for organizers}
 
-Organizers cover the costs of voting processes in \token tokens. The total cost combines four components:
+Organizers cover the costs of elections in \token tokens. The total cost combines four components:
 \[	\totalCost = \baseCost + \capacityCost + \durationCost + \securityCost,  \]
 where
 %
 \begin{itemize}
-	\item $\baseCost$ is a fixed setup fee, independent of process duration or security level. It is calculated as
+	\item $\baseCost$ is a fixed setup fee, independent of the election duration or security level. It is calculated as
 	\[
 	\baseCost = \fixedCost + \maxVotes \cdot p, 
 	\]
@@ -31,7 +31,7 @@ where
 	\[
 	k_1 \cdot \left( \frac{\totalVotingProcesses}{\totalSequencers - \usedSequencers + \epsilon} \cdot \maxVotes \right)^a
 	\]
-	with $k_1$ a scaling factor, $\totalVotingProcesses$ the number of voting processes running, $\totalSequencers$ the number of registered sequencers, $\usedSequencers$ the number of sequencers handling other voting events, $\epsilon$ a small constant to avoid division by zero, and $a$ an exponent controlling non-linearity.  
+	with $k_1$ a scaling factor, $\totalVotingProcesses$ the number of elections running, $\totalSequencers$ the number of registered sequencers, $\usedSequencers$ the number of sequencers handling other elections, $\epsilon$ a small constant to avoid division by zero, and $a$ an exponent controlling non-linearity.  
 	
 	\item $\durationCost$ grows with the length of the voting period, scaled non-linearly with the formula
 	\[
@@ -43,7 +43,7 @@ where
 	\[
 	k_3 \cdot e^{c \left( \frac{\numSequencers}{\totalSequencers} \right)^d}, 
 	\]
-	where $k_3$ is a scaling factor, $c$ controls the steepness, $\numSequencers$ is the number of sequencers needed in the process, $\totalSequencers$ the number of available sequencers, and $d$ adjusts the non-linearity as the number of sequencers increases.\\
+	where $k_3$ is a scaling factor, $c$ controls the steepness, $\numSequencers$ is the number of sequencers needed in the election, $\totalSequencers$ the number of available sequencers, and $d$ adjusts the non-linearity as the number of sequencers increases.\\
 	{\color{blue}Before $\totalSequencers$ was defined as the number of \textit{registered} sequencers and here it means the number of \textit{available} sequencers. Is it assumed to always be the same?}
 \end{itemize}
 
@@ -87,4 +87,4 @@ where $0 \leq s \leq 1$ is a slashing coefficient. This ensures accountability a
 
 \subsection{Summary and remarks}
 
-The cost model combines four components: base, capacity, duration, and security. It ensures small processes are cost-efficient, large or resource-intensive processes incur higher costs, and impractical setups are excluded. Organizers aim to minimize costs, while sequencers seek to maximize rewards — a natural tension that can be modeled as a strategic game. Analyzing this equilibrium is left for future work. {\color{blue}Move this to Section~\ref{sec:token}?}
+The cost model combines four components: base, capacity, duration, and security. It ensures small elections are cost-efficient, large or resource-intensive elections incur higher costs, and impractical setups are excluded. Organizers aim to minimize costs, while sequencers seek to maximize rewards — a natural tension that can be modeled as a strategic game. Analyzing this equilibrium is left for future work. {\color{blue}Move this to Section~\ref{sec:token}?}

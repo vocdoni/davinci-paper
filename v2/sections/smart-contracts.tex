@@ -1,17 +1,40 @@
 % !TeX root = ../build/main.tex
 
-An Ethereum compatible network is used as the source of truth for the voting system. By leveraging an Ethereum virutal machine (EVM) blockchain, the voting process management ensures that all transitions are immutable and verifiable by all participants. To this end, we implement the following three smart contracts.\\
+The \davinci protocol operates on an Ethereum-compatible network, which serves as the source of truth for the election. By leveraging an Ethereum virtual machine (EVM) blockchain, all election transitions become immutable and publicly verifiable. To coordinate and validate each phase of the process, DAVINCI deploys a set of smart contracts that enforce protocol rules, verify zero-knowledge proofs, and maintain on-chain commitments such as state roots, encryption keys, and final results. Together, these contracts provide a trustless execution environment that guarantees the correct and transparent progression of the election without relying on any centralized authority. 
+\noi {\color{blue}\textbf{TODO}: add methods and state variables.}
 
-\noi {\color{blue}\textbf{TODO}: add methods and state variables. Smart contracts are outdated.}
+\subsubsection{Organization registry}
 
-\subsubsection{Process management} 
+The \orgregistry smart contract is used to create and manage organizations within the system. Each organization is identified by the Ethereum address of its creator and is associated with a name and a URL pointing to its metadata. At this stage, the contract serves only as a registration mechanism, but it lays the foundation for future extensions, such as managing multiple elections under the same organization.
 
-It is responsible for the life-cycle management of voting processes. It includes the initiation, monitoring, execution, and closure of voting events.
+\subsubsection{Key management}
 
-\subsubsection{Sequencer registry} 
+The \hlset{\dkgmanagement} smart contract coordinates the DKG process among the \keywardens. It records their contributions, verifies proofs of correct participation, and ensures that a valid encryption public key is produced once the DKG round is complete.
 
-It keeps track of the existing available sequencers, stores the collateral of the sequencers to ensure (that incentivizes) good behaviour, and is used to coordinate the distributed key generation when a new voting process is created.
+\subsubsection{Election (process) registry}
 
-\subsubsection{Results verification}
+The \hlset{\electionregistry} manages the lifecycle of each election, from its creation to the registration of final results. It maintains the election’s current state and ensures that all transitions follow the protocol. 
 
-For each voting process, this smart contract maintains the integrity of the cast votes and process life cycle. It verifies that each state transition committed by a sequencer adheres to the predefined rules.
+\subsubsection{State transition verifier}
+
+The \hlset{\statetransitionverifier} is responsible for validating the proofs that attest to correct updates of the election state. It stores the verification key corresponding to the state transition circuit (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) and checks that each submitted proof correctly links the previous and new state roots. Only transitions verified through this contract are accepted as valid updates by the process registry.
+
+\subsubsection{Results verifier}
+
+The \hlset{\resultsverifier} contract validates the proof of correct tally computation. It contains the verification key for the results circuit (see Section~\ref{sec:vocdoni-protocol:circuits:results}) and ensures that the final results submitted by the organizer match the commitments from the final state. Once verified, the results and their proof are permanently recorded on-chain, providing a tamper-proof reference for the election outcome.\\
+
+\martai{\\
+	1. \orgregistry only for transparency purposes, right? Any EOW can call \electionregistry?\\
+	2. Once EPK is created, does a kew warden uploaded it to \dkgmanagement and that triggers a call to \electionregistry that records it?\\
+	3. What is the relation with \electionregistry and \dkgmanagement, because the organizer sets the security parameters for the DKG, what is the interaction between contracts?\\
+	4. Does \electionregistry call the other two verifier contracts? Or the sequencers need to call the other two?}
+
+%
+%1. OrganizationRegistry: se utiliza para crear una organización (que asocia la address del creador con un nombre y una URL a sus metadatos). No tiene ningún otro rol de momento.
+%2. ProcessRegistry: registra como dices todo el proceso de una election, desde su creación hasta registrar los resultados (incluyendo el stateroot en cada momento). En resumen:
+%Genera el state root inicial (aun no, pero lo hará).
+%Controla el status de la election (ready, pause, ...).
+%Verifica las state transitions y actualiza el state de la election.
+%Verifica los resultados una vez que son calculados.
+%3. (Encara no): Coordinación DKG
+%4. Verifier: Realmente son 2 verifiers, el de las statetransitions y el de los results (uno por cada circuito porque cada uno contiene la verification key que debe).
