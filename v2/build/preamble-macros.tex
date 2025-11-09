@@ -106,6 +106,13 @@
 % Circuits
 \newcommand{\public}{{\sf\color{teal}public}\xspace}
 \newcommand{\private}{{\sf\color{red}private}\xspace}
+\newcommand{\circuitstyle}[1]{{\sf{#1}}\xspace}
+\newcommand{\ballotcircuit}{\circuitstyle{BallotCircuit}}
+\newcommand{\verifiercircuit}{\circuitstyle{VerifierCircuit}}
+\newcommand{\aggregationcircuit}{\circuitstyle{AggregationCircuit}}
+\newcommand{\statetransitioncircuit}{\circuitstyle{StateTransitionCircuit}}
+\newcommand{\publicinputs}{\circuitstyle{PI}}
+\newcommand{\witness}{\circuitstyle{witness}}
 
 % Roles
 \definecolor{voterbg}{RGB}{200, 230, 200}  % soft, muted green
@@ -187,6 +194,13 @@
 \newcommand{\statetransitionverifier}{\smartcontractstyle{StateTransitionVerifier}}
 \newcommand{\resultsverifier}{\smartcontractstyle{ResultsVerifier}}
 
+% Blobs
+\newcommand{\blobstyle}[1]{{\sf{#1}}\xspace}
+\newcommand{\blobdata}{\blobstyle{blobData}}
+\newcommand{\blobcom}{\blobstyle{blobCommitment}}
+\newcommand{\evalpoint}{\blobstyle{evalPoint}}
+\newcommand{\openproof}{\blobstyle{openingProof}}
+
 % Cryptographic primitives
 \newcommand{\methodstyle}[1]{{\sf{#1}}\xspace}
 \newcommand{\Keccak}{\methodstyle{Hash_1}}
@@ -199,6 +213,15 @@
 \newcommand{\ReEnc}{\methodstyle{ReEnc}}
 \newcommand{\SSign}{\methodstyle{S.Sign}}
 \newcommand{\SVer}{\methodstyle{S.Verify}}
+\newcommand{\SPubKey}{\methodstyle{S.ExtractPublicKey}}
+\newcommand{\CCommit}{\methodstyle{C.Commit}}
+\newcommand{\CSetup}{\methodstyle{C.Setup}}
+\newcommand{\COpen}{\methodstyle{C.Open}}
+\newcommand{\CVerifyPoly}{\methodstyle{C.VerifyPoly}}
+\newcommand{\CCreateWitness}{\methodstyle{C.CreateWitness}}
+\newcommand{\CVerifyEval}{\methodstyle{C.VerifyEval}}
+\newcommand{\CProve}{\methodstyle{C.Prove}}
+\newcommand{\CVerify}{\methodstyle{C.Verify}}
 \newcommand{\PProve}{\methodstyle{P.Prove}}
 \newcommand{\PVerify}{\methodstyle{P.Verify}}
 \newcommand{\GenerateShares}{\methodstyle{GenerateShares}}

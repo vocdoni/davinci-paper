@@ -204,10 +204,18 @@ To support state transitions and circuit verification, each tree $\tree$ has the
 
 These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Section~\ref{sec:vocdoni-protocol:merkle-trees}.
 
+\subsection{Commitments}
+\label{sec:cryptographic-primitives:commitments}
+
+{\color{blue} Description of KZG~\cite{kate2010constant} with SRS, $\hlset{\CCommit}()$, and $\hlset{\CVerify}()$.}\\
+Original methods: \hlset{\CSetup}, \hlset{\COpen}, \hlset{\CVerifyPoly}, \hlset{\CCreateWitness}, \hlset{\CVerifyEval}, \hlset{\CProve}, \hlset{\CVerify}.
+
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
 
-\Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson2001ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
+{\color{blue}{\textbf{TODO}: add algorithm \hlset{\SPubKey} that extracts $\pk$ from $\signature$.}}\\
+
+\noi \Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson2001ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
 %
 %\Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson01ecdsa} over the SECP256K1 curve for user authentication and vote authorization. This decision is taken to ensure that \davinci is compatible with standard Ethereum wallets, such as MetaMask~\ref{} or Ledger~\ref{}, without requiring users to generate or manage additional cryptographic keys. 
 %

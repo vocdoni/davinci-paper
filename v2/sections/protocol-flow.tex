@@ -9,12 +9,10 @@ In this phase, sequencers register and the organizer sets the election up.\\
 
 \rogeri{I'd put this outside of the "voting process". I think adding a section "System setup and operation"-like before this one and rename this one as "voting process flow" (or simply "voting process") could ease the explanation.}
 
-\martai{This section is outdated. Sequencers do not register, and we should remove the colours and boxes.}
+%\noi \sequencers 
+%Sequencers must first register in the sequencer registry smart contract, a process that remains open continuously. Registration involves publishing their identity, network endpoint (e.g., URI), and a collateral deposit to ensure honest participation. The collateral can later be slashed in case of misbehavior. \\
 
-\noi \sequencers 
-Sequencers must first register in the sequencer registry smart contract, a process that remains open continuously. Registration involves publishing their identity, network endpoint (e.g., URI), and a collateral deposit to ensure honest participation. The collateral can later be slashed in case of misbehavior. \\
-
-\noi \organizer For each new election, the organizer performs the following steps:
+\noi For each new election, the organizer performs the following steps:
 \begin{enumerate}
 	\item Prepare the census data \censusdata\ and generate the census Merkle tree $\censusTree$ with that data.
 	\item Compute the census commitment $\censusroot = \censusTree.\hlget{\MTRoot}()$.
@@ -23,7 +21,7 @@ Sequencers must first register in the sequencer registry smart contract, a proce
 	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived from the organizer’s Ethereum address, nonce, and the chain ID.
 	\item Set security parameters for the %forthcoming
 	DKG ceremony (e.g., timeout, minimum number of sequencers).
-	\item Submit all this information in a transaction to the process management smart contract {\color{blue}(pay tx fees)}:
+	\item Submit all this information in a transaction to the \hlget{\electionregistry} smart contract {\color{blue}(pay tx fees)}:
 	\[ tx_{org} = (\censusroot, ballotCommitment, \ballotmode, electionMetadata, \processid, dkgParameters).\]
 \end{enumerate}
 
@@ -58,8 +56,14 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 			\label{eq-voteid}
 			\voteid = \hlget{\Multimimc}(\processid \conc \address \conc k).
 		\end{equation}
-	\item Use the ballot circuit (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) to generate a ZK-SNARK proof to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$:
-		\[ {\color{blue}\voteproof = \text{\hlget{Prove}(Circuit, PI = ())}.}\]	
+	\item Use the \ballotcircuit from Section~\ref{sec:vocdoni-protocol:circuits:ballot} to generate a ZK-SNARK proof to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed and that $\ballot$ satisfies ballot protocol rules according to $\ballotmode$:
+		\begin{align*}
+		\voteproof = & \hlget{\PProve}(
+			\hlget{\ballotcircuit},
+			\witness = (\ballot, k), 
+			\publicinputs = (\processid, \ballotmode,\\
+			&\epk, \address, \weight, (C_1, C_2), \voteid)).
+		\end{align*}	
 	\item Sign the vote identifier with their Ethereum secret key to authenticate the vote and ensure that was cast by a legitimate voter:  
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
 	\item Submits the package  
@@ -75,22 +79,66 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 \noi \textbf{(b) Vote batching.} Upon receiving votes, a sequencer does the following:
 
 \begin{enumerate}
-	{\color{blue}
-	\item Retrieve the current state root $\stateroot$ and census root $\censusroot$ from the process management smart contract and the associated data from the Ethereum data blobs.  
-	\item Verify each submission by generating a state transition proof (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), ensuring:
-	\begin{itemize}
-		\item the validity of the voter’s zkSNARK proof,  
-		\item correct accumulation of encrypted votes via ElGamal’s homomorphic properties,  
-		\item eligibility of voters (via census Merkle proofs),  
-		\item absence of double voting (or correct handling of overwrites via nullifiers),  
-		\item consistency between data blobs and the on-chain state.  
-	\end{itemize}
+	\item Retrieve election identifier $\processid$, current state root $\stateroot$, and census root $\censusroot$ from the \hlget{\electionregistry} smart contract and the associated data from the Ethereum data blobs.  
+	\item Upon receiving a vote
+	\[\vote_i = [\processid, \voteid, \encryptedballot, \censusproof, \voteproof, \signature],\]
+	extract the voter's public key $\pk_i = \hlget{\SPubKey}(\signature)$.
+	\item For each $\vote_i$ received, use \verifiercircuit from Section~\ref{sec:vocdoni-protocol:circuits:verifier} to generate a proof 
+	\begin{align*}
+		\authenticationproof_i = & \hlget{\PProve}(\hlget{\verifiercircuit}, 
+		\witness = (\ballotproof, \weight, \censusproof, \signature),\\
+		& \publicinputs = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \censusroot, \pk)).
+	\end{align*}
+	This proof ensures that the voter’s \voteproof, the \signature, and the \censusproof are all valid.
+	\item Batch a set of $n$ proofs $\{\authenticationproof_i\}_{i = 1}^n$ and batch verify them together using \aggregationcircuit from Section~\ref{sec:vocdoni-protocol:circuits:aggregation}:
+	\begin{align*}
+		\aggregationproof = &\hlget{\PProve}(\hlget{\aggregationcircuit}, 
+						\witness = (\{\authenticationproof_i\}_{i = 1}^n),\\
+						&\publicinputs = (\encryptedballot, \{\voteid_i\}_{i = 1}^n),
+						\{\pk_i\}_{i = 1}^n,
+						\processid,
+						\ballotmode,\\
+						&
+						\epk,
+						\censusroot
+						).
+	\end{align*}
+	This proof ensures that the public inputs corresponding to the global process parameters ($\processid$, $\ballotmode$, $\epk$, $\censusroot$) are correct and that all $\authenticationproof_i$ are valid.
+	
+	\item Prepare the state transition data that will be stored in an Ethereum blob: pack votes/results into a 4096-cell blob \blobdata. 
+		\begin{itemize}
+			\item Compute data commitment $\blobcom = \hlget{\CCommit}(\blobdata)$. 
+			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, oldRoot, batchNum, nonce).$
+			\item Prepare polynomial $P$ from $\blobdata$.
+			\item Evaluate $y = P(\evalpoint)$.
+			\item Generate opening proof $\openproof$ from $...$.
+			\item The following step (circuit) will prove that $y = P(\evalpoint)$.
+		\end{itemize}
+		
+	\item {\color{blue}Before doing state transitions, we need to prepare the data that will be stored on chain as a blob. Hence, collect xxxx, create commitment. In circuit (next step), we will prove that... .}
+	
+	\item Finally, prove that all transitions are correct .... with circuit from Section~\ref{sec:vocdoni-protocol:circuits:state-transition}.
+	consistency between data blobs and the on-chain state:
+	
+	\begin{align*}
+		\stateproof = \hlget{\PProve}(\hlget{\statetransitioncircuit}, 
+		\witness = (), \publicinputs = ().	
+	\end{align*}
+	
+	\item Verify each $\vote$ submission received by generating a state transition proof (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), ensuring:
+		\begin{itemize}
+			\item correct accumulation of encrypted votes via ElGamal’s homomorphic properties,  
+			\item eligibility of voters (via census Merkle proofs),  
+			\item absence of double voting (or correct handling of overwrites via nullifiers),  
+		\end{itemize}
+	\item Compute blob commitment TAL.
 	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
-	}
 	\martai{If \stateroot changed, repeat last circuit.}
 \end{enumerate}
 
 Sequencers repeat this process until the voting deadline set by the organizer.
+
+Upon receiving a valid transaction, the \electionregistry smart contract does the following checks:
 
 \subsubsection{Decryption key generation}
 \label{sec:vocdoni-protocol:deckey-gen}
