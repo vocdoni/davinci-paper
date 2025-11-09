@@ -1,14 +1,18 @@
 % !TeX root = ../build/main.tex
 
-This section outlines the \davinci voting protocol. We introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. In Section~\ref{sec:vocdoni-protocol:merkle-trees}, we describe the census and state Merkle trees, and in Section~\ref{sec:vocdoni-protocol:smart-contracts} the Ethereum smart contracts. In Section~\ref{sec:vocdoni-protocol:circuits}, we present the ZK circuits used to enforce vote validity, authentication, aggregation, and state transitions. Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
+This section outlines the \davinci voting protocol. We introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. In Section~\ref{sec:vocdoni-protocol:census}, we describe the census data structure and in Section~\ref{sec:vocdoni-protocol:state-tree} the state Merkle trees. Then, in Section~\ref{sec:vocdoni-protocol:smart-contracts} the Ethereum smart contracts. In Section~\ref{sec:vocdoni-protocol:circuits}, we present the ZK circuits used to enforce vote validity, authentication, aggregation, and state transitions. Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
 
 \subsection{Parties involved}
 \label{sec:vocdoni-protocol:parties}
 \input{\secs/parties.tex}
 
-\subsection{Merkle trees}
-\label{sec:vocdoni-protocol:merkle-trees}
-\input{\secs/merkle-trees.tex}
+\subsection{Census}
+\label{sec:vocdoni-protocol:census}
+\input{\secs/census.tex}
+
+\subsection{State tree}
+\label{sec:vocdoni-protocol:state-tree}
+\input{\secs/state-tree.tex}
 
 \subsection{Smart contracts}
 \label{sec:vocdoni-protocol:smart-contracts}

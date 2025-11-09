@@ -202,9 +202,9 @@ To support state transitions and circuit verification, each tree $\tree$ has the
 	\item $\tree.\hlset{\MTVerify}(\leaf, proof, root)$: it verifies that the given proof corresponds to the claimed root and leaf.
 \end{itemize}
 
-These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Section~\ref{sec:vocdoni-protocol:merkle-trees}.
+These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Sections~\ref{sec:vocdoni-protocol:census} and~\ref{sec:vocdoni-protocol:state-tree}.
 
-\subsection{Commitments}
+\subsection{Commitment schemes}
 \label{sec:cryptographic-primitives:commitments}
 
 {\color{blue} Description of KZG~\cite{kate2010constant} with SRS, $\hlset{\CCommit}()$, and $\hlset{\CVerify}()$.}\\
