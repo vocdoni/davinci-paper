@@ -14,7 +14,7 @@ In this phase, sequencers register and the organizer sets the election up.\\
 
 \noi For each new election, the organizer performs the following steps:
 \begin{enumerate}
-	\item Prepare the census data \censusdata\ and generate the census Merkle tree $\censusTree$ with that data.
+	\item Prepare the census data \censusdata\ and generate the census Merkle tree $\censusTree$ with that data. 
 	\item Compute the census commitment $\censusroot = \censusTree.\hlget{\MTRoot}()$.
 	\item Prepare the voting form (ballot / set of questions), upload it to IPFS, compute commitment.
 	\item Define the election details, including duration, options, and the ballot rules $\ballotmode$ (see Section~\ref{sec:ballot-protocol}).

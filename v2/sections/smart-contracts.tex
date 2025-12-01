@@ -5,7 +5,11 @@ The \davinci protocol operates on an Ethereum-compatible network, which serves a
 
 \subsubsection{Organization registry}
 
-The \orgregistry smart contract is used to create and manage organizations within the system. Each organization is identified by the Ethereum address of its creator and is associated with a name and a URL pointing to its metadata. At this stage, the contract serves only as a registration mechanism, but it lays the foundation for future extensions, such as managing multiple elections under the same organization.
+The \hlset{\orgregistry} smart contract is used to create and manage organizations within the system. Each organization is identified by the Ethereum address of its creator and is associated with a name and a URL pointing to its metadata. At this stage, the contract serves only as a registration mechanism, but it lays the foundation for future extensions, such as managing multiple elections under the same organization.
+
+\subsubsection{Census management}
+
+{\color{blue}The \hlset{\censusmanagement} smart contract xxx.}
 
 \subsubsection{Key management}
 
@@ -24,7 +28,7 @@ The \hlset{\statetransitionverifier} is responsible for validating the proofs th
 The \hlset{\resultsverifier} contract validates the proof of correct tally computation. It contains the verification key for the results circuit (see Section~\ref{sec:vocdoni-protocol:circuits:results}) and ensures that the final results submitted by the organizer match the commitments from the final state. Once verified, the results and their proof are permanently recorded on-chain, providing a tamper-proof reference for the election outcome.\\
 
 \martai{\\
-	1. \orgregistry only for transparency purposes, right? Any EOW can call \electionregistry?\\
+	1. \orgregistry only for transparency purposes, right? Any EOA can call \electionregistry?\\
 	2. Once EPK is created, does a kew warden uploaded it to \dkgmanagement and that triggers a call to \electionregistry that records it?\\
 	3. What is the relation with \electionregistry and \dkgmanagement, because the organizer sets the security parameters for the DKG, what is the interaction between contracts?\\
 	4. Does \electionregistry call the other two verifier contracts? Or the sequencers need to call the other two?}

@@ -1,0 +1,123 @@
+% !TeX root = ../build/main.tex
+
+The census Merkle tree, denoted by $\hlget{\censusTree}$ encodes the list of eligible voters and their associated voting weights. Formally, it is implemented as a sparse Merkle tree (SMT) of fixed depth\footnote{In the present work, all circuits are instantiated using sparse Merkle trees as described above. However, the protocol does not strictly depend on this structure: any authenticated data structure that supports efficient commitments and membership proofs verifiable inside zero-knowledge circuits could be employed. Adapting the protocol to such alternatives would only require modifying the corresponding circuits, while the overall flow of the election process would remain unchanged.}, as described in Section~\ref{sec:cryptographic-primitives:merkle-trees}. Each voter is mapped to a unique path in the tree, typically derived from their Ethereum address or another unique identifier, and the corresponding leaf stores the voting weight of that address. While the default weight is usually one, the system also supports weighted voting, where different participants may have different levels of influence.
+
+To construct the census, the organizer collects the dataset of eligible voters and their weights, computes the corresponding tree, and publishes its root (\censusroot) on-chain. The full dataset does not need to be stored on-chain; instead, it is distributed off-chain (e.g., via IPFS or another content-addressed storage system), enabling verifiers and sequencers to independently reconstruct the tree and produce membership proofs when needed. This design ensures transparency and verifiability while minimizing on-chain storage requirements.
+
+The census tree plays a central role during the voting phase. Voters must provide a Merkle proof showing that their address and weight are included in the tree committed by the organizer. These proofs are then verified within ZK circuits, which guarantees that only eligible participants can cast ballots without requiring the disclosure of the entire census. In this way, the census Merkle tree provides a compact, cryptographically verifiable commitment to voter eligibility that supports both privacy and scalability.
+
+Although the protocol does not mandate a specific method for constructing the census tree, different instantiations are possible depending on the application context:
+%
+\begin{itemize}
+	\item \emph{Private datasets}. Organizations maintaining internal voter registries (e.g., membership databases or CSV files) can directly convert them into the Merkle format. This approach keeps the registry confidential, with only the root hash made public.
+	\item \emph{Self-sovereign identity (SSI)}. If voters manage identities through SSI systems, the organizer can aggregate these identities and build 
+	the tree accordingly. This enables participation without requiring centralized identity management.
+	\item \textit{Ethereum-based tokens}. Token balances (e.g., ERC-20 or NFTs) may also define eligibility. In this setting, the census can either be created via the optimistic approach, taking a snapshot of token balances and allowing a dispute period for fraud proofs, or through a ZK-SNARK that proves correctness directly from Ethereum storage proofs and ensures that both individual balances and the token’s total supply are consistent. 
+\end{itemize}
+%
+This flexibility allows the protocol to accommodate a wide range of use cases, from private associations to decentralized communities, while maintaining the same security and verifiability guarantees.
+
+-----------------------------------------
+
+
+The census defines the set of eligible voters and their associated voting weights. Throughout the protocol, the census is represented by a lean incremental Merkle tree, as defined in Section~\ref{sec:cryptographic-primitives:merkle-trees}, and denoted by $\hlset{\censusTree}$. Voters are inserted sequentially into the tree: each new eligible voter occupies the next available leaf, and that leaf stores both their Ethereum address (or another unique identifier) and their voting weight. While the default weight is one, the protocol also supports weighted voting, where different participants may have different voting power.
+
+
+
+
+
+---------------------------------------
+
+\subsection{ALTRETYPE}
+
+The census defines the set of eligible voters and their associated voting weights. 
+Throughout the protocol, the census is represented by a Merkle-tree commitment, denoted 
+by $$\hlset{\censusTree}$$, and its root $\censusroot$ is recorded in the election registry smart 
+contract. Each voter is mapped to a unique path in the tree---typically derived from 
+their Ethereum address or another unique identifier---and the corresponding leaf stores 
+the voter’s weight. While the default weight is one, the protocol naturally supports 
+weighted voting.
+
+During ballot submission, voters provide a Merkle membership proof showing that their 
+address and weight are included in the committed census. These proofs are verified inside 
+zero-knowledge circuits, ensuring that eligibility checks occur privately and without 
+requiring disclosure of the full census. The Merkle-tree commitment thus offers a compact, 
+scalable mechanism to attest voter eligibility.
+
+DAVINCI supports multiple census models depending on the deployment context, including 
+off-chain and on-chain trees, static or dynamically updatable registries, and 
+credential-based approaches. In all configurations, the election registry smart 
+contract stores two parameters:
+(i) \texttt{censusRoot}, containing either a Merkle root or the address of a census 
+contract, and 
+(ii) \texttt{censusURI}, pointing to an off-chain location where sequencers can 
+retrieve the census data or related verification information.
+
+The supported census models are described below.
+
+\paragraph{Off-chain static census.}
+
+In this model, the organizer constructs a fixed census prior to the start of the election. 
+The census is represented as a (incremental) Merkle tree built off-chain, and its root is 
+submitted to the election registry contract during setup. The contract stores this 
+commitment in \texttt{censusRoot}, while \texttt{censusURI} provides a URL or 
+content-addressed reference (e.g., IPFS) where sequencers can download the full tree to 
+generate and verify Merkle proofs. The tree remains unchanged throughout the voting 
+period.
+
+\paragraph{Off-chain dynamic census.} 
+
+In the off-chain dynamic model, the Merkle tree remains off-chain but can be \emph{extended} 
+during the voting period. The organizer may add new voters (but may never delete entries 
+or alter weights, as such operations would enable double voting). Each update produces a 
+new Merkle root, which the organizer must publish to the election registry contract via a 
+transaction that updates the \texttt{censusRoot} variable. Sequencers always verify 
+membership proofs against the most recently published root, ensuring consistency with the 
+on-chain commitment.
+
+\paragraph{On-chain static census.}
+
+Here, the census is deployed as a dedicated smart contract that stores the Merkle tree 
+on-chain. The tree is static and does not change during the voting period. During election 
+setup, the election registry contract reads the tree root from the census contract and 
+stores it in \texttt{censusRoot}, while \texttt{censusURI} indicates where sequencers may 
+retrieve the full tree representation (e.g., IPFS). Membership verification can therefore 
+be performed entirely on-chain.
+
+\paragraph{On-chain dynamic census.}
+
+In this configuration, the census lives in a dedicated on-chain contract that supports the
+addition of new members during the voting period. The address of this contract is stored in 
+\texttt{censusRoot}, and \texttt{censusURI} points to an external representation of the tree 
+(e.g., dGraph, IPFS). The census contract maintains a list of all Merkle roots corresponding 
+to valid updates. Sequencers may produce membership proofs using earlier roots, since the 
+tree evolves over time. During state transitions, the election registry contract queries the 
+census contract to check whether the root used in a submitted proof is recognized as valid. 
+As in all dynamic models, only additions to the census are permitted.
+
+\paragraph{Credential service provider.}
+
+Credential service provider (CSP)\\
+
+This model replaces the Merkle-tree-based census with an eligibility credential issued by a 
+trusted entity. Instead of providing a Merkle proof, voters obtain a digital signature from a 
+\emph{Credential Service Provider} (CSP) attesting to their eligibility. In this case, the 
+election registry smart contract stores the CSP’s public key in \texttt{censusRoot}, and 
+\texttt{censusURI} specifies where voters may request or obtain their credential. Sequencers 
+verify eligibility by checking the CSP signature directly, eliminating the need for a 
+census tree. This approach is suitable when eligibility is administered by an external 
+authority capable of issuing verifiable credentials.
+
+\paragraph{Constructing the census.}
+
+Any of the above models may be instantiated using different sources of eligibility 
+information. That is, the protocol does not mandate a specific method for constructing the census tree, different instantiations are possible depending on the application context:
+%
+\begin{itemize}
+	\item \emph{Private datasets}. Organizations maintaining internal voter registries (e.g., membership databases or CSV files) can directly convert them into the Merkle format. This approach keeps the registry confidential, with only the root hash made public.
+	\item \emph{Self-sovereign identity (SSI)}. If voters manage identities through SSI systems, the organizer can aggregate these identities and build 
+	the tree accordingly. This enables participation without requiring centralized identity management.
+	\item \textit{Ethereum-based tokens}. Token balances (e.g., ERC-20 or NFTs) may also define eligibility. In this setting, the census can either be created via the optimistic approach, taking a snapshot of token balances and allowing a dispute period for fraud proofs, or through a \ac{ZK-SNARK} that proves correctness directly from Ethereum storage proofs and ensures that both individual balances and the token’s total supply are consistent. 
+\end{itemize}
+%
+This flexibility allows \davinci to accommodate a wide range of governance and participation use cases, from private associations to decentralized communities, while maintaining the same security and verifiability guarantees.

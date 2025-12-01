@@ -1,6 +1,6 @@
 % !TeX root = ../build/main.tex
 
-At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the election. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies the voter's census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the \ac{ZK-SNARK} proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}.  
+At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the election. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies the voter's census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the \ac{ZK-SNARK} proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}. {\color{blue}Add \textit{results} circuit.}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow-v2}}
@@ -27,7 +27,7 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Figure~\ref{fig:circ
 		\item $\public$ $\epk$ ($EPK$): encryption public key.
 		\item $\public$ $\address$: voter's address.
 		\item $\public$ $\weight$: voter's weight.
-		\item $\public$ $(C_1, C_2)$: encrypted ballot. 
+		\item $\public$ $\encryptedballot$: encrypted ballot. 
 		\item $\public$ $\voteid$: vote's unique identifier. 
 	\end{itemize}
 	\textbf{Private inputs}
@@ -37,7 +37,7 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Figure~\ref{fig:circ
 	\end{itemize}
 	\textbf{Constraints}
 	\begin{itemize}								
-		\item \emph{Vote encryption}. Correct encryption of the ballot: $(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).$
+		\item \emph{Vote encryption}. Correct encryption of the ballot: $\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).$
 		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
 		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\processid \conc  \address \conc k).$
 	\end{itemize}
@@ -45,7 +45,7 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Figure~\ref{fig:circ
 \end{spacing}
 
 \begin{figure}[H]
-	\centerline{\includegraphics[width=380pt,draft=false]{\figs/circuit-voter}}
+	\centerline{\includegraphics[width=380pt,draft=false]{\figs/circuit1.pdf}}
 	\caption{Ballot circuit. All public values are framed in green.}
 	\label{fig:circuit-ballot}
 \end{figure}
@@ -87,7 +87,7 @@ The verifier circuit (\hlset{\verifiercircuit}), illustrated in Figure~\ref{fig:
 \end{spacing}
 
 \begin{figure}[H]
-	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit-authentication}}
+	\centerline{\includegraphics[width=450pt,draft=false]{\figs/circuit2.pdf}}
 	\caption{Authentication circuit. All public values are framed in green.}
 	\label{fig:circuit-verifier}
 \end{figure}
@@ -123,7 +123,7 @@ The aggregation circuit (\hlset{\aggregationcircuit}), illustrated in Figure~\re
 \end{spacing}
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-aggregate}}
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit3.pdf}}
 	\caption{Aggregation circuit. All public values are framed in green.}
 	\label{fig:circuit-aggregate}
 \end{figure}
@@ -218,11 +218,9 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 \subsubsection{Results circuit}
 \label{sec:vocdoni-protocol:circuits:results}
 
-{\color{blue}{It needs to be done.}}
-
 \begin{figure}[h]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit-results}}
-	\caption{Results circuit. All public values are framed in green.}
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit5.pdf}}
+	\caption{Results circuit. All public values are framed in green. {\color{red}The figure is not right.}}
 	\label{fig:circuit-results}
 \end{figure}
 
@@ -230,7 +228,7 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 \begin{landscape}
 	%\thispagestyle{empty} % removes the page number
 	\begin{figure}[H]
-		\centerline{\includegraphics[width=560pt,draft=false]{\figs/circuit-state-transition-v2}}
+		\centerline{\includegraphics[width=700pt,draft=false]{\figs/circuit4.pdf}}
 		\caption{State transition circuit. All public values are framed in green.}
 		\label{fig:circuit-state-transition-v2}
 	\end{figure}

@@ -19,6 +19,14 @@ Ethereum is a decentralized blockchain platform that supports programmable trans
 
 \paragraph{Data blobs.} Data availability is a key requirement for decentralized protocols. Ethereum’s recent EIP-4844~\cite{eip4844} introduces data blobs as a mechanism for publishing large volumes of off-chain data alongside transactions at a lower cost than traditional storage. These blobs are kept on-chain for 4096 epochs, approximately 18 days, after which they are pruned. For longer election periods, third-party solutions based on EIP-4844 can be used to extend data availability~\cite{todocitation}. In \davinci, sequencers use data blobs to share state transition data efficiently. By publishing state updates in blobs, sequencers allow other participants to reconstruct and verify the evolution of the election without overloading Ethereum’s permanent storage. This ensures scalable, decentralized data availability while retaining verifiability.
 
+
+\subsection{Merkle trees}
+\label{sec:background:mt}
+
+\paragraph{Sparse Merkle trees.}
+
+\paragraph{Lean incremental Merkle trees.}
+
 \subsection{Zero-knowledge proofs}
 \label{sec:background:zkp}
 
