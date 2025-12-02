@@ -50,7 +50,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\item Sample fresh randomness $k \in \F$ and encrypt the ballot using $\epk$:  
 		  \begin{equation}
 		  \label{eq-ciphertext}
-		  	(C_1, C_2) = \hlget{\Enc}_{\epk}(\ballot; k).
+		  	\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).
 		  \end{equation}
 	\item Use their Ethereum address $\address$ and the previous $k$ to compute a unique vote identifier:
 		\begin{equation}
@@ -63,7 +63,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 			\hlget{\ballotcircuit},
 			\witness = (\ballot, k), 
 			\publicinputs = (\processid, \ballotmode,\\
-			&\epk, \address, \weight, (C_1, C_2), \voteid)).
+			&\epk, \address, \weight, \encryptedballot, \voteid)).
 		\end{align*}	
 	\item Sign the vote identifier with their Ethereum secret key $\sk$ to authenticate the vote and ensure that was cast by a legitimate voter:  
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
@@ -88,7 +88,8 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\begin{align*}
 		\authenticationproof_i = & \hlget{\PProve}(\hlget{\verifiercircuit}, 
 		\witness = (\ballotproof, \weight, \censusproof, \signature),\\
-		& \publicinputs = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \censusroot, \pk)).
+		& \publicinputs = (\processid, \ballotmode, \epk, \encryptedballot, \voteid, \\
+		& \censusroot, \pk)).
 	\end{align*}
 	This proof ensures that the voter’s \voteproof, the \signature, and the \censusproof are all valid.
 	\item Batch a set of $n$ proofs $\{\authenticationproof_i\}_{i = 1}^n$ and batch verify them together using \aggregationcircuit from Section~\ref{sec:vocdoni-protocol:circuits:aggregation}:

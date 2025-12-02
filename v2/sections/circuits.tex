@@ -62,7 +62,7 @@ The verifier circuit (\hlset{\verifiercircuit}), illustrated in Figure~\ref{fig:
 		\item \public $\processid$: election identifier.
 		\item \public $\ballotmode$: ballot protocol configuration.
 		\item \public $\epk$ ($EPK$): encryption public key.
-		\item \public $(C_1, C_2)$: encrypted ballot.		
+		\item \public $\encryptedballot$: encrypted ballot.		
 		\item \public $\voteid$: voter's identifier.
 		\item \public $\censusroot$: census Merkle tree root.
 		\item \public $\pk$: voter's public key.
@@ -77,7 +77,7 @@ The verifier circuit (\hlset{\verifiercircuit}), illustrated in Figure~\ref{fig:
 	\textbf{Constraints}	
 	\begin{itemize}
 		\item \emph{Voter's proof verification.} The voter's submitted proof is valid for the inputs provided: 
-		$$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, (C_1, C_2), \voteid, \weight)\right) = \true.$$
+		$$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, \encryptedballot, \voteid, \weight)\right) = \true.$$
 		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided:
 		$$ \hlget{\censusTree}.\hlget{\MTVerify}\left(\weight, \address = \hlget{\Keccak}(\pk), \censuspf, \censusroot\right) = \true. $$
 		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key:
@@ -101,7 +101,7 @@ The aggregation circuit (\hlset{\aggregationcircuit}), illustrated in Figure~\re
 	\vspace{0.3cm}
 	\noi \textbf{Public inputs}
 	\begin{itemize}
-		\item \public $(C_1, C_2)_i$: list of voters' encrypted ballots.
+		\item \public $\encryptedballot_i$: list of voters' encrypted ballots.
 		\item \public $\voteid_i$: set of vote's identifiers.
 		\item \public $\pk_i$: list of voters' public keys.
 		\item \public $\processid$: election identifier.
@@ -116,7 +116,7 @@ The aggregation circuit (\hlset{\aggregationcircuit}), illustrated in Figure~\re
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Votes aggregation.} The accumulated authentication proofs are valid (for the given inputs). For every $i$:
-		$$\hlget{\PVerify}\left(\authenticationproof, PI = ((C_1, C_2)_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)\right) = \true.$$
+		$$\hlget{\PVerify}\left(\authenticationproof, PI = (\encryptedballot_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)\right) = \true.$$
 		\item \emph{Shared public inputs.} The public inputs \processid, \ballotmode, \epk, and \censusroot are the same for all proofs.
 	\end{itemize}
 	\vspace{-0.3cm}
@@ -156,7 +156,7 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 		\item \private $EPK$: encryption public key.
 		\item \private $\processid$: election identifier.
 		\item \private $\{\voteid_i\}_{i= 1}^{N}$: set of vote's identifiers.
-		\item \private $\{(C_1, C_2)_i\}_{i= 1}^{N}$: set of voters' encrypted ballots.
+		\item \private $\{\encryptedballot_i\}_{i= 1}^{N}$: set of voters' encrypted ballots.
 		\item \private $\{\pk_i\}_{i= 1}^{N}$: list of voters' public keys.
 		\item \private $\{\merkleproofs^{encBallots}_i\}_{i= 1}^{N}$: Merkle tree proofs of encrypted ballots. If it is a new vote, the proof will be a non-inclusion proof, if it is an overwrite, an inclusion proof.
 		\item \private $\{\merkleproofs^{\voteid}_i\}_{i= 1}^{N}$: non-membership proofs of vote identifiers.
@@ -168,7 +168,7 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Aggregation verification.} The accumulated authentication proofs are valid. For every $i\in\{1,\dots,N\}$:
-		$$\hlget{\PVerify}(\authenticationproof, PI = ((C_1, C_2)_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)).$$
+		$$\hlget{\PVerify}(\authenticationproof, PI = (\encryptedballot_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)).$$
 		\item \emph{Transition verification.} Verify initial state and state transitions are applied correctly.
 				\begin{itemize}
 					\renewcommand{\labelitemii}{$\circ$}
@@ -184,26 +184,26 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 					\begin{itemize}
 						\item For new votes (keep iterating for all of them):
 							\begin{enumerate}
-								\item Add encrypted ballot to the tree: $\stateTree.\hlget{\MTInsert}(\address = \hlget{\Keccak}(\pk), (C_1, C_2))$.
+								\item Add encrypted ballot to the tree: $\stateTree.\hlget{\MTInsert}(\address = \hlget{\Keccak}(\pk), \encryptedballot)$.
 								\item Add vote identifier: $\stateTree.\hlget{\MTInsert}(\voteid)$.
 								\item Increase votes counter: $\numvotes = \numvotes + 1$.
-								\item Aggregate the vote to the results accumulator: $\addaccumulator = \addaccumulator + (C_1, C_2)$.
+								\item Aggregate the vote to the results accumulator: $\addaccumulator = \addaccumulator + \encryptedballot$.
 						\end{enumerate}
 						\item For overwritten votes (keep iterating for all of them):
 							\begin{enumerate}
-								\item Overwrite the encrypted ballot: $\stateTree.\hlget{\MTUpdate}(\address = \hlget{\Keccak}(\pk), (C_1, C_2))$.
+								\item Overwrite the encrypted ballot: $\stateTree.\hlget{\MTUpdate}(\address = \hlget{\Keccak}(\pk), \encryptedballot)$.
 								\item Add vote identifier: $\stateTree.\hlget{\MTInsert}(\voteid)$.
 								\item Increase votes counter: $\numvotes = \numvotes + 1$.
 								\item Increase overwrites counter: $\numoverwrites = \numoverwrites + 1$.
-								\item Aggregate the vote to the results accumulator: $\addaccumulator = \addaccumulator + (C_1, C_2)$.
-								\item Aggregate the old vote to the accumulator: $\substractaccumulator = \substractaccumulator + (C_1, C_2)^{old}$.
+								\item Aggregate the vote to the results accumulator: $\addaccumulator = \addaccumulator + \encryptedballot$.
+								\item Aggregate the old vote to the accumulator: $\substractaccumulator = \substractaccumulator + \encryptedballot^{old}$.
 							\end{enumerate}
-						{\color{blue}The old ciphertexts $(C_1, C_2)^{old}$ should also be inputs or retrieved from the MT inclusion proofs.}
+						{\color{blue}The old  $\encryptedballot^{old}$ should also be inputs or retrieved from the MT inclusion proofs.}
 					\end{itemize}
 					\item After all previous state transitions are done, recompute new tree root:
 					\[\stateroot^{new} = \stateTree.\hlget{\MTRoot}().\]
 					\item Reencrypt all leafs of the tree (both old and new ones). {\color{blue}New are ok, but for those that are old, also verify MTProofs of membership?}.
-					\[newLeafContent = \hlget{\ReEnc}_{\epk}((C_1, C_2)_i, k), \quad k = Hash(k).\]
+					\[newLeafContent = \hlget{\ReEnc}_{\epk}(\encryptedballot_i, k), \quad k = Hash(k).\]
 					\item Data blob commitment. Calculation of the commitment to all leafs that changed in the tree after all transition states were applied. 
 					\[ \blobcomm = Commitment(\text{all leaves that changed}).\]
 				\end{itemize}
