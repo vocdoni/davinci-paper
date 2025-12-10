@@ -15,7 +15,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown2010sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{jancar2020bn256} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles2021twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe2020zexe} and BW6-761~\cite{elhousni2020optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
+\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown2010sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{wood2014ethereum} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles2021twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe2020zexe} and BW6-761~\cite{elhousni2020optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci’s aggregation and state transition logic. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
@@ -24,9 +24,9 @@ In this section, we present the cryptographic primitives used in the protocol de
 	\item[$\bullet$] $p = \tt{\hspace{0.04cm}0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f}$ (256-bit prime).
 	\item[$\bullet$] $q = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).	
 	%
-	\item[$\bullet$] $r = \tt{0x2523648240000001ba344d80000000086121000000000013a700000000000013}$ (254-bit prime).
-	\item[$\bullet$] $s = \tt{\hspace{0.04cm}0x2523648240000001ba344d8000000007ff9f800000000010a10000000000000d}$ (254-bit prime).
-	\item[$\bullet$] $t = \tt{\hspace{0.01cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
+	\item[$\bullet$] $r = \tt{0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47}$ (254-bit prime).
+	\item[$\bullet$] $s = \tt{\hspace{0.03cm}0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001}$ (254-bit prime).
+	\item[$\bullet$] $t = \tt{\hspace{0.07cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
 	%
 	\item[$\bullet$] $u = \tt{0x122e824fb83ce0ad187c94004faff3eb926186a81d14688528275ef8087be41707ba638e584e9190}$
 	\item[] \hspace{0.53cm} $\tt{3cebaff25b423048689c8ed12f9fd9071dcd3dc73ebff2e98a116c25667a8f8160cf8aeeaf0a437e69}$

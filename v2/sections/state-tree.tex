@@ -2,7 +2,6 @@
 
 % \noi Merkle trees are used to create a cryptographic representation of both the voter census registry and the election state. 
 
-
 The state Merkle tree, denoted by $\hlset{\stateTree}$, represents the evolving state of the election. It is implemented as a \ac{SMT} of fixed depth, as described in Section~\ref{sec:cryptographic-primitives:merkle-trees}, and is dynamic: it is updated throughout the election as new votes are cast, validated, and incorporated by the sequencers. The leaves of the state tree store the global election parameters, the encrypted ballots, and the set of vote identifiers, as illustrated in Figure~\ref{fig:mt-state} and described below.
 
 \paragraph{Reserved addresses for metadata.} The first six addresses are reserved for the process parameters as follows:

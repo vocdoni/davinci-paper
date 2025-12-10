@@ -218,18 +218,21 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 \subsubsection{Results circuit}
 \label{sec:vocdoni-protocol:circuits:results}
 
-\begin{figure}[h]
-	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit5.pdf}}
-	\caption{Results circuit. All public values are framed in green. {\color{red}The figure is not right.}}
-	\label{fig:circuit-results}
-\end{figure}
-
 %%% STATE-TRANSITION CIRCUIT
 \begin{landscape}
-	%\thispagestyle{empty} % removes the page number
-	\begin{figure}[H]
-		\centerline{\includegraphics[width=700pt,draft=false]{\figs/circuit4.pdf}}
-		\caption{State transition circuit. All public values are framed in green.}
-		\label{fig:circuit-state-transition-v2}
-	\end{figure}
+	\centering
+	{\setkeys{Gin}{draft=false}%shows image even in draft mode
+	\includegraphics[width=\linewidth]{\figs/circuit4.pdf}}
+	\captionof{figure}{State transition circuit. All public values are framed in green.}
+	\label{fig:circuit-state-transition-v2}
 \end{landscape}
+
+%\begin{landscape}
+%%	%\thispagestyle{empty} % removes the page number
+%	\begin{figure}[H]
+%		\centerline{\includegraphics[width=700pt,draft=false]{\figs/circuit4.pdf}}
+%		\captionof{figure}{State transition circuit. All public values are framed in green.}
+%		\caption{State transition circuit. All public values are framed in green.}
+%		\label{fig:circuit-state-transition-v2}
+%	\end{figure}
+%\end{landscape}

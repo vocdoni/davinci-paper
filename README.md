@@ -20,7 +20,7 @@ The protocol provides end-to-end verifiability, receipt-freeness, and decentrali
 ├── v1/                 # Early draft version
 └── v2/                 # Main paper source (current version)
     ├── build/          # Compiled files and LaTeX class/style files
-    ├── figures/        # Diagrams and illustrations (.png, .drawio, .mmd)
+    ├── figures/        # Diagrams and illustrations (.png, .drawio, .mmd, .pdf)
     ├── sections/       # Individual .tex files for each section
     ├── bibliography/   # References (bibtex.bib)
     └── misc/           # Miscellaneous materials (links, notes)
