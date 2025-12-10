@@ -19,7 +19,7 @@ Based on the above principles, the protocol provides a number of concrete securi
 \end{itemize}
 
 
-\paragraph{Privacy.} Ballots remain secret even though encrypted ballots are publicly stored and processed. Ballot secrecy is preserved through ElGamal encryption, which allows votes to be aggregated without decryption. Encrypted ballots are stored in public repositories (e.g., Ethereum blobs). Because of DKG sequencers cannot decrypt individual ballots themselves. {\color{blue}The protocol does not reveal the ballot but it does reveal if someone has voted or not.}
+\paragraph{Privacy.} Ballots remain secret even though encrypted ballots are publicly stored and processed. Ballot secrecy is preserved through ElGamal encryption, which allows votes to be aggregated without decryption. Encrypted ballots are stored in public repositories (e.g., Ethereum blobs). Because of \ac{DKG} sequencers cannot decrypt individual ballots themselves. {\color{blue}The protocol does not reveal the ballot but it does reveal if someone has voted or not.}
 
 \paragraph{Quantum resistance.} Quantum computers threaten discrete-logarithm-based cryptography such as ECDSA and ElGamal. For this reason, \davinci is designed in a modular way that would allow to migrate to post-quantum primitives in the longer term. For example,use CRYSTALS-Dilithium, Falcon, or Rainbow, for signature schemes, Brakerski-Gentry-Vaikuntanathan (BGV) or Brakerski/Fan-Vercauteren (BFV) which are lattice-based homomorphic encryption schemes, and ZK-STARKs for post-quantum zero-knowledge proofs. {\color{blue} Add citations to protocols.}
 

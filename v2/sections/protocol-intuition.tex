@@ -20,7 +20,7 @@ The following section provides an overview of the DAVINCI protocol, describing i
 	Additionally, the organizer defines the voting parameters, including the number of voting options and the vote-counting mechanism (e.g., weighted voting, quadratic voting, etc.). Once these details are set, the organizer submits a transaction to the process management smart contract on the Ethereum blockchain. This transaction publicly records the voting parameters and census commitment, ensuring transparency and preventing any subsequent alterations to the voting setup.\\
 	%
 	\item \textit{Encryption key generation.} 
-	A designated group of participants, referred to as \emph{\keywardens}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a {distributed key generation} (DKG) protocol, ensuring that no single party can control or reconstruct the corresponding private key independently.
+	A designated group of participants, referred to as \emph{\keywardens}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a \ac{DKG} protocol, ensuring that no single party can control or reconstruct the corresponding private key independently.
 	%Sequencers have a dual role in the protocol. In addition to generating the encryption key, they are also responsible for collecting votes from voters during the election. Consequently, their public key and the necessary information to contact them off-chain must be registered in the sequencer registry smart contract. 
 	Once the encryption public key is securely computed and published in the smart contract, the voting period can start.\\
 	%

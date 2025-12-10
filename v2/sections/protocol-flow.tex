@@ -20,7 +20,7 @@ In this phase, sequencers register and the organizer sets the election up.\\
 	\item Define the election details, including duration, options, and the ballot rules $\ballotmode$ (see Section~\ref{sec:ballot-protocol}).
 	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived from the organizer’s Ethereum address, nonce, and the chain ID.
 	\item Set security parameters for the %forthcoming
-	DKG ceremony (e.g., timeout, minimum number of sequencers).
+	\ac{DKG} ceremony (e.g., timeout, minimum number of sequencers).
 	\item Submit all this information in a transaction to the \hlget{\electionregistry} smart contract {\color{blue}(pay tx fees)}:
 	\[ tx_{org} = (\censusroot, ballotCommitment, \ballotmode, electionMetadata, \processid, dkgParameters).\]
 \end{enumerate}
@@ -30,7 +30,7 @@ In this phase, sequencers register and the organizer sets the election up.\\
 
 In this phase, \keywardens collectively generate the public encryption key.\\
 
-\noi \Keywardens fetch the process parameters ($\processid$, $\ballotmode$, $\censusroot$) from the process management smart contract and participate in a DKG protocol before the timeout set by the organizer expires. If the minimum number of contributions is reached, the public encryption key $\epk$ is derived and made available on-chain. This ensures that no single party controls the secret key, and that decryption later requires threshold participation {\color{blue}(give more details)}.\\
+\noi \Keywardens fetch the process parameters ($\processid$, $\ballotmode$, $\censusroot$) from the process management smart contract and participate in a \ac{DKG} protocol before the timeout set by the organizer expires. If the minimum number of contributions is reached, the public encryption key $\epk$ is derived and made available on-chain. This ensures that no single party controls the secret key, and that decryption later requires threshold participation {\color{blue}(give more details)}.\\
 
 \noi {\color{blue} Alternatively, generate a SNARK proving the EPK has been generated correctly and the contract verifies it.}
 

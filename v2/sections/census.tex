@@ -23,7 +23,7 @@ The supported census models are summarized in Table~\ref{tab:census-models} and 
 
 \paragraph{Off-chain dynamic census.} The Merkle tree remains off-chain, but the organizer may append new voters during the voting period (never deleting voters or modifying weights, as this would enable double voting). Each new insertion produces a new Merkle root, which the organizer must publish to the \hlget{\electionregistry} contract by updating the \censusroot parameter. As in the static model, GraphQL provides the endpoint from which sequencers download the current version of the tree. Sequencers verify membership proofs against the most recently published root.
 
-\paragraph{On-chain dynamic census.} In this configuration, the census is managed by a dedicated on-chain contract (\hlget{\censusmanagement}) that supports adding new members during the voting period. The address of this contract is stored in \censusroot, while \censusuri points to an external representation of the tree (e.g., a GraphQL endpoint). The \hlget{\censusmanagement} contract maintains a history of valid Merkle roots. Sequencers may therefore generate membership proofs using older roots, and during state transitions the \hlget{\electionregistry} contract queries the \hlget{\censusmanagement} contract to verify that the root used in the proof is still valid. As in all dynamic models, only additions to the census are permitted during the voting period.
+\paragraph{On-chain dynamic census.} In this configuration, the census is managed by a dedicated on-chain contract (\hlget{\censusmanagement}) that supports adding new members during the voting period. The address of this contract is stored in \censusroot, while \censusuri points to an external representation of the tree. The \hlget{\censusmanagement} contract maintains a history of valid Merkle roots. Sequencers may therefore generate membership proofs using older roots, and during state transitions the \hlget{\electionregistry} contract queries the \hlget{\censusmanagement} contract to verify that the root used in the proof is still valid. As in all dynamic models, only additions to the census are permitted during the voting period.
 
 \begin{table}[H]
 	\centering
@@ -37,8 +37,8 @@ The supported census models are summarized in Table~\ref{tab:census-models} and 
 		Membership proof \\
 		\hline
 		
-		\multicolumn{2}{|P{3.5cm}|}{Credential service provider (CSP)}
-		& \multirow{2}{*}{CSP's public key} 
+		\multicolumn{2}{|P{3.5cm}|}{Credential service provider (\ac{CSP})}
+		& \multirow{2}{*}{\ac{CSP}'s public key} 
 		& Endpoint to obtain an eligibility credential
 		& \multirow{2}{*}{Digital signature verification}\\
 		\hline

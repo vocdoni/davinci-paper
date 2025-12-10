@@ -6,7 +6,7 @@
 %decentralized trust: DKG
 %verifiability: ZKPs
 
-In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; distributed key generation (DKG) for decentralizing trust in the election keys; and zero-knowledge proofs (\acp{ZK-SNARK}) for verifiability of computations. For each primitive, we also specify the concrete choice of parameters used.
+In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; \ac{DKG} for decentralizing trust in the election keys; and zero-knowledge proofs (\acp{ZK-SNARK}) for verifiability of computations. For each primitive, we also specify the concrete choice of parameters used.
 
 %\paragraph{Notation.} Throughout the document, we use the following conventions. Given a set $S$, we denote sampling an element $x$ uniformly at random from $S$ by $x \sample S$. We denote all bitstrings of arbitrary length by $\{0,1\}^*$. 
 %Any group $\G$ used is of a large prime order, and we assume that the discrete logarithm problem is hard in $\G$. If two elements are denoted by the same letter in upper and lower case, e.g. $a, A$, this often means that $A$ is a public key corresponding to the secret key $a$. 
@@ -328,7 +328,7 @@ In the protocol, re-encryption is applied not only to newly submitted ballots bu
 \subsection{Key generation schemes}
 \label{sec:cryptographic-primitives:dkg}
 
-To ensure that no single entity controls the decryption key, DAVINCI employs a distributed key generation (DKG) protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{todocitaton}. Participants who contribute to the DKG ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical DKG protocols where shares are exchanged in the clear, our construction uses encrypted shares and ZK-SNARK proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
+To ensure that no single entity controls the decryption key, DAVINCI employs a \ac{DKG} protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{todocitaton}. Participants who contribute to the \ac{DKG} ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols where shares are exchanged in the clear, our construction uses encrypted shares and \ac{ZK-SNARK} proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
 
 {\color{blue} Let $t$ be the threshold parameter and $n$ the number of \keywardens, with $t\leq n$. Let $G$ be a generator of the elliptic curve group of order $q$. Each participant $P_i$ runs the following procedure.
 
@@ -391,7 +391,7 @@ After collecting valid encrypted shares, each participant $P_j$ can recover thei
 	\end{itemize}
 \end{mdframed}
 
-This approach ensures that the encryption public key is securely generated in a decentralized way, that each \keywarden learns only their own secret share, and that the correctness of the entire DKG procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
+This approach ensures that the encryption public key is securely generated in a decentralized way, that each \keywarden learns only their own secret share, and that the correctness of the entire \ac{DKG} procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
