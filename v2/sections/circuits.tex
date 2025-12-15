@@ -1,7 +1,6 @@
 % !TeX root = ../build/main.tex
 
-At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the election. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies the voter's census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; and the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the \ac{ZK-SNARK} proof that is verified on-chain. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}. {\color{blue}Add \textit{results} circuit.}
-
+At the core of \davinci lie a set of arithmetic circuits that enforce the correctness of every step of the election. Each circuit corresponds to a distinct task and, taken together, they guarantee that all protocol rules are satisfied without revealing any private information. Specifically, the \emph{ballot circuit} (Section~\ref{sec:vocdoni-protocol:circuits:ballot}) ensures that encrypted votes are valid and well-formed, the \emph{verifier circuit} (Section~\ref{sec:vocdoni-protocol:circuits:verifier}) verifies the voter's census membership; the \emph{aggregation circuit} (Section~\ref{sec:vocdoni-protocol:circuits:aggregation}) combines multiple authenticated votes into a single proof; the \emph{state transition circuit} (Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) updates the global state root and produces the \ac{ZK-SNARK} proof that is verified on-chain; and the \textit{results circuit} (Section~\ref{sec:vocdoni-protocol:circuits:results}) proves that the election results were computed correctly. The flow of these circuits and their interactions is shown in Figure~\ref{fig:circuits-flow}. 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow.pdf}}
 	\caption{
@@ -9,7 +8,7 @@ At the core of \davinci lie a set of arithmetic circuits that enforce the correc
 	\label{fig:circuits-flow}
 \end{figure}
 
-For clarity, the circuits are described in this section with their full set of public inputs explicitly listed. In the actual implementation, however, we apply an optimization: rather than exposing all public inputs $PI$ individually, we compute a single commitment $h = Hash(PI)$ and use $h$ as the only public input. The proof verifier then checks that $Hash(PI) = h$, ensuring that the original public inputs are consistent while reducing both proof size and verification cost. In \davinci, this commitment is computed using the MiMC-7 hash function {\color{blue}(use hlget to point "Hash" to MiMC-7)}. Note that this optimization does not alter the semantics of the circuits but significantly reduces verifier complexity and on-chain verification costs. Other implementation aspects such as the exact number of constraints and the proving frameworks used are deferred to Section~\ref{sec:analysis:implementation}.
+For clarity, the circuits are described in this section with their full set of public inputs explicitly listed. In the actual implementation, however, we apply an optimization: rather than exposing all public inputs $\publicinputs$ individually, we compute a single commitment $h = \hlget{\Mimc}(\publicinputs)$ and use $h$ as the only public input. The proof verifier then checks that $\hlget{\Mimc}(\publicinputs) = h$, ensuring that the original public inputs are consistent while reducing both proof size and verification cost. Note that this optimization does not alter the semantics of the circuits but significantly reduces verifier complexity and on-chain verification costs. Other implementation aspects such as the exact number of constraints and the proving frameworks used are deferred to Section~\ref{sec:analysis:implementation}.
 
 % Old text: By structuring the process this way, we ensure that voting can be performed from any device-including smartphones and web browsers-while keeping the sequencer's computational requirements within the capabilities of accessible, CPU-based machines with 64 GiB of memory.
 
@@ -37,9 +36,11 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Figure~\ref{fig:circ
 	\end{itemize}
 	\textbf{Constraints}
 	\begin{itemize}								
-		\item \emph{Vote encryption}. Correct encryption of the ballot: $\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).$
-		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): $... + \weight$.
-		\item \emph{Vote identifier}. The vote's identifier is correctly computed: $\voteid = \text{Hash} (\processid \conc  \address \conc k).$
+		\item \emph{Vote encryption}. Correct encryption of the ballot: \[\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).\]
+		\item \emph{Protocol rules compliance}. The ballot meets the protocol rules (number of valid choices, etc.): 
+		\[\text{protocolRulesCompliance}(\ballotmode, \weight, \ballot) = \true.\]
+		\item \emph{Vote identifier}. The vote's identifier is correctly computed: 
+		\[\voteid = \text{Hash} (\processid \conc  \address \conc k).\]
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -234,6 +235,8 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 
 \subsubsection{Results circuit}
 \label{sec:vocdoni-protocol:circuits:results}
+
+The results circuit (\hlset{\resultscircuit}) proves that... .
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit5.pdf}}

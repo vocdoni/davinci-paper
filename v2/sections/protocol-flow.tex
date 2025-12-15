@@ -42,8 +42,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 \noi \textbf{(a) Vote casting.} To cast a ballot, a voter does the following:
 
 \begin{enumerate}
-	{\color{red}
-	\item Select a sequencer from the sequencer registry smart contract.}  
+	\item Select a sequencer.  
 	\item Retrieve their census membership proof $\censusproof$ to prove eligibility.  
 	\item Fetch parameters $\epk$, $\ballotmode$, and $\processid$ from the \hlget{\electionregistry} smart contract.  
 	\item Select their ballot choice $\ballot$ according to the rules of $\ballotmode$.  
@@ -144,20 +143,30 @@ Upon receiving a valid transaction, the \electionregistry smart contract does th
 \subsubsection{Decryption key generation}
 \label{sec:vocdoni-protocol:deckey-gen}
 
+{\color{blue} After the voting period expires, $t$ out of $n$ sequencers publish their decryption shares of the election private key. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
+	
+Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share (see Seciton~\ref{sec:token} for details on incentivation mechanisms.)}
+	
+
 \subsubsection{Tally finalization}
 \label{sec:vocdoni-protocol:results}
 
-{\color{blue} After the voting period expires, $t$ out of $n$ sequencers publish their decryption shares of the election private key. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
+In this final phase, the organizer/a sequencer computes the tally and publishes the result, together with a proof of its correct computation, on-chain.
 
-Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share (INCENTIVATION MECHANISM).
+\begin{enumerate}
+	\item Retrieve $\decryptionkey$ from \dots.
+	\item ...
+	\item Use \resultscircuit from Section~\ref{sec:vocdoni-protocol:circuits:results} to generate a proof 
+	\begin{align*}
+		\resultsproof =  \hlget{\PProve}(\hlget{\resultscircuit}, 
+		\witness = (...), 
+		\publicinputs = (...)).
+	\end{align*}
+\end{enumerate}
 
-At this point:
-\begin{itemize}
-	\item Anyone can verify the correctness of the final results by checking the \ac{ZK-SNARK} state proofs and on-chain commitments.  
-	\item The combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire election.  
-\end{itemize}
+The election is considered finalized once the decrypted tally is available on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.
 
-The election is considered finalized once the decrypted tally is available and all state transition proofs have been verified on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.}
+{\color{blue} Note that, anyone can verify the correctness of the final results by checking the \ac{ZK-SNARK} state proofs and on-chain commitments. Moreover, the combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire election.}
 
 \begin{figure}%[H]
 	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow.pdf}}
