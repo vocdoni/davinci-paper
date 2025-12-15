@@ -110,7 +110,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\item Prepare the state transition data that will be stored in an Ethereum blob: pack votes/results into a 4096-cell blob \blobdata. 
 		\begin{itemize}
 			\item Compute data commitment $\blobcom = \hlget{\CCommit}(\blobdata)$. 
-			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, oldRoot, batchNum, nonce).$
+			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, oldRoot, \blobcom).$
 			\item Prepare polynomial $P$ from $\blobdata$.
 			\item Evaluate $y = P(\evalpoint)$.
 			\item Generate opening proof $\openproof$ from $...$.
@@ -133,7 +133,6 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 			\item eligibility of voters (via census Merkle proofs),  
 			\item absence of double voting (or correct handling of overwrites via nullifiers),  
 		\end{itemize}
-	\item Compute blob commitment TAL.
 	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
 	\martai{If \stateroot changed, repeat last circuit.}
 \end{enumerate}

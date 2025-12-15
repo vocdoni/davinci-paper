@@ -64,22 +64,20 @@ The verifier circuit (\hlset{\verifiercircuit}), illustrated in Figure~\ref{fig:
 		\item \public $\epk$ ($EPK$): encryption public key.
 		\item \public $\encryptedballot$: encrypted ballot.		
 		\item \public $\voteid$: voter's identifier.
-		\item \public $\censusroot$: census Merkle tree root.
-		\item \public $\pk$: voter's public key.
+		\item \public $\address$: voter's address.
+		\item \public $\weight$: voter's weight.
 	\end{itemize}
 	\textbf{Private inputs}
-	\begin{itemize}								
-		\item \private $\ballotproof$: voter's ballot proof.
-		\item \private $\weight$: voter's weight.
-		\item \private $\censuspf$: census membership proof.
+	\begin{itemize}		
+		\item \private $\pk$: voter's public key.						
 		\item \private $\signature$: voter's signature.
+		\item \private $\ballotproof$: voter's ballot proof.
 	\end{itemize}
 	\textbf{Constraints}	
 	\begin{itemize}
 		\item \emph{Voter's proof verification.} The voter's submitted proof is valid for the inputs provided: 
 		$$\hlget{\PVerify}\left(\ballotproof, PI = (\processid, \ballotmode, \epk, \encryptedballot, \voteid, \weight)\right) = \true.$$
-		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided:
-		$$ \hlget{\censusTree}.\hlget{\MTVerify}\left(\weight, \address = \hlget{\Keccak}(\pk), \censuspf, \censusroot\right) = \true. $$
+		\item Compute the address derived from the user's public key: $ \address = \hlget{\Keccak}(\pk)$.
 		\item \emph{Authentication + non-malleability.} The signature of the vote's identifier is valid for the given public key:
 		$$ \hlget{\SVer}_{\pk}(\voteid, \signature) = \true. $$
 	\end{itemize}
@@ -103,11 +101,10 @@ The aggregation circuit (\hlset{\aggregationcircuit}), illustrated in Figure~\re
 	\begin{itemize}
 		\item \public $\encryptedballot_i$: list of voters' encrypted ballots.
 		\item \public $\voteid_i$: set of vote's identifiers.
-		\item \public $\pk_i$: list of voters' public keys.
+		\item \public $\address_i$: list of voters' addresses.
 		\item \public $\processid$: election identifier.
 		\item \public $\ballotmode$: ballot protocol configuration.
 		\item \public $\epk$ ($EPK$): encryption public key.
-		\item \public $\censusroot$: census Merkle tree root.
 	\end{itemize}
 	\textbf{Private inputs}
 	\begin{itemize}								
@@ -116,7 +113,7 @@ The aggregation circuit (\hlset{\aggregationcircuit}), illustrated in Figure~\re
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Votes aggregation.} The accumulated authentication proofs are valid (for the given inputs). For every $i$:
-		$$\hlget{\PVerify}\left(\authenticationproof, PI = (\encryptedballot_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)\right) = \true.$$
+		$$\hlget{\PVerify}\left(\authenticationproof, \publicinputs = (\encryptedballot_i, \voteid_i, \address_i, \processid, \ballotmode, EPK)\right) = \true.$$
 		\item \emph{Shared public inputs.} The public inputs \processid, \ballotmode, \epk, and \censusroot are the same for all proofs.
 	\end{itemize}
 	\vspace{-0.3cm}
@@ -140,18 +137,20 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 	\vspace{0.3cm}
 	\noi \textbf{Public inputs}
 	\begin{itemize}
+		\item \public $\censusroot$: census Merkle tree root.
 		\item \public $\stateroot^{old}$: current state tree root.
 		\item \public $\stateroot^{new}$: new tree root after all state transitions are applied.
 		\item \public $\numoverwrites^{old}$: current number of overwrites.
 		\item \public $\numoverwrites^{new}$: number of overwrites after all state transitions are applied.
 		\item \public $\numvotes^{old}$: current number of votes.
 		\item \public $\numvotes^{new}$: total number of votes after all state transitions are applied.
-		\item \public $\blobcomm$: {\color{blue}commitment to the data blob}.
+		\item \public $C$: commitment to the data blob.
 	\end{itemize}
 	\textbf{Private inputs}
-	\begin{itemize}								
+	\begin{itemize}			
+		\item \private $\censusorigin$: census origin parameter.	
 		\item \private $\{\aggregationproof_i\}_{i= 1}^{N}$: set of aggregation proofs.
-		\item \private $\censusroot$: census Merkle tree root.
+		\item \private $\{\censuspf_i\}_{i = 1}^N$: census membership proofs.
 		\item \private $\ballotmode$: ballot protocol configuration.
 		\item \private $EPK$: encryption public key.
 		\item \private $\processid$: election identifier.
@@ -163,12 +162,14 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 		\item \private $\addaccumulator^{old}$: current accumulator of votes (before the transitions).
 		\item \private $\substractaccumulator^{old}$: current accumulator of votes that have been overwritten (before the transition).
 		\item \private $k$: random scalar.
-		\item \private {\color{blue}{ }Census Merkle tree (old): all leaves of the old tree (except the first six leaves).}
+		\item \private $\openproof$: KZG opening proof.
 	\end{itemize}
 	\textbf{Constraints} \\ \vspace{-0.4cm}		
 	\begin{itemize}
 		\item \emph{Aggregation verification.} The accumulated authentication proofs are valid. For every $i\in\{1,\dots,N\}$:
 		$$\hlget{\PVerify}(\authenticationproof, PI = (\encryptedballot_i, \voteid_i, \pk_i, \processid, \ballotmode, EPK, \censusroot)).$$
+		\item \emph{Census membership.} The address derived from the user's public key is part of the census, and verifies the census proof with the user's weight provided:
+		$$ \hlget{\censusTree}.\hlget{\MTVerify}\left(\weight, \address, \censuspf, \censusroot\right) = \true. $$
 		\item \emph{Transition verification.} Verify initial state and state transitions are applied correctly.
 				\begin{itemize}
 					\renewcommand{\labelitemii}{$\circ$}
@@ -204,9 +205,17 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 					\[\stateroot^{new} = \stateTree.\hlget{\MTRoot}().\]
 					\item Reencrypt all leafs of the tree (both old and new ones). {\color{blue}New are ok, but for those that are old, also verify MTProofs of membership?}.
 					\[newLeafContent = \hlget{\ReEnc}_{\epk}(\encryptedballot_i, k), \quad k = Hash(k).\]
-					\item Data blob commitment. Calculation of the commitment to all leafs that changed in the tree after all transition states were applied. 
-					\[ \blobcomm = Commitment(\text{all leaves that changed}).\]
 				\end{itemize}
+	\item \emph{Data blob}. 
+		\begin{itemize}
+			\item Construct blob $B$ (as described in Section~X).
+			\item Derive polynomial $p(x)$ from $B$.
+			\item Compute evaluation point
+					\( z = \hlget{\Poseidon}(\processid, C, \openproof) \).
+			\item Compute evaluation \(y = p(z)\).
+			\item Verify  
+			\(\hlget{\CVerify}(z, y, C, \openproof) = \true.\)\\
+		\end{itemize} 
 	\end{itemize}
 	\vspace{-0.3cm}
 \end{spacing}
@@ -215,24 +224,19 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 
 \martai{\numvotes and \numoverwrites are part of the smart contract state.}
 
-\subsubsection{Results circuit}
-\label{sec:vocdoni-protocol:circuits:results}
-
-%%% STATE-TRANSITION CIRCUIT
 \begin{landscape}
 	\centering
 	{\setkeys{Gin}{draft=false}%shows image even in draft mode
-	\includegraphics[width=\linewidth]{\figs/circuit4.pdf}}
+		\includegraphics[width=\linewidth]{\figs/circuit4.pdf}}
 	\captionof{figure}{State transition circuit. All public values are framed in green.}
 	\label{fig:circuit-state-transition-v2}
 \end{landscape}
 
-%\begin{landscape}
-%%	%\thispagestyle{empty} % removes the page number
-%	\begin{figure}[H]
-%		\centerline{\includegraphics[width=700pt,draft=false]{\figs/circuit4.pdf}}
-%		\captionof{figure}{State transition circuit. All public values are framed in green.}
-%		\caption{State transition circuit. All public values are framed in green.}
-%		\label{fig:circuit-state-transition-v2}
-%	\end{figure}
-%\end{landscape}
+\subsubsection{Results circuit}
+\label{sec:vocdoni-protocol:circuits:results}
+
+\begin{figure}[h]
+	\centerline{\includegraphics[width=400pt,draft=false]{\figs/circuit5.pdf}}
+	\caption{Aggregation circuit. All public values are framed in green. \color{red}Circuit is not correct.}
+	\label{fig:circuit-results}
+\end{figure}
