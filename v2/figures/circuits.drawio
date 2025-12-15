@@ -639,7 +639,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="4. state-transition" id="gqVSyPOq0HqqUG1E7rmp">
-    <mxGraphModel dx="2950" dy="1792" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
+    <mxGraphModel dx="4940" dy="2420" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="1" shadow="0">
       <root>
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-0" />
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-1" parent="YdgG6UzsnOPgAgFR6wUF-0" />
@@ -1045,7 +1045,7 @@
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-91" parent="YdgG6UzsnOPgAgFR6wUF-1" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;rotation=-90;" value="" vertex="1">
           <mxGeometry height="1127.5" width="20" x="828.75" y="533.75" as="geometry" />
         </mxCell>
-        <mxCell id="YdgG6UzsnOPgAgFR6wUF-92" parent="YdgG6UzsnOPgAgFR6wUF-1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="CENSUS MEMBERSHIP" vertex="1">
+        <mxCell id="YdgG6UzsnOPgAgFR6wUF-92" parent="YdgG6UzsnOPgAgFR6wUF-1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="CENSUS MEMBERSHIP" vertex="1">
           <mxGeometry height="40" width="350" x="-110" y="1117.19" as="geometry" />
         </mxCell>
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-93" parent="YdgG6UzsnOPgAgFR6wUF-1" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;rotation=-90;" value="" vertex="1">
@@ -1067,7 +1067,7 @@
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-97" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Courier New;" value="$$\text{censusRoot}$$" vertex="1">
           <mxGeometry height="40" width="80" x="-10" y="-120" as="geometry" />
         </mxCell>
-        <mxCell id="YdgG6UzsnOPgAgFR6wUF-98" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" value="&lt;div&gt;&lt;u&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div&gt;&lt;u&gt;&lt;b&gt;VERIFY CENSUS MEMBERSHIP PROOFS&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- If &lt;b&gt;censusOrigin&lt;/b&gt; = &lt;b&gt;CSP&lt;/b&gt;, then verify CPS&#39;s signature:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;$$\text{S.Verify}_\text{censusRoot}((\text{weight}_i, \text{address}_i), \text{censusProof}_i)$$&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Else, do:&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;&amp;nbsp;&lt;/div&gt;&lt;div&gt;$$\text{MT.Verify}((\text{weight}_i, \text{address}_i), \text{censusProof}_i, \text{censusRoot})$$&lt;/div&gt;" vertex="1">
+        <mxCell id="YdgG6UzsnOPgAgFR6wUF-98" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Courier New;" value="&lt;div&gt;&lt;u&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div&gt;&lt;u&gt;&lt;b&gt;VERIFY CENSUS MEMBERSHIP PROOFS&lt;/b&gt;&lt;/u&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- If &lt;b&gt;censusOrigin&lt;/b&gt; = &lt;b&gt;CSP&lt;/b&gt;, then verify CPS&#39;s signature:&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;$$\text{S.Verify}_\text{censusRoot}((\text{weight}_i, \text{address}_i), \text{censusProof}_i)$$&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;- Else, do:&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;&amp;nbsp;&lt;/div&gt;&lt;div&gt;$$\text{MT.Verify}((\text{weight}_i, \text{address}_i), \text{censusProof}_i, \text{censusRoot})$$&lt;/div&gt;" vertex="1">
           <mxGeometry height="220" width="370" x="-130" y="80" as="geometry" />
         </mxCell>
         <mxCell id="YdgG6UzsnOPgAgFR6wUF-99" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" source="YdgG6UzsnOPgAgFR6wUF-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.346;entryY=-0.013;entryDx=0;entryDy=0;entryPerimeter=0;" target="YdgG6UzsnOPgAgFR6wUF-53" value="">
@@ -1184,7 +1184,7 @@
             <mxPoint x="1600" y="200" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="_rE4CFF2qiUWnB8IBAZF-5" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Courier New;" value="&lt;div&gt;$$z = \text{Hash}(\text{processID} ||&amp;nbsp;\text{stateRoot}^{\text{old}}&amp;nbsp;|| C)$$&lt;/div&gt;" vertex="1">
+        <mxCell id="_rE4CFF2qiUWnB8IBAZF-5" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" value="&lt;div&gt;$$z = \text{Hash}(\text{processID} ||&amp;nbsp;\text{stateRoot}^{\text{old}}&amp;nbsp;|| C)$$&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="240" x="1480" y="80" as="geometry" />
         </mxCell>
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-9" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" source="_rE4CFF2qiUWnB8IBAZF-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.831;entryY=-0.043;entryDx=0;entryDy=0;entryPerimeter=0;" target="_rE4CFF2qiUWnB8IBAZF-5" value="">
@@ -1204,19 +1204,19 @@
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-26" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" source="_rE4CFF2qiUWnB8IBAZF-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.166;entryY=0.018;entryDx=0;entryDy=0;entryPerimeter=0;" target="_rE4CFF2qiUWnB8IBAZF-24" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="_rE4CFF2qiUWnB8IBAZF-12" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Courier New;" value="$$y = p(z)$$" vertex="1">
+        <mxCell id="_rE4CFF2qiUWnB8IBAZF-12" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" value="$$y = p(z)$$" vertex="1">
           <mxGeometry height="40" width="60" x="1730" y="340" as="geometry" />
         </mxCell>
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-17" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" source="_rE4CFF2qiUWnB8IBAZF-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="_rE4CFF2qiUWnB8IBAZF-12" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="_rE4CFF2qiUWnB8IBAZF-13" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Courier New;" value="Construct polynomial \(p(x)\)" vertex="1">
+        <mxCell id="_rE4CFF2qiUWnB8IBAZF-13" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" value="Construct polynomial \(p(x)\)" vertex="1">
           <mxGeometry height="40" width="190" x="1510" y="340" as="geometry" />
         </mxCell>
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-15" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fontFamily=Courier New;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1" value="Blob \(B\)" vertex="1">
           <mxGeometry height="40" width="120" x="1360" y="340" as="geometry" />
         </mxCell>
-        <mxCell id="_rE4CFF2qiUWnB8IBAZF-21" parent="YdgG6UzsnOPgAgFR6wUF-1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" value="DATA BLOB" vertex="1">
+        <mxCell id="_rE4CFF2qiUWnB8IBAZF-21" parent="YdgG6UzsnOPgAgFR6wUF-1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Courier New;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" value="DATA BLOB" vertex="1">
           <mxGeometry height="40" width="560" x="1430" y="1117.18" as="geometry" />
         </mxCell>
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-22" parent="YdgG6UzsnOPgAgFR6wUF-1" style="strokeWidth=1;html=1;shape=mxgraph.flowchart.annotation_2;align=left;labelPosition=right;pointerEvents=1;rotation=-90;" value="" vertex="1">
@@ -1233,7 +1233,7 @@
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-30" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" source="_rE4CFF2qiUWnB8IBAZF-24" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="_rE4CFF2qiUWnB8IBAZF-29" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="_rE4CFF2qiUWnB8IBAZF-24" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;fontFamily=Courier New;" value="&lt;div&gt;$$\text{C.Verify}(z, y, C, \text{openingProof})$$&lt;/div&gt;" vertex="1">
+        <mxCell id="_rE4CFF2qiUWnB8IBAZF-24" parent="YdgG6UzsnOPgAgFR6wUF-1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Courier New;" value="&lt;div&gt;$$\text{C.Verify}(z, y, C, \text{openingProof})$$&lt;/div&gt;" vertex="1">
           <mxGeometry height="40" width="240" x="1720" y="480" as="geometry" />
         </mxCell>
         <mxCell id="_rE4CFF2qiUWnB8IBAZF-25" edge="1" parent="YdgG6UzsnOPgAgFR6wUF-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=oval;startFill=1;" value="">
