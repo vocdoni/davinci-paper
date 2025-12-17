@@ -207,13 +207,13 @@ These functions are used by sequencers to construct proofs that certify the vali
 \subsection{Commitment schemes}
 \label{sec:cryptographic-primitives:commitments}
 
-{\color{blue} Description of KZG~\cite{kate2010constant} with SRS, $\hlset{\CCommit}()$, and $\hlset{\CVerify}()$.}\\
+{\color{blue} Description of KZG~\cite{kate2010constant} with SRS \textbf{[add link to Ethereum's BLS12-381 SRS]}, $\hlset{\CCommit}()$, and $\hlset{\CVerify}()$.}\\
 Original methods: \hlset{\CSetup}, \hlset{\COpen}, \hlset{\CVerifyPoly}, \hlset{\CCreateWitness}, \hlset{\CVerifyEval}, \hlset{\CProve}, \hlset{\CVerify}.
 
 \subsection{Digital signature schemes}
 \label{sec:cryptographic-primitives:signatures}
 
-{\color{blue}{\textbf{TODO}: add algorithm \hlset{\SPubKey} that extracts $\pk$ from $\signature$.}}\\
+{\color{blue}{\textbf{TODO}: add \hlset{\SPubKey} that extracts $\pk$ from $\signature$ (in Ethereum it's called \texttt{ECRecover}).}}\\
 
 \noi \Davinci uses the {elliptic curve digital signature algorithm} (ECDSA)~\cite{johnson2001ecdsa} over the SECP256K1 curve to ensure compatibility with standard Ethereum wallets. %, such as MetaMask~\ref{} or Ledger~\ref{}, 
 %

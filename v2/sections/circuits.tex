@@ -200,11 +200,11 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N<60$
 								\item Aggregate the vote to the results accumulator: $\addaccumulator = \addaccumulator + \encryptedballot$.
 								\item Aggregate the old vote to the accumulator: $\substractaccumulator = \substractaccumulator + \encryptedballot^{old}$.
 							\end{enumerate}
-						{\color{blue}The old  $\encryptedballot^{old}$ should also be inputs or retrieved from the MT inclusion proofs.}
+						{\color{blue}The old  $\encryptedballot^{old}$ should also be inputs or retrieved from the MT inclusion proofs -- YES.}
 					\end{itemize}
 					\item After all previous state transitions are done, recompute new tree root:
 					\[\stateroot^{new} = \stateTree.\hlget{\MTRoot}().\]
-					\item Reencrypt all leafs of the tree (both old and new ones). {\color{blue}New are ok, but for those that are old, also verify MTProofs of membership?}.
+					\item Reencrypt all leafs of the tree (both old and new ones). {\color{blue}New are ok, but for those that are old, also verify MTProofs of membership? -- YES}.
 					\[newLeafContent = \hlget{\ReEnc}_{\epk}(\encryptedballot_i, k), \quad k = Hash(k).\]
 				\end{itemize}
 	\item \emph{Data blob}. 
