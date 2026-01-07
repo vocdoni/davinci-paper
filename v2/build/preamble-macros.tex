@@ -13,6 +13,15 @@
 \definedir{\figs}{../figures}
 \definedir{\bib}{../bibliography}
 
+% Hyperref setup
+%\hypersetup{
+%	final=true,
+%	colorlinks=true,
+%	linkcolor=blue,
+%	urlcolor=blue,
+%	citecolor=blue,
+%}
+
 % Comments
 \newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
 \newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
@@ -166,6 +175,8 @@
 \newcommand{\address}{\variablestyle{address}}
 \newcommand{\stateproof}{\variablestyle{stateProof}}
 \newcommand{\merkleproofs}{\variablestyle{merkleProofs}}
+\newcommand{\merkleInclusionPf}{\variablestyle{merkleInclusionProof}}
+\newcommand{\merkleNInclusionPf}{\variablestyle{merkleNonInclusionProof}}
 
 % State Merkle tree
 \newcommand{\censusroot}{\variablestyle{censusRoot}}
@@ -189,7 +200,8 @@
 \newcommand{\noi}{\noindent}
 \newcommand{\conc}{\:||\:}
 \newcommand{\batchsize}{\variablestyle{batchSize}}
-
+\newcommand{\old}{\texttt{old}\xspace}
+\newcommand{\new}{\texttt{new}\xspace}
 % Hyperlinks
 \newcommand{\hlset}[1]{\hypertarget{\detokenize{#1}}{#1}}
 \newcommand{\hlget}[1]{\hyperlink{\detokenize{#1}}{#1}}
