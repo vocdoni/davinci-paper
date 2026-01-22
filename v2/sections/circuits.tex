@@ -34,7 +34,6 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Figure~\ref{fig:circ
 		\item \private $\ballot$: voter's voting choice.
 		\item \private $k$: random scalar.
 	\end{itemize}
-	\pagebreak
 	\textbf{Constraints}
 	\begin{itemize}								
 		\item \emph{Vote encryption}. Correct encryption of the ballot: \[\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).\]
@@ -69,7 +68,7 @@ The verifier circuit (\hlset{\verifiercircuit}), illustrated in Figure~\ref{fig:
 		\item \public $\address$: voter's address.
 		\item \public $\weight$: voter's weight.
 	\end{itemize}
-	\pagebreak
+%	\pagebreak
 	\textbf{Private inputs}
 	\begin{itemize}		
 		\item \private $\pk$: voter's public key.						
