@@ -3,21 +3,24 @@
 The census defines the set of eligible voters and their associated voting weights. At its core, a census is simply a dataset that, for each voter, contains a unique identifier (typically an Ethereum address), a voting weight, and a means to produce a membership proof that can be verified inside a \ac{ZK} circuit. \Davinci supports two mechanisms for generating such proofs:
 \begin{itemize}
 	\item \textit{Credential-based membership proofs}: eligibility is certified by a digital signature issued by a \ac{CSP}.
-	\item \textit{Merkle-tree-based membership proofs}: the census is organized as a lean incremental Merkle tree (see Section~\ref{sec:cryptographic-primitives:merkle-trees}) and denoted by $\hlset{\censusTree}$. Each voter is assigned a sequential index in the tree, and their identifier and weight are stored in the corresponding leaf. Only the Merkle root is kept on-chain, and sequencers supply Merkle proofs to attest membership.
+	\item \textit{Merkle-tree-based membership proofs}: the census is organized as an incremental Merkle tree (see Section~\ref{sec:cryptographic-primitives:merkle-trees}) and denoted by $\hlset{\censusTree}$. Each voter is assigned a sequential index in the tree, and their identifier and weight are stored in the corresponding leaf. Only the Merkle root is kept on-chain, and sequencers supply Merkle proofs to attest membership.
 \end{itemize}
 %
 To support different census models, the \hlget{\electionregistry} smart contract stores the following three parameters:
 \begin{itemize}
 	\item \censusorigin: the deployment model (off-chain static, off-chain dynamic, on-chain dynamic, or \ac{CSP}).
 	\item \censusuri: a \ac{URI} pointing to an external reference (URL, GraphQL endpoint, CDN path, IPFS/IPNS, etc.) from which sequencers can download or query the census data.
-	\item \censusroot: the on-chain commitment used for membership verification. Its interpretation depends on the type of census. In the \ac{CSP} model, this parameter corresponds to the \ac{CSP}’s public key, and in the case of Merkle trees, it corresponds to a Merkle root (off-chain static/dynamic) or a census contract address (on-chain dynamic).	
+	\item \censusroot: the on-chain commitment used for membership verification. Its interpretation depends on the \censusorigin. In the \ac{CSP} model, this parameter corresponds to the \textbf{hash of the \ac{CSP}’s public key}, and in the case of Merkle trees, it corresponds to a Merkle root (off-chain static/dynamic) or a census contract address (on-chain dynamic).	
 \end{itemize}
 %
-Organizers are free to construct the census from various data sources, such as private membership registries, self-sovereign identity credentials, or Ethereum-based tokens (e.g. ERC-20 or NFTs) whose balances define eligibility. Token-based censuses may be built from an optimistic snapshot at a chosen block or via a ZK proof that validates balances using Ethereum storage proofs. This flexibility supports a broad range of use cases and governance scenarios. 
+Organizers are free to construct the census from various data sources, such as private membership registries, self-sovereign identity credentials, or Ethereum-based tokens (e.g. ERC-20 or NFTs) whose balances define eligibility. 
+%Token-based censuses may be built from an optimistic snapshot at a chosen block or via a ZK proof that validates balances using Ethereum storage proofs.
+%This is correct, but it is not the way DAVINCI is designed to support token-based censuses. In the case of token-based, there must be a smart-contract that builds a Merkle-Tree onchain. Then we declare a census Root the address of that contract.
+This flexibility supports a broad range of use cases and governance scenarios. 
 %
 The supported census models are summarized in Table~\ref{tab:census-models} and described in detail below.
 
-\paragraph{Credential-based census.} Voter eligibility is certified by a digital signature issued by a \ac{CSP}. A voter obtains a signed credential from the \ac{CSP}, and sequencers verify the signature inside the \ac{ZK} circuits. In this case, \censusroot stores the \ac{CSP}’s public key, and \censusuri specifies the endpoint where voters obtain their credential. This model is suitable when eligibility is managed externally through attested identities rather than by maintaining a Merkle-tree dataset.
+\paragraph{Credential service provider.} Voter eligibility is certified by a digital signature issued by a \ac{CSP}. A voter obtains a signed credential from the \ac{CSP}, and sequencers verify the signature inside the \ac{ZK} circuits. In this case, \censusroot stores the \ac{CSP}’s public key, and \censusuri specifies the endpoint where voters obtain their credential. This model is suitable when eligibility is managed externally through attested identities rather than by maintaining a Merkle-tree dataset.
 
 \paragraph{Off-chain static census.} The organizer constructs a fixed census prior to the election. The Merkle tree is built locally, its root is stored in \censusroot, and \censusuri specifies the endpoint from which sequencers can retrieve the full tree. Since the census is static, no updates occur during the voting period.
 
@@ -38,7 +41,7 @@ The supported census models are summarized in Table~\ref{tab:census-models} and 
 		\hline
 		
 		\multicolumn{2}{|P{3.5cm}|}{Credential service provider (\ac{CSP})}
-		& \multirow{2}{*}{\ac{CSP}'s public key} 
+		& \textbf{Hash of the {\ac{CSP}'s public key}} 
 		& Endpoint to obtain an eligibility credential
 		& \multirow{2}{*}{Digital signature verification}\\
 		\hline
@@ -68,3 +71,9 @@ The supported census models are summarized in Table~\ref{tab:census-models} and 
 	\caption{Summary of census configurations supported by the \davinci protocol.}
 	\label{tab:census-models}
 \end{table}
+
+%CENSUS ORIGIN
+%MerkleTreeOffchainStaticV1
+%MerkleTreeOffchainDynamicV1
+%MerkleTreeOnchainDynamicV1
+%CSPEdDSABabyJubJubV1

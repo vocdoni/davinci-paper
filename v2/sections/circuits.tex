@@ -222,7 +222,7 @@ To formalize the setting, let the sequencer collect a batch of $N$ votes ($N\leq
 			\]
 			where \(\censusroot\) contains the CSP public key and \(\censuspf_i\) is the eligibility signature attesting that voter \(i\) belongs to the census with the given weight. {\color{blue}Missing parameters in the message being signed, e.g. ProcessID.}
 			
-			\item Otherwise, if the census is represented by a lean \ac{IMT}, the circuit verifies a Merkle membership proof showing that the pair \((\address_i, \weight_i)\) is included in the committed census. For all $i \in \{1,\dots,N\}$:
+			\item Otherwise, if the census is represented by an \ac{IMT}, the circuit verifies a Merkle membership proof showing that the pair \((\address_i, \weight_i)\) is included in the committed census. For all $i \in \{1,\dots,N\}$:
 			\[
 			\hlget{\censusTree}.\hlget{\MTVerify}\big((\address_i, \weight_i), \censuspf_i, \censusroot\big) = \true.
 			\]
