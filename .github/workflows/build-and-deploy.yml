@@ -1,0 +1,126 @@
+name: Build & Deploy Paper
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-bibtex-extra texlive-extra-utils
+
+      - name: Convert LaTeX to Markdown
+        run: |
+          ./scripts/convert-paper.sh
+
+      - name: Build Markdown preview page
+        run: |
+          touch docs/.nojekyll
+          cat << 'EOF' > docs/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>DaVinci Paper (Markdown)</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown.min.css">
+            <style>
+              :root { color-scheme: light; }
+              body {
+                margin: 0;
+                background: #f6f8fa;
+                color: #24292f;
+              }
+              .topbar {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding: 12px 16px;
+                border-bottom: 1px solid #d0d7de;
+                background: #ffffff;
+              }
+              .topbar a {
+                text-decoration: none;
+                border: 1px solid #d0d7de;
+                border-radius: 6px;
+                padding: 6px 10px;
+                color: #24292f;
+                background: #f6f8fa;
+                font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+              }
+              .markdown-body {
+                box-sizing: border-box;
+                min-width: 200px;
+                max-width: 980px;
+                margin: 0 auto;
+                padding: 28px 20px 40px;
+                background: #fff;
+              }
+              #status {
+                margin-left: auto;
+                font: 500 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                color: #57606a;
+              }
+              @media (max-width: 767px) {
+                .markdown-body { padding: 20px 16px 28px; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="topbar">
+              <a href="paper.md" download>Download paper.md</a>
+              <a href="paper.md" target="_blank" rel="noopener noreferrer">Open raw markdown</a>
+              <span id="status">Loading markdown...</span>
+            </div>
+            <article id="content" class="markdown-body"></article>
+            <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+            <script>
+              (async () => {
+                const status = document.getElementById('status');
+                const content = document.getElementById('content');
+                try {
+                  const response = await fetch('paper.md', { cache: 'no-store' });
+                  if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                  }
+                  const md = await response.text();
+                  marked.setOptions({ gfm: true, breaks: false });
+                  const html = marked.parse(md);
+                  content.innerHTML = DOMPurify.sanitize(html);
+                  status.textContent = 'Loaded';
+                } catch (err) {
+                  status.textContent = 'Failed to load markdown';
+                  content.innerHTML = '<p>Unable to render <code>paper.md</code>.</p><p>' + err.message + '</p>';
+                }
+              })();
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+
+      - name: Upload paper.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-markdown
+          path: docs/paper.md
+          if-no-files-found: error
