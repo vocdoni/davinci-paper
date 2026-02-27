@@ -34,18 +34,26 @@ jobs:
           touch docs/.nojekyll
           cat << 'EOF' > docs/index.html
           <!DOCTYPE html>
-          <html lang="en">
+          <html lang="en" data-color-mode="light" data-light-theme="light" data-dark-theme="light">
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>DaVinci Paper (Markdown)</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown.min.css">
             <style>
-              :root { color-scheme: light; }
+              :root {
+                color-scheme: light;
+                --fgColor-default: #1f2328;
+                --fgColor-muted: #57606a;
+                --fgColor-accent: #0969da;
+                --bgColor-default: #ffffff;
+                --bgColor-muted: #f6f8fa;
+                --borderColor-default: #d0d7de;
+              }
               body {
                 margin: 0;
-                background: #f6f8fa;
-                color: #24292f;
+                background: linear-gradient(180deg, #eef2f7 0%, #f6f8fa 30%, #f6f8fa 100%);
+                color: #1f2328;
               }
               .topbar {
                 position: sticky;
@@ -56,14 +64,15 @@ jobs:
                 align-items: center;
                 padding: 12px 16px;
                 border-bottom: 1px solid #d0d7de;
-                background: #ffffff;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(4px);
               }
               .topbar a {
                 text-decoration: none;
                 border: 1px solid #d0d7de;
                 border-radius: 6px;
                 padding: 6px 10px;
-                color: #24292f;
+                color: #1f2328;
                 background: #f6f8fa;
                 font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
               }
@@ -71,9 +80,43 @@ jobs:
                 box-sizing: border-box;
                 min-width: 200px;
                 max-width: 980px;
-                margin: 0 auto;
-                padding: 28px 20px 40px;
+                margin: 14px auto 24px;
+                padding: 30px 28px 40px;
                 background: #fff;
+                border: 1px solid #d0d7de;
+                border-radius: 10px;
+                box-shadow: 0 10px 24px rgba(31, 35, 40, 0.07);
+                color: #1f2328 !important;
+                font-size: 17px;
+                line-height: 1.72;
+              }
+              .markdown-body p,
+              .markdown-body li,
+              .markdown-body blockquote,
+              .markdown-body td,
+              .markdown-body th {
+                color: #1f2328 !important;
+              }
+              .markdown-body h1,
+              .markdown-body h2,
+              .markdown-body h3,
+              .markdown-body h4,
+              .markdown-body h5,
+              .markdown-body h6 {
+                color: #0f172a !important;
+                letter-spacing: -0.01em;
+              }
+              .markdown-body a {
+                color: #0969da !important;
+              }
+              .markdown-body code {
+                color: #0550ae;
+                background: #f6f8fa;
+              }
+              .markdown-body pre {
+                background: #f6f8fa;
+                border: 1px solid #d0d7de;
+                border-radius: 8px;
               }
               #status {
                 margin-left: auto;
@@ -81,7 +124,14 @@ jobs:
                 color: #57606a;
               }
               @media (max-width: 767px) {
-                .markdown-body { padding: 20px 16px 28px; }
+                .markdown-body {
+                  margin: 0;
+                  border-radius: 0;
+                  border-left: none;
+                  border-right: none;
+                  padding: 22px 16px 30px;
+                  font-size: 16px;
+                }
               }
             </style>
           </head>
