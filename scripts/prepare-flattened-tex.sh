@@ -61,7 +61,7 @@ fi
 
 (
   cd "$TMP_TEX_ROOT/build"
-  latexpand main.tex > "$ROOT_DIR/build/flat/flattened.tex"
+  latexpand --makeatletter main.tex > "$ROOT_DIR/build/flat/flattened.tex"
 )
 
 # Preserve references as readable labels when TeX crossrefs are unresolved.
