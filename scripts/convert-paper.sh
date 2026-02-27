@@ -31,12 +31,15 @@ RESOURCE_PATH="$ROOT_DIR/build/flat:$ROOT_DIR/build/flat/texsrc/build:$ROOT_DIR/
 perl -0777 -i -pe '
   s/\\hyperlink\{[^{}]*\}\{([^{}]*)\}/$1/g;
   s/\\hypertarget\{[^{}]*\}\{([^{}]*)\}/$1/g;
+  s/\\ensuremath\{/\{/g;
   s/\\ensuremath\{([^{}]+)\}/$1/g;
   s/\\detokenize\{([^{}]+)\}/$1/g;
   s/\{\\sf\{([^{}]+)\}\}/\\texttt{$1}/g;
   s/\\sf\{([^{}]+)\}/\\texttt{$1}/g;
   s/\{\\tt\{([^{}]+)\}\}/\\texttt{$1}/g;
   s/\\tt\{([^{}]+)\}/\\texttt{$1}/g;
+  s/\\text\{\\tiny\s*\\sf\s*([^{}]+)\}/\\mathrm{$1}/g;
+  s/\\text\{\\tiny\s*\\mathsf\{([^{}]+)\}\}/\\mathrm{$1}/g;
   s/\\xspace//g;
   s/\\hspace\{[^}]*\}//g;
   s/\\rule\{[^}]*\}\{[^}]*\}//g;

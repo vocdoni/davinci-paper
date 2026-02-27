@@ -190,6 +190,11 @@ jobs:
                   if (window.renderMathInElement) {
                     window.renderMathInElement(content, {
                       throwOnError: false,
+                      macros: {
+                        "\\ensuremath": "#1",
+                        "\\sf": "\\mathsf",
+                        "\\tt": "\\texttt"
+                      },
                       delimiters: [
                         { left: '$$', right: '$$', display: true },
                         { left: '$', right: '$', display: false },
