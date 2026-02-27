@@ -43,7 +43,7 @@ perl -0777 -i -pe "
   pre { overflow-x: auto; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 8px; padding: 10px; }
   @media (max-width: 767px) { body { padding: 14px 12px 28px; } .paper-nav { margin: -14px -12px 16px; } }
   </style></head>~s;
-  s~<body([^>]*)>~<body\\1><div class='paper-nav'><a href='$MD_PATH'>Markdown View</a><a href='${MD_PATH}paper.md' download>Download paper.md</a></div>~s;
+  s~<body([^>]*)>~<body\\1><div class='paper-nav'><a href='paper.pdf' download>Download paper.pdf</a><a href='$MD_PATH'>Markdown View</a><a href='${MD_PATH}paper.md' download>Download paper.md</a></div>~s;
 " "$OUTPUT_DIR/index.html"
 
 # Ensure extracted media links are relative in deployed root page.

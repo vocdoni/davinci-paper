@@ -5,6 +5,7 @@ RUN apt-get update \
     pandoc \
     poppler-utils \
     texlive-latex-recommended \
+    texlive-latex-extra \
     texlive-bibtex-extra \
     texlive-extra-utils \
   && rm -rf /var/lib/apt/lists/*

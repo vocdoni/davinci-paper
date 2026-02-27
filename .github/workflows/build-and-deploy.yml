@@ -23,11 +23,15 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-latex-recommended texlive-bibtex-extra texlive-extra-utils poppler-utils
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-latex-extra texlive-bibtex-extra texlive-extra-utils poppler-utils
 
       - name: Build LaTeX HTML site
         run: |
           ./scripts/build-latex-html.sh docs ./md/
+
+      - name: Build final PDF
+        run: |
+          ./scripts/build-paper-pdf.sh docs/paper.pdf
 
       - name: Convert LaTeX to Markdown
         run: |
@@ -165,6 +169,7 @@ jobs:
           <body>
             <div class="topbar">
               <a href="../">LaTeX HTML view</a>
+              <a href="../paper.pdf" download>Download paper.pdf</a>
               <a href="paper.md" download>Download paper.md</a>
               <a href="paper.md" target="_blank" rel="noopener noreferrer">Open raw markdown</a>
               <span id="status">Loading markdown...</span>
@@ -219,6 +224,13 @@ jobs:
         with:
           name: paper-markdown
           path: docs/md/paper.md
+          if-no-files-found: error
+
+      - name: Upload paper.pdf artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: docs/paper.pdf
           if-no-files-found: error
 
       - name: Upload GitHub Pages artifact
