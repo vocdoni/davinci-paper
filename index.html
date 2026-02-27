@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>body{font-family:sans-serif; margin:2rem;}</style>
+</head>
+<body>
+  <div id="content">Loading...</div>
+  <script>
+    fetch('paper.md')
+      .then(resp => resp.text())
+      .then(md => {
+        document.getElementById('content').innerHTML = marked(md);
+      });
+  </script>
+</body>
+</html>
