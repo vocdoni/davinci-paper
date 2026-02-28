@@ -1,0 +1,254 @@
+name: Build & Deploy Paper
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-recommended texlive-latex-extra texlive-bibtex-extra texlive-extra-utils poppler-utils
+
+      - name: Build LaTeX HTML site
+        run: |
+          ./scripts/build-latex-html.sh docs ./md/
+
+      - name: Build final PDF
+        run: |
+          ./scripts/build-paper-pdf.sh docs/paper.pdf
+
+      - name: Convert LaTeX to Markdown
+        run: |
+          ./scripts/convert-paper.sh docs/md
+
+      - name: Build Markdown preview page (/md)
+        run: |
+          touch docs/.nojekyll
+          mkdir -p docs/md
+          cat << 'EOF' > docs/md/index.html
+          <!DOCTYPE html>
+          <html lang="en" data-color-mode="light" data-light-theme="light" data-dark-theme="light">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>DaVinci Paper (Markdown)</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.8.1/github-markdown.min.css">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+            <style>
+              :root {
+                color-scheme: light;
+                --fgColor-default: #1f2328;
+                --fgColor-muted: #57606a;
+                --fgColor-accent: #0969da;
+                --bgColor-default: #ffffff;
+                --bgColor-muted: #f6f8fa;
+                --borderColor-default: #d0d7de;
+              }
+              body {
+                margin: 0;
+                background: linear-gradient(180deg, #eef2f7 0%, #f6f8fa 30%, #f6f8fa 100%);
+                color: #1f2328;
+              }
+              .topbar {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding: 12px 16px;
+                border-bottom: 1px solid #d0d7de;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(4px);
+              }
+              .topbar a {
+                text-decoration: none;
+                border: 1px solid #d0d7de;
+                border-radius: 6px;
+                padding: 6px 10px;
+                color: #1f2328;
+                background: #f6f8fa;
+                font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+              }
+              .markdown-body {
+                box-sizing: border-box;
+                min-width: 200px;
+                max-width: 980px;
+                margin: 14px auto 24px;
+                padding: 30px 28px 40px;
+                background: #fff;
+                border: 1px solid #d0d7de;
+                border-radius: 10px;
+                box-shadow: 0 10px 24px rgba(31, 35, 40, 0.07);
+                color: #1f2328 !important;
+                font-size: 17px;
+                line-height: 1.72;
+              }
+              .markdown-body p,
+              .markdown-body li,
+              .markdown-body blockquote,
+              .markdown-body td,
+              .markdown-body th {
+                color: #1f2328 !important;
+              }
+              .markdown-body h1,
+              .markdown-body h2,
+              .markdown-body h3,
+              .markdown-body h4,
+              .markdown-body h5,
+              .markdown-body h6 {
+                color: #0f172a !important;
+                letter-spacing: -0.01em;
+              }
+              .markdown-body a {
+                color: #0969da !important;
+              }
+              .markdown-body code {
+                color: #0550ae;
+                background: #f6f8fa;
+              }
+              .markdown-body pre {
+                background: #f6f8fa;
+                border: 1px solid #d0d7de;
+                border-radius: 8px;
+              }
+              .markdown-body img,
+              .markdown-body object,
+              .markdown-body embed {
+                max-width: 100% !important;
+                width: 100% !important;
+                height: auto !important;
+                display: block;
+                margin: 0 auto;
+                border-radius: 6px;
+              }
+              .markdown-body figure {
+                margin: 1.2rem 0;
+                max-width: 100%;
+              }
+              .markdown-body figure > img {
+                width: 100% !important;
+              }
+              .markdown-body figcaption {
+                color: #57606a !important;
+                font-size: 0.95rem;
+              }
+              #status {
+                margin-left: auto;
+                font: 500 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                color: #57606a;
+              }
+              @media (max-width: 767px) {
+                .markdown-body {
+                  margin: 0;
+                  border-radius: 0;
+                  border-left: none;
+                  border-right: none;
+                  padding: 22px 16px 30px;
+                  font-size: 16px;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="topbar">
+              <a href="../">LaTeX HTML view</a>
+              <a href="../paper.pdf" download>Download paper.pdf</a>
+              <a href="paper.md" download>Download paper.md</a>
+              <a href="paper.md" target="_blank" rel="noopener noreferrer">Open raw markdown</a>
+              <span id="status">Loading markdown...</span>
+            </div>
+            <article id="content" class="markdown-body"></article>
+            <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.umd.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+            <script>
+              (async () => {
+                const status = document.getElementById('status');
+                const content = document.getElementById('content');
+                try {
+                  const response = await fetch('paper.md', { cache: 'no-store' });
+                  if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                  }
+                  const md = await response.text();
+                  marked.setOptions({ gfm: true, breaks: false });
+                  const html = marked.parse(md);
+                  content.innerHTML = DOMPurify.sanitize(html);
+                  if (window.renderMathInElement) {
+                    window.renderMathInElement(content, {
+                      throwOnError: false,
+                      macros: {
+                        "\\ensuremath": "#1",
+                        "\\sf": "\\mathsf",
+                        "\\tt": "\\texttt"
+                      },
+                      delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\\\[', right: '\\\\]', display: true },
+                        { left: '\\\\(', right: '\\\\)', display: false }
+                      ]
+                    });
+                  }
+                  status.textContent = 'Loaded';
+                } catch (err) {
+                  status.textContent = 'Failed to load markdown';
+                  content.innerHTML = '<p>Unable to render <code>paper.md</code>.</p><p>' + err.message + '</p>';
+                }
+              })();
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload paper.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-markdown
+          path: docs/md/paper.md
+          if-no-files-found: error
+
+      - name: Upload paper.pdf artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: docs/paper.pdf
+          if-no-files-found: error
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
