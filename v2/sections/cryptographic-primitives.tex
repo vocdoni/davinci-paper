@@ -191,7 +191,7 @@ The \davinci protocol uses sparse Merkle Trees (SMTs) as its primary data struct
 
 In \davinci, SMTs are used to represent two core data structures: the census tree, which encodes the list of eligible voters along with their respective voting weights, and the state tree, which encodes the current status of submitted votes. Both trees have fixed depth 64. The census tree is instantiated with the MiMC hash function over the BLS12-377 scalar field, while the state tree uses Poseidon over the BN254 scalar field. Only the root hash of each tree is published on-chain, ensuring verifiability with minimal on-chain storage. 
 %
-To support state transitions and circuit verification, each tree $\tree$ has the following functions associated:
+To support state transitions and circuit verification, each tree $\tree{}$ has the following functions associated:
 
 \begin{itemize}
 	\item $\tree.\hlset{\MTRoot}()$: it returns the current Merkle root of the tree.
@@ -199,7 +199,7 @@ To support state transitions and circuit verification, each tree $\tree$ has the
 	\item $\tree.\hlset{\MTUpdate}(\leaf_{old}, \leaf)$: it updates an existing leaf in the tree.
 	\item $\tree.\hlset{\MTMembershipProof}(\leaf)$: it returns a Merkle proof of inclusion for the given leaf.
 	\item $\tree.\hlset{\MTNonMembershipProof}(\leaf)$: it returns a proof that the given leaf is not included in the tree.
-	\item $\tree.\hlset{\MTVerify}(\leaf, proof, root)$: it verifies that the given proof corresponds to the claimed root and leaf.
+	\item $\tree.\hlset{\MTVerify}(\leaf, \MTProof, \root{})$: it verifies that the given proof corresponds to the claimed root and leaf.
 \end{itemize}
 
 These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Sections~\ref{sec:vocdoni-protocol:census} and~\ref{sec:vocdoni-protocol:state-tree}.

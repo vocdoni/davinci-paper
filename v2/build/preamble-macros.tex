@@ -1,11 +1,13 @@
 % !TeX root = main.tex
 
-% Doc sytle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DOCUMENT STYLE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Document sytle
 \setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
-% Set the first-level itemize label to use math mode \bullet
-\setlist[itemize,1]{label=$\bullet$}
-% The second-level enumerates (enumerate,2) should only show (a) when referenced (not (3a)).
-\setlist[enumerate,2]{label=(\alph*),ref=\alph*}
+\setlist[itemize,1]{label=$\bullet$} %set the first-level itemize label to use math mode \bullet
+\setlist[enumerate,2]{label=(\alph*),ref=\alph*} %the second-level enumerates (enumerate,2) should only show (a) when referenced (not (3a)).
 
 % Working directory
 \newcommand{\definedir}[2]{\newcommand{#1}{#2}}
@@ -13,22 +15,19 @@
 \definedir{\figs}{../figures}
 \definedir{\bib}{../bibliography}
 
+% Colours
+\definecolor{cred}{rgb}{1, 0.5, 0.5}
+\definecolor{cgreen}{rgb}{0.5, 1, 0.5}
+\definecolor{cblue}{rgb}{0.5, 0.5, 1}
+
 % Hyperref setup
 %\hypersetup{
-%	final=true,
-%	colorlinks=true,
-%	linkcolor=blue,
-%	urlcolor=blue,
-%	citecolor=blue,
-%}
-
-% Comments
-\newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
-\newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
-\newcommand{\pau}[1]{\todo[size=\small, color=green!40]{\textbf{Pau}: #1}}
-\newcommand{\paui}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Pau}: #1}}
-\newcommand{\roger}[1]{\todo[size=\small, color=blue!40]{\textbf{Roger}: #1}}
-\newcommand{\rogeri}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Roger}: #1}}
+	%	final=true,
+	%	colorlinks=true,
+	%	linkcolor=cblue,
+	%	urlcolor=black,
+	%	citecolor=cblue,
+	%}
 
 % Freefootnote
 \let\svthefootnote\thefootnote
@@ -39,8 +38,13 @@
 }
 
 % Footnote spaces
-\setlength{\skip\footins}{20pt}      % space between text and footnotes
-\setlength{\footnotesep}{1em}        % space between individual footnotes
+\setlength{\skip\footins}{20pt} %space between text and footnotes
+\setlength{\footnotesep}{1em} %space between individual footnotes
+
+% New foonote referencing a previous footmark
+\makeatletter
+\newcommand\footnoteref[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
+\makeatother
 
 % Table of contents style
 \newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}} % it works like p{} but centered
@@ -67,50 +71,54 @@
 	{\normalfont\normalsize\bfseries}}   % Font style
 \makeatother
 
-% Colours
-\definecolor{cred}{rgb}{1, 0.5, 0.5}
-\definecolor{cgreen}{rgb}{0.5, 1, 0.5}
-\definecolor{cblue}{rgb}{0.5, 0.5, 1}
+% Draft watermark
+%\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
 
-% Hyperref setup
-%\hypersetup{
-%	final=true,
-%	colorlinks=true,
-%	linkcolor=cblue,
-%	urlcolor=black,
-%	citecolor=cblue,
-%}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% COMMENTS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\marta}[1]{\todo[size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\martai}[1]{\todo[inline, size=\small, color=red!40]{\textbf{Marta}: #1}}
+\newcommand{\pau}[1]{\todo[size=\small, color=green!40]{\textbf{Pau}: #1}}
+\newcommand{\paui}[1]{\todo[inline, size=\small, color=green!40]{\textbf{Pau}: #1}}
+\newcommand{\roger}[1]{\todo[size=\small, color=blue!40]{\textbf{Roger}: #1}}
+\newcommand{\rogeri}[1]{\todo[inline, size=\small, color=blue!40]{\textbf{Roger}: #1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% NOMENCLATURE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Mathbb
-\newcommand{\N}{\ensuremath{\mathbb{N}}\xspace}
-\newcommand{\Z}{\ensuremath{\mathbb{Z}}\xspace}
-\newcommand{\G}{\ensuremath{\mathbb{G}}\xspace}
-\newcommand{\F}{\ensuremath{\mathbb{F}}\xspace}
-\newcommand{\J}{\ensuremath{\mathbb{J}}\xspace}
+\newcommand{\N}{\mathbb{N}\xspace}
+\newcommand{\Z}{\mathbb{Z}\xspace}
+\newcommand{\G}{\mathbb{G}\xspace}
+\newcommand{\F}{\mathbb{F}\xspace}
+\newcommand{\J}{\mathbb{J}\xspace}
 
 % Elliptic curves
-\newcommand{\BW}[1]{\ensuremath{{#1}^{\text{\tiny \sf BW}}}\xspace}
-\newcommand{\BLS}[1]{\ensuremath{{#1}^{\text{\tiny \sf BLS}}}\xspace}
-\newcommand{\BN}[1]{\ensuremath{{#1}^{\text{\tiny \sf BN}}}\xspace}
-\newcommand{\BJ}[1]{\ensuremath{{#1}^{\text{\tiny \sf BJ}}}\xspace}
-\newcommand{\SEC}[1]{\ensuremath{{#1}^{\text{\tiny \sf SEC}}}\xspace}
+\newcommand{\BW}[1]{{#1}^{\text{\tiny \sf BW}}\xspace}
+\newcommand{\BLS}[1]{{#1}^{\text{\tiny \sf BLS}}\xspace}
+\newcommand{\BN}[1]{{#1}^{\text{\tiny \sf BN}}\xspace}
+\newcommand{\BJ}[1]{{#1}^{\text{\tiny \sf BJ}}\xspace}
+\newcommand{\SEC}[1]{{#1}^{\text{\tiny \sf SEC}}\xspace}
 
 % Trees
-\newcommand{\tree}[1][]{\sf{MT}^{\sf{#1}}}
+\newcommand{\tree}[1][]{{\sf MT}^{{\sf #1}}}
 \renewcommand{\root}[1][]{\sf{root}^{\sf{#1}}}
-\newcommand{\recentroots}{\sf{recentRoots}}
-\newcommand{\leaf}{\sf{leaf}}
-\newcommand{\leaves}{\sf{leaves}}
-\newcommand{\MTGenerate}{\sf{Generate}}
-\newcommand{\MTRoot}{\sf{Root}}
-\newcommand{\MTInsert}{\sf{Insert}}
-\newcommand{\MTProof}{\sf{Proof}}
-\newcommand{\MTMembershipProof}{\sf{MembershipProof}}
-\newcommand{\MTNonMembershipProof}{\sf{NonMembershipProof}}
+\newcommand{\recentroots}{{\sf recentRoots}}
+\newcommand{\leaf}{{\sf leaf}}
+\newcommand{\leaves}{{\sf leaves}}
+\newcommand{\MTGenerate}{{\sf Generate}}
+\newcommand{\MTRoot}{{\sf Root}}
+\newcommand{\MTInsert}{{\sf Insert}}
+\newcommand{\MTProof}{{\sf Proof}}
+\newcommand{\MTMembershipProof}{{\sf MembershipProof}}
+\newcommand{\MTNonMembershipProof}{\text{\sf{NonMembershipProof}}}
 \newcommand{\MTRemove}{\sf{Remove}}
 \newcommand{\MTOpen}{\sf{Open}}
 \newcommand{\MTUpdate}{\sf{Update}}
-\newcommand{\MTVerify}{\sf{Verify}}
+\newcommand{\MTVerify}{\text{\sf{Verify}}}
 \newcommand{\censusTree}{\sf{MT^{\census}}}
 \newcommand{\stateTree}{\sf{MT^{\state}}}
 
@@ -294,11 +302,3 @@
 \newcommand{\Keywarden}{Key warden\xspace}
 \newcommand{\keywardens}{key wardens\xspace}
 \newcommand{\Keywardens}{Key wardens\xspace}
-
-% Draft watermark
-%\ifdraft{\SetWatermarkScale{4}}{\SetWatermarkScale{0}}
-
-% New foonote referencing a previous footmark
-\makeatletter
-\newcommand\footnoteref[1]{\protected@xdef\@thefnmark{\ref{#1}}\@footnotemark}
-\makeatother
