@@ -20,7 +20,7 @@ In this phase, sequencers register and the organizer sets the election up.\\
 	\item Define the election details, including duration, options, and the ballot rules $\ballotmode$ (see Section~\ref{sec:ballot-protocol}).
 	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived from the organizer’s Ethereum address, nonce, and the chain ID.
 	\item Set security parameters for the %forthcoming
-	\ac{DKG} ceremony (e.g., timeout, minimum number of sequencers).
+	\ac{DKG} ceremony (e.g. timeout, minimum number of sequencers).
 	\item Submit all this information in a transaction to the \hlget{\electionregistry} smart contract {\color{blue}(pay tx fees)}:
 	\[ tx_{org} = (\censusroot, ballotCommitment, \ballotmode, electionMetadata, \processid, dkgParameters).\]
 \end{enumerate}
