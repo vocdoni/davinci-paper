@@ -166,7 +166,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 
 \paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient implementation inside arithmetic circuits. It is used in \davinci for computing commitments, nullifiers, and the state Merkle tree roots. Poseidon is used as $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ is the set of tuples of $\F_s$-elements of any length, and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
 
-{\color{blue} \paragraph{MiMC-7.} Finally, we use  functions from the MiMC family. On the one side, MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details). On the other side, $\hlset{\Multimimc}$. Different curves.}
+%{\color{blue} \paragraph{MiMC-7.} Finally, we use  functions from the MiMC family. On the one side, MiMC-7 hash function $\hlset{\Mimc} : \F_p \rightarrow \F_p$, where $\F_p$ is the set of tuples of $\F_p$-elements of any length, and $\F_p$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. This hash is used to hash the public inputs of the different circuits and verify the associated proofs more efficiently (see Section~\ref{sec:vocdoni-protocol:circuits} for further details). On the other side, $\hlset{\Multimimc}$. Different curves.}
 
 %MiMC-7~\cite{mimc} is another hash function optimized for zero-knowledge circuits, with extremely low multiplicative complexity. It is used in \davinci for hashing public inputs inside zkSNARKs, especially when generating a unique identifier for a vote (see Section~\ref{sec:vocdoni-protocol:circuits}).
 %We use the cubic S-box S(x)=x7S(x)=x7, and instantiate MiMC-7 over the same field FpFp​ as the SNARK circuit:
@@ -174,7 +174,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 %MiMC7:Fpt​→Fp​
 %This function is denoted Hash3Hash3 in our implementation.
 
-{\color{blue} For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of field elements. Any bitstring can be converted to a tuple of field elements, so this does not change the actual working of the hash computation. In this document, it is implied that the proper conversion happens before feeding the input into the actual hash function.}
+%{\color{blue} For the sake of clarity, in our notation we admit anything as an input of the above hash functions, although it might not be parsed as a sequence of field elements. Any bitstring can be converted to a tuple of field elements, so this does not change the actual working of the hash computation. In this document, it is implied that the proper conversion happens before feeding the input into the actual hash function.}
 
 %\subsection{Commitment schemes}
 %\label{sec:cryptographic-primitives:commitments}
@@ -204,13 +204,13 @@ To support state transitions and circuit verification, each tree $\tree{}$ has t
 
 These functions are used by sequencers to construct proofs that certify the validity of state transitions. In particular, they allow for off-chain state evolution that is independently verifiable on-chain and within ZK circuits. Additional details on the structure of the census and state trees, as well as the encoding of their leaves, are provided in Sections~\ref{sec:vocdoni-protocol:census} and~\ref{sec:vocdoni-protocol:state-tree}.
 
-\subsection{Commitment schemes}
+\subsection{Commitment scheme}
 \label{sec:cryptographic-primitives:commitments}
 
 {\color{blue} Description of KZG~\cite{kate2010constant} with SRS \textbf{[add link to Ethereum's BLS12-381 SRS]}, $\hlset{\CCommit}()$, and $\hlset{\CVerify}()$.}\\
 Original methods: \hlset{\CSetup}, \hlset{\COpen}, \hlset{\CVerifyPoly}, \hlset{\CCreateWitness}, \hlset{\CVerifyEval}, \hlset{\CProve}, \hlset{\CVerify}.
 
-\subsection{Digital signature schemes}
+\subsection{Digital signature scheme}
 \label{sec:cryptographic-primitives:signatures}
 
 {\color{blue}{\textbf{TODO}: add \hlset{\SPubKey} that extracts $\pk$ from $\signature$ (in Ethereum it's called \texttt{ECRecover}).}}\\
@@ -261,7 +261,7 @@ Verification of ECDSA signatures is performed inside zero-knowledge proofs using
 	\end{minipage}
 \end{mdframed}
 
-\subsection{Encryption schemes}
+\subsection{Encryption scheme}
 \label{sec:cryptographic-primitives:encryption}
 
 To preserve ballot secrecy while enabling tallying, \davinci employs a threshold variant of the ElGamal cryptosystem instantiated over the BabyJubjub curve~\cite{sutikno1998implementation}. This scheme offers two properties crucial for the protocol: \emph{additive homomorphism}, which allows the aggregation of encrypted votes without decryption, and \emph{re-encryption}, which enables ciphertext randomization without altering the underlying plaintext. Together, these properties allow sequencers to tally votes while preventing voters from producing receipts that could be used for coercion or vote selling. The corresponding public key is generated collectively by the sequencers via the distributed key generation protocol described in Section~\ref{sec:cryptographic-primitives:dkg}, ensuring that no single entity can decrypt ballots unilaterally.
@@ -325,7 +325,7 @@ Since the plaintext message space is typically small, recovering $m$ from $M$ is
 
 In the protocol, re-encryption is applied not only to newly submitted ballots but also to ballots already stored in the state tree. By refreshing the randomness of both new and existing ciphertexts, sequencers ensure that it is indistinguishable whether a ballot has been overwritten or merely re-randomized. This mechanism is essential for guaranteeing receipt-freeness: voters cannot produce a verifiable receipt of their choice, and adversaries cannot detect or prove whether a particular vote has been replaced (see Section~\ref{sec:analysis}).
 
-\subsection{Key generation schemes}
+\subsection{Distributed key generation scheme}
 \label{sec:cryptographic-primitives:dkg}
 
 To ensure that no single entity controls the decryption key, DAVINCI employs a \ac{DKG} protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{todocitation}. Participants who contribute to the \ac{DKG} ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols where shares are exchanged in the clear, our construction uses encrypted shares and \ac{ZK-SNARK} proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
@@ -398,4 +398,4 @@ This approach ensures that the encryption public key is securely generated in a 
 
 {Zero-knowledge succinct non-interactive arguments of knowledge (ZK-SNARKs)} are a crucial component in ensuring the integrity of the election. Voters generate ZK-SNARK proofs to demonstrate that their encrypted ballots comply with the rules and constraints defined by the election parameters, without revealing any information about their choices. Similarly, sequencers produce proofs to certify the correctness of vote aggregation and state transitions throughout the protocol. {\color{blue}\hlset{\PProve}(), \hlset{\PVerify}(proof, PI) -- pkey, vkey.}
 
-All ZK circuits in \davinci are compiled using the Groth16 proof system~\cite{groth2016size}, a widely adopted ZK-SNARK construction known for its succinctness, efficient verification, and minimal proof size. Although all circuits rely on the same proving system, they are instantiated with different elliptic curves depending on the cryptographic requirements of each phase. Specifically, the vote validity circuit is compiled over the BN254 curve, the census-related circuit uses BLS12-377, and the aggregation circuit is instantiated over BW6-761. Finally, the last circuit used by the sequencer—responsible for generating the final proof of correct tallying and result—is compiled over BN254 as well, since this is the proof that is verified on-chain by the smart contract using Ethereum’s native precompiles. Further details on the circuits are provided in Section~\ref{sec:vocdoni-protocol:circuits} and a summary of the instantiations can be found in Figure~\ref{fig:circuits-flow}.
+All ZK circuits in \davinci are compiled using the Groth16 proof system~\cite{groth2016size}, a widely adopted ZK-SNARK construction known for its succinctness, efficient verification, and minimal proof size. Although all circuits rely on the same proving system, they are instantiated with different elliptic curves depending on the cryptographic requirements of each phase. Specifically, the vote validity circuit is compiled over the BN254 curve, the census-related circuit uses BLS12-377, and the aggregation circuit is instantiated over BW6-761. Finally, the last circuit used by the sequencer—responsible for generating the final proof of correct tallying and result—is compiled over BN254 as well, since this is the proof that is verified on-chain by the smart contract using Ethereum’s native precompiles. Further details on the circuits are provided in Section~\ref{sec:vocdoni-protocol:circuits} and a summary of the instantiations can be found in Fig.~\ref{fig:circuits-flow}.

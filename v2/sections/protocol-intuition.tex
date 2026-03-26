@@ -1,6 +1,6 @@
 % !TeX root = ../build/main.tex
 
-The following section provides an overview of the DAVINCI protocol, describing its main phases and actors without delving into technical details. The election process is governed by smart contracts deployed on Ethereum, which ensure transparency, enforce rules, and verify proofs. As shown in Figure~\ref{fig:protocol-intuition}, the protocol consists of five main phases, from the setup of the election to the publication and verification of final results. 
+The following section provides an overview of the DAVINCI protocol, describing its main phases and actors without delving into technical details. An election is governed by smart contracts deployed on Ethereum, which ensure transparency, enforce rules, and verify proofs. As shown in Fig.~\ref{fig:protocol-intuition}, the protocol consists of five main phases, from the setup of the election to the publication and verification of the final results. 
 %All the voting process is governed by the rules encoded in three smart contracts: the \textit{process management}, the \textit{sequencer registry}, and the \textit{results verification} smart contract. All these three contracts are deployed on the Ethereum blockchain, and ensure that the execution of all steps is transparent and unalterable. The protocol consists of five phases, as illustrated in Figure~\ref{fig:protocol-intuition} and described below. The first two occur during the preparation period, the subsequent two during the voting period, and the final one takes place in the tally period.
 
 \begin{figure}[h]	
@@ -40,9 +40,18 @@ The following section provides an overview of the DAVINCI protocol, describing i
 		%they compress multiple individual verification into one.
 		Additionally, the sequencers reencrypt the votes and generate a proof of the correct reencryption computation. While this process does not alter the final tally, it prevents voters from decrypting their original vote. This step mitigates vote selling or coercion, as voters are no longer able to prove their choice to third parties. Finally, sequencers submit the reencrypted votes along with their verification and reencryption proofs to the process management smart contract. The smart contract verifies all the proofs provided by the sequencers to check that they complied with the protocol.\\
 	\end{enumerate}
+
+	\item \textit{Tally decryption}. 
+	At the end of the voting period, the smart contract ceases to accept new state updates. %,effectively finalizing the process.
+	Then, a threshold number of key wardens cooperate to reconstruct a partial decryption key that allows to decrypt the final tally. 
+%	the key wardens cooperate to open the final encrypted tally. Each of them contributes a verifiable decryption share, and once enough such shares have been published, the election outcome can be recovered. This ensures that ballots stay encrypted during the election while still allowing the final result to be publicly obtained and audited once voting has closed.
+%	the key wardens collaborate to enable the decryption of the final tally. 
+	That is, instead of reconstructing the election's private key, each key warden publishes a partial decryption together with a proof that the contribution is correct. 
+	%As soon as a threshold number of valid partial decryptions has been made available, the encrypted tally can be opened and the plaintext results can be recovered. 
+	This way, the individual votes remain encrypted throughout the voting period, and only the final aggregated result is decrypted at the end of the election.
+	\\
 	%
-	\item \textit{Decryption key generation}.\\
-	%
-	\item \textit{Tally finalization}.	
-	At the end of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process. The organizer then computes the outcome of the election and submits both the results and a proof of correctness to the smart contract. The contract verifies the proof, ensuring that the tally has been derived faithfully from the final state. Once this verification succeeds, the results and the corresponding state root remain available on-chain, providing an immutable record of the election outcome that can be independently audited by anyone.
+	\item \textit{Election finalization}.	
+	%At the end of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process.
+	The results and a proof of correctness are submitted to the results verification smart contract. The contract verifies the proof, ensuring that the tally has been derived faithfully from the final state. Once this verification succeeds, the results and the latest state root remain available on-chain, providing an immutable record of the election outcome that can be independently audited by anyone.
 \end{enumerate}

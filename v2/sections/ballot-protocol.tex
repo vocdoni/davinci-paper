@@ -4,7 +4,7 @@ The ballot protocol provides a unified and parametric way to represent a wide ra
 
 \paragraph{Definition of parameters.} 
 %Each ballot is defined as an array of integer values subject to the following configurable parameters:
-Each ballot is defined as an array of integer values subject to a set of configurable parameters, illustrated in Figure~\ref{fig:ballot-variables}. These parameters are defined as follows:
+Each ballot is defined as an array of integer values subject to a set of configurable parameters, illustrated in Fig.~\ref{fig:ballot-variables}. These parameters are defined as follows:
 \begin{itemize}
 	\item \numfields: the maximum number of fields (i.e., options) in the ballot.  
 	\item \minvalue: the minimum value that each field in the ballot can take.  
@@ -32,7 +32,7 @@ Each ballot is defined as an array of integer values subject to a set of configu
 \end{figure}
 \vspace{-1cm}
 
-\paragraph{Definition of constraints.} Given a ballot with $n$ fields and each field filled with a value $v_i$ for $i = 1, \dots, n$, we enforce the following constraints (captured in Figure~\ref{fig:ballot-variables}):
+\paragraph{Definition of constraints.} Given a ballot with $n$ fields and each field filled with a value $v_i$ for $i = 1, \dots, n$, we enforce the following constraints (captured in Fig.~\ref{fig:ballot-variables}):
 
 \begin{itemize}
 	\item $\numfields = n$,
@@ -45,7 +45,7 @@ Each ballot is defined as an array of integer values subject to a set of configu
 A ballot is valid if and only if all the above constraints are satisfied. Invalid ballots are rejected at the circuit level and do not contribute to the tally. Valid ballots are aggregated into a results array, where each entry is the sum of all votes cast for the corresponding field across all voters. Voter weights, defined in the census tree (see Section~\ref{sec:vocdoni-protocol:census}), are taken into account when computing these sums. By default, all voters have the same weight, but the protocol also supports weighted voting, where different participants may contribute proportionally to their assigned voting power. In this case, \maxvaluesum\ reflects the maximum weight assigned to each voter, and the ballot and verifier circuits enforce that the correct weight is being used (see Sections~\ref{sec:vocdoni-protocol:circuits:ballot} and~\ref{sec:vocdoni-protocol:circuits:verifier} for further details).
 
 \paragraph{Ballot modes.} 
-Ballot modes correspond to different voting systems, each adjusted with the variables above ballot configurations. For usability, the organizer does not need to set every parameter manually: instead, they simply select one of the predefined ballot modes (e.g., quadratic voting, ranking, approval), each corresponding to a fixed parameter configuration. Some representative modes are shown in Figure~\ref{fig:ballot-modes}, which illustrate the expressiveness of the ballot protocol. For example, in \emph{approval voting}, each field is binary and voters can approve or reject multiple options simultaneously. In \emph{ranking}, fields must form a permutation of the integers from $1$ to $N$, enforcing uniqueness of values. In \emph{quadratic voting}, voters allocate credits across options, and the cost is quadratic in the number of credits used, captured by setting \costexponent$=2$. Other systems such as single-choice or multiple-choice elections are special cases of the same framework. The figure also illustrates examples of voters' ballots, with the last column indicating whether each ballot is valid or invalid under the rules of the selected mode.
+Ballot modes correspond to different voting systems, each adjusted with the variables above ballot configurations. For usability, the organizer does not need to set every parameter manually: instead, they simply select one of the predefined ballot modes (e.g., quadratic voting, ranking, approval), each corresponding to a fixed parameter configuration. Some representative modes are shown in Fig.~\ref{fig:ballot-modes}, which illustrate the expressiveness of the ballot protocol. For example, in \emph{approval voting}, each field is binary and voters can approve or reject multiple options simultaneously. In \emph{ranking}, fields must form a permutation of the integers from $1$ to $N$, enforcing uniqueness of values. In \emph{quadratic voting}, voters allocate credits across options, and the cost is quadratic in the number of credits used, captured by setting \costexponent$=2$. Other systems such as single-choice or multiple-choice elections are special cases of the same framework. The figure also illustrates examples of voters' ballots, with the last column indicating whether each ballot is valid or invalid under the rules of the selected mode.
 
 %\begin{landscape}
 \begin{figure}[h]

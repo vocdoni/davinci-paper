@@ -2,6 +2,12 @@
 %\documentclass{llncs}
 %\documentclass{article}
 
+% CONSIDERATIONS
+% - From \textit{address} to \textit{nullifier} (if you think of an address as a token that allows voters to vote).
+% - From \textit{aggregation or accumulation} (in aggregation circuit) to \textit{batching}. 
+% - Add a section with vulnerabilities.
+% - Include the role of the \textit{workers} as \textit{sequencer} helpers?
+
 \input{preamble-packages}
 \input{preamble-macros}
 \input{acronyms.tex}
@@ -15,19 +21,22 @@
 
 \author{
 	Pau Escrich\inst{1} \and 
-	Marta Bellés\inst{2} \and
+	Marta Bellés-Muñoz\inst{2} \and
 	Jordi Piñana\inst{1} \and
-	Lucas Menéndez\inst{1} \and
+	Lucas Menéndez\inst{1} \and 
+	Alex Kampa\inst{1} \and \linebreak %Alex Kampa (AZKR)
     Roger Baig\inst{3} \and
 	Jose Luis~Muñoz-Tapia\inst{3}
 }
 
 \institute{
-	Vocdoni Association -- \email{\{pau,painan,lucas\}@vocdoni.org}
+	Vocdoni Association
 	\and 
-	Pompeu Fabra University -- \email{marta.belles@upf.edu}
+	Pompeu Fabra University
 	\and 
-	Polytechnic University of Catalonia -- \email{\{roger.baig,jose.luis.munoz\}@upc.edu} 
+	Polytechnic University of Catalonia\\ \vspace{0.2cm}
+	\email{\{pau,painan,lucas,alex\}@vocdoni.org}, \email{marta.belles@upf.edu} \\
+	\email{\{roger.baig,jose.luis.munoz\}@upc.edu} 
 }
 
 \date{Last update: \today}
@@ -49,21 +58,6 @@
 		Finally, the design of \davinci is grounded in practicality; All components are implemented using current technologies and have undergone proof-of-concept testing. %This ensures that 
 		In sum, the proposed architecture is not merely theoretical, but a viable solution ready for short-term deployment. The source code has been made open source, allowing practitioners and researchers to further investigate its details and potential for future uses.
 \end{abstract}
-
-{\color{blue}\fbox{\parbox{0.93\textwidth}{
-
-\vspace{0.2cm}
-\noi Pieces of text marked in \textbf{blue} are heavily work in progress. In addition, there are these general tasks:
-\begin{itemize}
-    \item Notation considerations:
-    \begin{itemize}
-        \item From \textit{address} to \textit{nullifier} (if you think of an address as a token that allows voters to vote).
-        \item From \textit{aggregation or accumulation} (in aggregation circuit) to \textit{batching}. 
-    \end{itemize}
-    \item Add a section with vulnerabilities.
-    \item Include the role of the \textit{workers} as \textit{sequencer} helpers?
-\end{itemize}
-}}}
 
 \setcounter{tocdepth}{3}
 \makeatletter
@@ -116,7 +110,7 @@
 \addcontentsline{toc}{section}{\protect\numberline{}Acknowledgments}
 \label{sec:acknowledgments}
 
-The authors would like to thank the following reviewers and contributors for their valuable feedback and support: all team members from the Vocdoni association, Jordi Baylina (Iden3 and Polygon), Adrià Massanet (Privacy Scaling Explorations, Ethereum Foundation), Arnaucube (0xPARC), Alex Kampa (AZKR), Javier Herranz (Polytechnic University of Catalonia), Jordi Puiggali (Secrets Vault), and Carla Ràfols (Pompeu Fabra University).
+The authors would like to thank the following reviewers and contributors for their valuable feedback and support: all team members from the Vocdoni association, Jordi Baylina (Iden3 and Polygon), Adrià Massanet (Privacy Scaling Explorations, Ethereum Foundation), Arnaucube (0xPARC), Javier Herranz (Polytechnic University of Catalonia), Jordi Puiggali (Secrets Vault), and Carla Ràfols (Pompeu Fabra University).
 
 % ---- Bibliography ----
 

@@ -2,7 +2,7 @@
 
 % \noi Merkle trees are used to create a cryptographic representation of both the voter census registry and the election state. 
 
-The state Merkle tree, denoted by $\hlset{\stateTree}$, represents the evolving global state of an election in \davinci. It is implemented as a \ac{SMT} of fixed depth $D = 64$, as described in Section~\ref{sec:cryptographic-primitives:merkle-trees}. The state tree acts as a cryptographic accumulator that compactly commits to all relevant election data, including configuration parameters, vote identifiers, and encrypted ballots.
+The state Merkle tree, denoted by $\hlset{\stateTree}$, represents the evolving global state of an election in \davinci. It is implemented as a \ac{SMT} of fixed depth $D = 64$, as described in Appendix~\ref{sec:cryptographic-primitives:merkle-trees}. The state tree acts as a cryptographic accumulator that compactly commits to all relevant election data, including configuration parameters, vote identifiers, and encrypted ballots.
 By organizing the election state in a single \ac{SMT}, \davinci supports efficient membership and update proofs that can be verified inside \ac{ZK} circuits, enabling succinct and verifiable state transitions.
 
 The root of the state tree, denoted $\stateroot$, is committed on-chain and serves as the authoritative reference to the current election state. Each state transition performed by a sequencer updates the tree and produces a new root. The correctness of this update, namely, that it follows the protocol rules and correctly incorporates new votes, is attested by a \ac{ZK-SNARK} proof, which is verified by the $\hlget{\statetransitionverifier}$ smart contract before the new root is accepted.
@@ -10,8 +10,8 @@ The root of the state tree, denoted $\stateroot$, is committed on-chain and serv
 
 \paragraph{Namespaced key space.} 
 
-The state tree operates over keys in the range $[0, 2^D-1] \subset \mathbb{F}_p$ and uses a SNARK-friendly hash function (Poseidon, see Section~\ref{sec:cryptographic-primitives:hash}) to enable efficient in-circuit verification. To prevent collisions between different categories of data stored in the state, the 64-bit key space is partitioned into three disjoint numeric namespaces using a fixed thershold $N$. We define \( N = 2^{D-1}\), 
-which we use to split the address space into a lower region for configuration parameters and encrypted ballot storage,  and an upper region strictly reserved for vote identifiers. This strict separation ensures that configuration entries, vote identifiers, and ballots never collide. The structure of the tree is depicted in Figure~\ref{fig:mt-state}.
+The state tree operates over keys in the range $[0, 2^D-1] \subset \mathbb{F}_p$ and uses a SNARK-friendly hash function (\hlget{\Poseidon}, see Appendix~\ref{sec:cryptographic-primitives:hash}) to enable efficient in-circuit verification. To prevent collisions between different categories of data stored in the state, the 64-bit key space is partitioned into three disjoint numeric namespaces using a fixed thershold $N$. We define \( N = 2^{D-1}\), 
+which we use to split the address space into a lower region for configuration parameters and encrypted ballot storage,  and an upper region strictly reserved for vote identifiers. This strict separation ensures that configuration entries, vote identifiers, and ballots never collide. The structure of the tree is depicted in Fig.~\ref{fig:mt-state}.
 %the 64-bit key space is partitioned into disjoint numeric namespaces by leveraging the most significant bit (MSB) of the address, effectively splitting the space exactly in half at the threshold N. 
 
 
@@ -39,7 +39,7 @@ Let $\configmax$ denote the largest index reserved for configuration parameters 
 
 The region immediately following the configuration parameters, the interval $[\configmax + 1, N - 1]$, is reserved for storing encrypted ballots. 
 %In contrast to vote identifiers, 
-Ballot storage locations are deterministic and derived from the voter's position in the census. Let $\idx$ denote the voter's census index, proven via a census membership proof. The storage path for the encrypted ballot is computed as
+Ballot storage locations are deterministic and derived from the voter's position in the census. Let $\idx$ denote the voter's census index (see Section~\ref{sec:vocdoni-protocol:census}), proven via a census membership proof. The storage path for the encrypted ballot is computed as
 \[
 \text{encPath} = \configmax + \idx \cdot 2^{16} + (\address \bmod 2^{16}).
 \]
