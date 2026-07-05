@@ -11,26 +11,34 @@ The root of the state tree, denoted $\stateroot$, is committed on-chain and serv
 \paragraph{Namespaced key space.} 
 
 The state tree operates over keys in the range $[0, 2^D-1] \subset \mathbb{F}_p$ and uses a SNARK-friendly hash function (\hlget{\Poseidon}, see Appendix~\ref{sec:cryptographic-primitives:hash}) to enable efficient in-circuit verification. To prevent collisions between different categories of data stored in the state, the 64-bit key space is partitioned into three disjoint numeric namespaces using a fixed thershold $N$. We define \( N = 2^{D-1}\), 
-which we use to split the address space into a lower region for configuration parameters and encrypted ballot storage,  and an upper region strictly reserved for vote identifiers. This strict separation ensures that configuration entries, vote identifiers, and ballots never collide. The structure of the tree is depicted in Fig.~\ref{fig:mt-state}.
+which we use to split the address space into a lower region for configuration parameters and encrypted ballot storage,  and an upper region strictly reserved for vote identifiers. This strict separation ensures that configuration entries, vote identifiers, and ballots never collide. %The structure of the tree is depicted in Fig.~\ref{fig:mt-state}.
 %the 64-bit key space is partitioned into disjoint numeric namespaces by leveraging the most significant bit (MSB) of the address, effectively splitting the space exactly in half at the threshold N. 
 
 
-\begin{figure}[h]
-	\centerline{\includegraphics[width=450pt,draft=false]{\figs/mt-state-mermaid}}
-	\caption{Structure of the state Merkle tree. The first leaves are reserved for global election parameters while subsequent leaves store vote identifiers and encrypted ballots.}
-	\label{fig:mt-state}
-\end{figure}
+%\begin{figure}[h]
+%	\centerline{\includegraphics[width=450pt,draft=false]{\figs/mt-state-mermaid}}
+%	\caption{Structure of the state Merkle tree. The first leaves are reserved for global election parameters while subsequent leaves store vote identifiers and encrypted ballots.}
+%	\label{fig:mt-state}
+%\end{figure}
 
 \paragraph{Configuration namespace.}
 
-The lowest indices of the tree are reserved for fixed process parameters that define the election rules. These keys are deterministic and occupy a negligible portion of the address space. Typical entries include:
+The lowest indices of the tree are reserved for a small set of process parameters. Most are configuration values fixed at election setup and never modified thereafter
+(\processid, \ballotmode, \epk, \censusorigin); the remaining entry is a mutable accumulator (\encresults) updated on every state transition. In all cases these keys
+occupy deterministic, well-known positions and use a negligible portion of the address space. The default entries are:
+%The lowest indices of the tree are reserved for a small set of process parameters and accumulators. Their positions are deterministic and occupy a negligible portion of the address space. Typical entries include:
 \begin{itemize}
 	\item \texttt{0x0}: the election identifier (\processid).
-	\footnote{The index \texttt{0x1} is reserved for backward compatibility (historically used for alternative census structures).}
+	%\footnote{The index \texttt{0x1} is reserved for backward compatibility (historically used for alternative census structures).}
+	\footnote{The indices \texttt{0x1} and \texttt{0x5} are currently unused: \texttt{0x1} is
+		reserved for backward compatibility (historically used for alternative census structures),
+		and \texttt{0x5} is reserved for future use (an earlier design stored a separate subtractive
+		results accumulator there; the current design keeps a single net results accumulator at
+		\texttt{0x4}).}
 	\item \texttt{0x2}: the ballot mode configuration, which is the set of rules for validating votes (\ballotmode). 
 	\item \texttt{0x3}: the encryption public key used to encrypt the ballots (\epk).
-	\item \texttt{0x4}: an accumulator of the encrypted votes that need to be added to the tally (\addaccumulator). 
-	\item \texttt{0x5}: an accumulator of the encrypted votes that have been overwritten (\substractaccumulator).
+	\item \texttt{0x4}: the running encrypted results (\encresults). 
+%	\item \texttt{0x5}: an accumulator of the encrypted votes that have been overwritten (\substractaccumulator).
 	\item \texttt{0x6}: the census origin (\censusorigin). %and \type, a field in case the organization was using a different structure for the census than a MT.
 \end{itemize}
 Let $\configmax$ denote the largest index reserved for configuration parameters (by default, $\configmax = 15$).
@@ -45,11 +53,14 @@ Ballot storage locations are deterministic and derived from the voter's position
 \]
 This construction assigns each eligible voter a unique, reserved leaf in the state tree. Because the index $\idx$ is authenticated by the census, a voter can only write to their own slot. This enables efficient \emph{last-vote-wins} semantics: if a voter overwrites their ballot, the new ciphertext replaces the previous one at the same path, while the tally is updated by subtracting the old contribution and adding the new one.
 
+\martai{The leaf stores the ciphertext and the address of the voter. Justify that this is to prevent CPS' and dynamic census to assign the same encPath to two different people.}
+\martai{If $idx = 0$ and $address = 0$, then $encPath = configMax$ but the lower limit should be $configMax + 1$.}
+
 \paragraph{Vote identifier namespace.}
 
 The upper portion of the tree, $[N, 2^D - 1]$ is reserved for \emph{vote identifiers} (\voteid), which allows voters to verify that their vote has been included in the election state, without revealing or linking to the corresponding encrypted ballot. Vote identifiers are derived by hashing the process identifier, the voter’s address, and fresh randomness, and then mapping the result into the allowed range by setting the most significant bit to 1:
 \[
-\voteid = N + \bigl(\text{Hash}(\processid,\address,k) \bmod N\bigr).
+\voteid = N + \bigl(\hlget{\Poseidon}(\processid,\address,k) \bmod N\bigr).
 \]
 The \hlget{\statetransitioncircuit} recomputes this derivation and enforces that $N \le \voteid < 2^D$, guaranteeing that vote identifiers cannot overlap with configuration entries or ballot storage.
 

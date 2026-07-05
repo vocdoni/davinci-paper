@@ -69,13 +69,13 @@ In this phase, \keywardens collectively generate the public encryption key.\\
 
 In this phase, voters cast their ballots and send them to the sequencers, who collect and process them. \\
 
-\noi \textbf{(a) Vote casting.} To cast a ballot, a voter does the following:
+\noi \textbf{(a) Vote casting.} To cast a ballot, a voter does the following: \textit{\color{blue}-- mention that the voter has a (sk, pk, address) as described in Section~\ref{}.}
 
 \begin{enumerate}
 	\item Select a sequencer.  
 	\item Retrieve their census membership proof $\censusproof$ to prove eligibility.  
 	\item Fetch parameters $\epk$, $\ballotmode$, and $\processid$ from the \hlget{\electionregistry} smart contract.  
-	\item Select their ballot choice $\ballot$ according to the rules of $\ballotmode$.  
+	\item Select their ballot choice $\ballot$ following the rules of $\ballotmode$.  
 	\item Sample fresh randomness $k \in \F$ and encrypt the ballot using $\epk$:  
 		  \begin{equation}
 		  \label{eq-ciphertext}
@@ -84,9 +84,10 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\item Use their Ethereum address $\address$ and the previous $k$ to compute a unique vote identifier:
 		\begin{equation}
 			\label{eq-voteid}
-			\voteid ={ }\hlget{\Poseidon}(\processid \conc \address \conc k).
+			\voteid = N + \bigl(\hlget{\Poseidon}(\processid,\address,k) \bmod N\bigr),
 		\end{equation}
-	\item Use the \ballotcircuit from Section~\ref{sec:vocdoni-protocol:circuits:ballot} to generate a ZK-SNARK proof to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed and that $\ballot$ satisfies the ballot protocol rules according to $\ballotmode$:
+	where $N$ is defined by the protocol as described in Section~\ref{sec:vocdoni-protocol:circuits:state-transition}.
+	\item Use the \ballotcircuit from Section~\ref{sec:vocdoni-protocol:circuits:ballot} to generate a \ac{ZK-SNARK} proof to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed and that $\ballot$ satisfies the ballot protocol rules according to $\ballotmode$:
 		\begin{align*}
 		\voteproof ={ } & \hlget{\PProve}(
 			\hlget{\ballotcircuit},
@@ -97,7 +98,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\item Sign the vote identifier with their Ethereum secret key $\sk$ to authenticate the vote and ensure that was cast by a legitimate voter:  
 		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
 	\item Submit the package  
-	\[\vote = [\processid, \voteid, \encryptedballot, \censusproof, \voteproof, \signature]\]  
+	\[\vote = [\processid, \voteid, \encryptedballot, \voteproof, \signature]\]  
 	to the chosen sequencer.  
 \end{enumerate}
 
@@ -111,35 +112,34 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 \begin{enumerate}
 	\item Retrieve election identifier $\processid$, current state root $\stateroot$, and census root $\censusroot$ from the \hlget{\electionregistry} smart contract and the associated data from the Ethereum data blobs.  
 	\item Upon receiving a vote
-	\[\vote_i = [\processid, \voteid, \encryptedballot, \censusproof, \voteproof, \signature],\]
-	extract the voter's public key $\pk_i = \hlget{\SPubKey}(\signature)$.
+	\[\vote_i = [\processid, \voteid, \encryptedballot, \voteproof, \signature],\]
+	extract the voter's public key $\pk_i = \hlget{\SPubKey}(\signature)$. -- {\color{blue}Add this function to Appendix.}
 	\item For each $\vote_i$ received, use \verifiercircuit from Section~\ref{sec:vocdoni-protocol:circuits:verifier} to generate a proof 
 	\begin{align*}
 		\authenticationproof_i ={ } & \hlget{\PProve}(\hlget{\verifiercircuit}, 
-		\witness = (\ballotproof, \weight, \censusproof, \signature),\\
+		\witness = (\ballotproof, \pk, \signature),\\
 		& \publicinputs = (\processid, \ballotmode, \epk, \encryptedballot, \voteid, \\
-		& \censusroot, \pk)).
+		& \address, \weight)).
 	\end{align*}
-	This proof ensures that the voter’s \voteproof, the \signature, and the \censusproof are all valid.
+	This proof ensures that the voter’s \voteproof and \signature are valid.
 	\item Batch a set of $n$ proofs $\{\authenticationproof_i\}_{i = 1}^n$ and batch verify them together using \aggregationcircuit from Section~\ref{sec:vocdoni-protocol:circuits:aggregation}:
 	\begin{align*}
 		\aggregationproof = { } &\hlget{\PProve}(\hlget{\aggregationcircuit}, 
 						\witness = (\{\authenticationproof_i\}_{i = 1}^n),\\
-						&\publicinputs = (\encryptedballot, \{\voteid_i\}_{i = 1}^n),
-						\{\pk_i\}_{i = 1}^n,
-						\processid,
-						\ballotmode,\\
+						&\publicinputs = (\{\encryptedballot\}_{i = 1}^n, \{\voteid_i\}_{i = 1}^n),
+						\{\address_i\}_{i = 1}^n,
+						\processid,\\
 						&
-						\epk,
-						\censusroot
+						\ballotmode,
+						\epk
 						).
 	\end{align*}
-	This proof ensures that the public inputs corresponding to the global process parameters ($\processid$, $\ballotmode$, $\epk$, $\censusroot$) are correct and that all $\authenticationproof_i$ are valid.
+	This proof ensures that public inputs corresponding to the global process parameters ($\processid$, $\ballotmode$, $\epk$) are correct and that all $\authenticationproof_i$ are valid.
 	
 	\item Prepare the state transition data that will be stored in an Ethereum blob: pack votes/results into a 4096-cell blob \blobdata. 
 		\begin{itemize}
 			\item Compute data commitment $\blobcom = \hlget{\CCommit}(\blobdata)$. 
-			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, oldRoot, \blobcom).$
+			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, \stateroot^\old, \blobcom).$
 			\item Prepare polynomial $P$ from $\blobdata$.
 			\item Evaluate $y = P(\evalpoint)$.
 			\item Generate opening proof $\openproof$ from $...$.
@@ -147,6 +147,8 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 		\end{itemize}
 		
 	\item {\color{blue}Before doing state transitions, we need to prepare the data that will be stored on chain as a blob. Hence, collect xxxx, create commitment. In circuit (next step), we will prove that... .}
+	
+	\item {\color{blue}The sequencer must retrieve the voter's membership proof. Add as a footnote that this can be done by the voter and sent to the sequencer, who verifies it, but we want to minimize the actions of the voter.}
 	
 	\item Finally, prove that all transitions are correct .... with circuit from Section~\ref{sec:vocdoni-protocol:circuits:state-transition}.
 	consistency between data blobs and the on-chain state:
@@ -159,8 +161,7 @@ In this phase, voters cast their ballots and send them to the sequencers, who co
 	\item Verify each $\vote$ submission received by generating a state transition proof (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), ensuring:
 		\begin{itemize}
 			\item correct accumulation of encrypted votes via ElGamal’s homomorphic properties,  
-			\item eligibility of voters (via census Merkle proofs),  
-			\item absence of double voting (or correct handling of overwrites via nullifiers),  
+			\item eligibility of voters (via census Merkle proofs),
 		\end{itemize}
 	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
 	\martai{If \stateroot changed, repeat last circuit.}
@@ -173,7 +174,7 @@ Upon receiving a valid transaction, the \electionregistry smart contract does th
 \subsubsection{Tally decryption}
 \label{sec:vocdoni-protocol:deckey-gen}
 
-{\color{blue} After the voting period expires, $t$ out of $n$ sequencers publish their decryption shares of the election private key. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
+{\color{blue} After the voting period expires, $t$ out of $n$ sequencers share their decryption shares of the election private key \textbf{to whom?}. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
 	
 Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share (see Seciton~\ref{sec:token} for details on incentivation mechanisms.)}
 	

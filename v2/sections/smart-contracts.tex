@@ -1,29 +1,30 @@
 % !TeX root = ../build/main.tex
 
 The \davinci protocol operates on an Ethereum-compatible network, which serves as the source of truth for the election. By leveraging an Ethereum virtual machine (EVM) blockchain, all election transitions become immutable and publicly verifiable. To coordinate and validate each phase of the process, DAVINCI deploys a set of smart contracts that enforce protocol rules, verify \ac{ZK} proofs, and maintain on-chain commitments such as state roots, encryption keys, and final results. Together, these contracts provide a trustless execution environment that guarantees the correct and transparent progression of the election without relying on any centralized authority. 
-\noi {\color{blue}\textbf{TODO}: add methods and state variables.}
 
-\subsubsection{Organization registry}
+\paragraph{Organization registry.}
 
 The \hlset{\orgregistry} smart contract is used to create and manage organizations within the system. Each organization is identified by the Ethereum address of its creator and is associated with a name and a URL pointing to its metadata. At this stage, the contract serves only as a registration mechanism, but it lays the foundation for future extensions, such as managing multiple elections under the same organization.
 
-\subsubsection{Census management}
+\paragraph{Census management.} 
 
-{\color{blue}The \hlset{\censusmanagement} smart contract xxx.}
+This contract is only used by the on-chain dynamic census model (see Section~\ref{sec:vocdoni-protocol:census}), the off-chain and \ac{CSP} models store the
+census commitment directly as a parameter and require no such contract. This contract maintains the census as an on-chain \ac{IMT} and exposes (i) the current census root, (ii) the total voting power recorded for a given root, and (iii) the validity of a root, returning the last block at which it was valid. 
+%To bound storage, only a recent window of roots is retained. During each state transition, the \electionregistry\ contract queries the census contract to confirm that the \censusroot\ used in the membership proof is still valid---and no older than the election's creation block---rejecting the transition otherwise. This lets the census grow during the voting period while ensuring sequencers can only prove membership against roots the contract recognizes.
 
-\subsubsection{Key management}
+\paragraph{Key management.}
 
 The \hlset{\dkgmanagement} smart contract coordinates the \ac{DKG} process among the \keywardens. It records their contributions, verifies proofs of correct participation, and ensures that a valid encryption public key is produced once the \ac{DKG} round is complete.
 
-\subsubsection{Election (process) registry}
+\paragraph{Election registry.}
 
-The \hlset{\electionregistry} manages the lifecycle of each election, from its creation to the registration of final results. It maintains the election’s current state and ensures that all transitions follow the protocol. 
+The \hlset{\electionregistry} smart contract manages the lifecycle of each election, from its creation to the registration of final results. It maintains the election’s current state and ensures that all transitions follow the protocol. 
 
-\subsubsection{State transition verifier}
+\paragraph{State transition verifier.}
 
 The \hlset{\statetransitionverifier} is responsible for validating the proofs that attest to correct updates of the election state. It stores the verification key corresponding to the state transition circuit (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) and checks that each submitted proof correctly links the previous and new state roots. Only transitions verified through this contract are accepted as valid updates by the process registry.
 
-\subsubsection{Results verifier}
+\paragraph{Results verifier.}
 
 The \hlset{\resultsverifier} contract validates the proof of correct tally computation. It contains the verification key for the results circuit (see Section~\ref{sec:vocdoni-protocol:circuits:results}) and ensures that the final results submitted by the organizer match the commitments from the final state. Once verified, the results and their proof are permanently recorded on-chain, providing a tamper-proof reference for the election outcome.\\
 

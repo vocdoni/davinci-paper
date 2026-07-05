@@ -22,9 +22,31 @@ To coordinate protocol execution over a decentralized network of nodes, \davinci
 \subsection{Related work}
 \label{sec:introduction:sota}
 
-\begin{itemize}
-	\item State of the art of e-voting: \url{https://research.azkr.org/blog/evoting-review/}.
-\end{itemize}
+%https://research.azkr.org/blog/evoting-review/
+
+\paragraph{Foundations of cryptographic voting.}
+%Cryptographic e-voting begins with Chaum's mix-nets~\cite{chaum1981}, which establish anonymity through verifiable shuffling of ciphertexts.
+Cryptographic e-voting originated with Chaum's mix-net construction~\cite{chaum1981}, which achieves anonymity through verifiable shuffling of ciphertexts.
+Helios~\cite{helios2008} was the first deployed web-based system to combine threshold ElGamal encryption with a public bulletin board and homomorphic tallying, and it remains a standard reference point for end-to-end (E2E) verifiability in practice.
+Belenios~\cite{belenios2019} refines this design with formal verifiability proofs and a clean separation between the registration authority and the voting server; the BeleniosRF variant additionally achieves receipt-freeness, but only under the assumption that the voting server is honest regarding that property.
+ElectionGuard~\cite{electionguard2024} belongs to the same family, combining homomorphic tallying with threshold guardians, publicly verifiable proofs, and a centralized election administrator that drives the tally. A common feature of all of these systems is that, beyond their cryptographic core, they require a non-trivial setup of either the bulletin board, the tally authority, or both, and that the operator set is fixed for each election rather than open to participation.
+
+\paragraph{Receipt-freeness and revoting.}
+A receipt-free voting system prevents a voter from producing convincing evidence of their vote, mitigating bribery and simple coercion. Benaloh and Tuinstra~\cite{benaloh1994} gave the first formal notion, and Hirt~\cite{hirt2000} showed how to achieve it efficiently by combining homomorphic encryption with re-encryption performed by a designated helper.
+Doan et al.~\cite{doan2024} subsequently generalize Hirt-style receipt-freeness to a setting with multiple ballot-processing servers, removing the single-point-of-failure assumption common to earlier non-interactive constructions.
+These constructions remain server-based: none of them places the protocol on a public bulletin board with cryptographically enforced data availability, and the helpers responsible for re-encryption are selected in advance rather than drawn from an open set.
+
+\paragraph{Blockchain-based and ZK-based voting.}
+McCorry et al.~\cite{mccorry2017} proposed the first self-tallying voting contract on Ethereum, but placing every vote directly on-chain is expensive and creates a linkable trail between voters and their choices. Permissioned-ledger proposals~\cite{kirillov2019} improve operational properties but still rest on honest-majority assumptions over a closed set of validators.
+Freedom Tool~\cite{freedomtool2024} uses ZK proofs over biometric passports to enforce eligibility, but votes appear on-chain in cleartext, trading ballot secrecy for transparency.
+MACI~\cite{maci2019} uses ZK proofs to discourage bribery, but its coordinator is a single trusted party that can read individual votes; although later versions improve usability, this assumption remains.
+Semaphore~\cite{semaphore2020} provides anonymous group-membership proofs and is reused as a building block in several voting prototypes, although it is not itself a complete voting protocol.
+Cicada~\cite{cicada2023} and Shutter Network~\cite{shutter2024} use timelock and threshold encryption to keep ballots hidden until the tally, but neither re-randomizes stored ciphertexts after submission. As a result, voters can still prove how they voted, weakening protection against coercion and vote-selling.
+
+%\paragraph{Position of DAVINCI.}
+%Architecturally, DAVINCI is close to payment-focused ZK rollups such as Loopring~\cite{loopring2019} and zkSync~\cite{zksync2020}, rather than to traditional e-voting systems. It applies the off-chain computation and on-chain settlement split to elections while adding threshold decryption, ciphertext re-randomization, and silent revoting. These features are required in voting systems but absent from payment applications.
+%Table~\ref{tab:comparison} evaluates these systems on five formal properties: \emph{ballot privacy}, that the voter's choice remains hidden from third parties under the system's stated trust assumption; \emph{cast-as-intended verifiability}, a voter-facing mechanism by which the voter can check that the casting device honestly encrypted the chosen option; \emph{receipt-freeness}, that a voter cannot produce convincing evidence of how they voted to a third party observing the public bulletin board; \emph{permissionless ballot processing}, that the operator set is open to anyone rather than fixed in advance; and \emph{public-ledger settlement}, that the protocol's state and integrity proofs are anchored on a public bulletin board. For Belenios, the receipt-freeness mark refers to BeleniosRF, which adds an honesty assumption on the voting server; for MACI, ballot privacy and receipt-freeness are restricted to third parties besides the coordinator.
+%DAVINCI is the only system among those compared that provides \emph{receipt-freeness} without trusting a server while simultaneously running on \emph{permissionless} ballot-processing infrastructure with on-chain settlement. The cost it pays for this combination is the absence of \emph{cast-as-intended verifiability} at the protocol level; we discuss this gap and compatible second-device remedies in Sections~\ref{sec:e2e-verifiability} and~\ref{sec:conclusions}. Beyond the properties captured in the table, DAVINCI's parametric ballot circuit supports approval, ranking, multiple-choice, and quadratic voting with a single on-chain verifier, allowing arbitrarily many elections of different formats to reuse the same circuit set and trusted-setup ceremony.
 
 \subsection{Paper organization}
 \label{sec:introduction:organization}
