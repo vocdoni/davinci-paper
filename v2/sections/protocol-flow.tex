@@ -1,14 +1,14 @@
 % !TeX root = ../build/main.tex
 
-In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, tally decryption, and election finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Fig.~\ref{fig:protocol-flow}.
+In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, tally decryption, and election finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. %An overview of the complete process is shown in Fig.~\ref{fig:protocol-flow}.
 
 \subsubsection{Election setup}
 \label{sec:election-setup}
 
-Before any election can begin, sequencers must register by staking \token tokens in the
-{\color{blue}sequencer-registry} smart contract (see Section~\ref{sec:token}). This registration
-is a one-time operation per sequencer and is independent of any particular election; only
-registered sequencers are eligible to participate in the \ac{DKG} phase and to process votes.
+%Before any election can begin, sequencers must register in the \hlget{\electionregistry} smart contract. This registration is a one-time
+%operation per sequencer and is independent of any particular election.
+%; only registered
+%sequencers are eligible to participate in the processing of votes.
 %
 For each new election, the organizer performs the following steps:
 
@@ -19,188 +19,251 @@ For each new election, the organizer performs the following steps:
 	
 	\item Compute the census commitment $\censusroot = \censusTree.\hlget{\MTRoot}()$.
 	
-	\item Define the election details, including duration, the census model $\censusorigin$
+	\item Define the election details: the start time (\starttime), the duration of the voting period (\duration), the census model $\censusorigin$
 	(see Section~\ref{sec:vocdoni-protocol:census}), and the ballot rules $\ballotmode$
-	(see Section~\ref{sec:ballot-protocol}). 
+	(see Section~\ref{sec:ballot-protocol}).
 	
-	\item Upload the election metadata (questions, options, description, etc.)\ to IPFS to obtain {\color{blue}electionMetadata}.
+	\item Upload the election metadata (questions, options, description, etc.)\ to IPFS and
+	record the resulting URI as $\electionmetadata$.
 	
-	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived
-	from the organizer's Ethereum address, nonce, and the chain ID.
+	\item Determine the process identifier $\processid$, a 32-byte value derived
+	deterministically from the organizer's Ethereum address, the account nonce, and a prefix
+	encoding the chain identifier and the \hlget{\electionregistry} smart contract. Being deterministic, it can be
+	computed in advance by the organizer, although it is ultimately recomputed and assigned by
+	the contract upon registration.
 	
-	\item Initialize the state Merkle tree $\stateTree$ by inserting the election configuration
-	parameters into the reserved configuration namespace (see Section~\ref{sec:vocdoni-protocol:state-tree}):
-	$\processid$ at leaf $\mathtt{0x0}$, $\ballotmode$ at leaf $\mathtt{0x2}$,
-	$\censusorigin$ at leaf $\mathtt{0x6}$, and zero-valued accumulators $\addaccumulator$ and
-	$\substractaccumulator$ at leaves $\mathtt{0x4}$ and $\mathtt{0x5}$, respectively. {\color{blue}Compute the
-	initial state root -- is this done by the SC?}
+	\item Obtain the encryption public key $\epk$ for this process. The key is produced by the
+	key wardens through the \ac{DKG} protocol 
+	run for the identifier $\processid$, so that no single party knows the corresponding secret key.
+	
+	\item Register the process on-chain by submitting a transaction to the
+	\hlget{\electionregistry} smart contract with the election parameters:
+	\begin{align*}
+		\mathsf{tx} = \big(
+		&\censusorigin,\ \censusroot,\ \censusuri,\ \electionmetadata, \\
+		&\ballotmode,\ \epk,\ \starttime,\ \duration\big).
+	\end{align*}
+	Upon accepting this transaction, the \hlget{\electionregistry} contract initializes the reserved configuration leaves
+	of the state tree $\stateTree$ as %
+	$\processid$ at $\mathtt{0x0}$, $\ballotmode$ at $\mathtt{0x2}$, $\epk$ at $\mathtt{0x3}$,
+	$\censusorigin$ at $\mathtt{0x6}$, and the results accumulator $\encresults$ at
+	$\mathtt{0x4}$ initialized to the encryption of zero  (see Section~\ref{sec:vocdoni-protocol:state-tree}) and computes the initial state root
 	\[
 	\stateroot = \stateTree.\hlget{\MTRoot}().
 	\]
-	
-	\item Set security parameters for the \ac{DKG} ceremony (e.g.\ timeout, minimum number
-	of sequencers) {\color{blue}DKG}.
-	
-	\item Submit all this information in a transaction to the \hlget{\electionregistry} smart
-	contract:
-	\begin{align*}
-		tx_{\mathit{org}} = \big(
-		&\processid,\ \censusroot,\ \censusorigin,\ \censusuri, \\
-		&\ballotmode,\ {\color{blue}electionMetadata},\ \stateroot,\ {\color{blue}dkgParameters}
-		\big).
-	\end{align*}
-	
 \end{enumerate}
 %
-Once this transaction is accepted, the election is publicly registered on-chain and the
-\ac{DKG} phase can begin.
+Once this transaction is accepted, the election is publicly registered on-chain and, at its
+scheduled start time, the voting period can begin.
+%
+%Before any election can begin, key wardens must register in the \hlget{\dkgmanagement} smart contract. This registration
+%is a one-time operation per key warden and is independent of any particular election; only
+%registered parties are eligible to participate in the \ac{DKG} phase. 
+%%
+%For each new election, the organizer performs the following steps:
+%
+%\begin{enumerate}
+%	
+%	\item Prepare the census data \censusdata\ and build the \ac{IMT}
+%	$\censusTree$ from it. Publish the full tree to IPFS, and record the resulting URI as $\censusuri$.
+%	
+%	\item Compute the census commitment $\censusroot = \censusTree.\hlget{\MTRoot}()$.
+%	
+%	\item Define the election details, including duration, the census model $\censusorigin$
+%	(see Section~\ref{sec:vocdoni-protocol:census}), and the ballot rules $\ballotmode$
+%	(see Section~\ref{sec:ballot-protocol}). 
+%	
+%	\item Upload the election metadata (questions, options, description, etc.)\ to IPFS to obtain {\color{blue}electionMetadata}.
+%	
+%	\item Compute a unique process identifier $\processid$, which is a 32-byte number derived
+%	from the organizer's Ethereum address, nonce, and the chain ID.
+%	
+%	\item Initialize the state Merkle tree $\stateTree$ by inserting the election configuration
+%	parameters into the reserved configuration namespace (see Section~\ref{sec:vocdoni-protocol:state-tree}):
+%	$\processid$ at leaf $\mathtt{0x0}$, $\ballotmode$ at leaf $\mathtt{0x2}$,
+%	$\censusorigin$ at leaf $\mathtt{0x6}$, and zero-valued accumulators $\addaccumulator$ and
+%	$\substractaccumulator$ at leaves $\mathtt{0x4}$ and $\mathtt{0x5}$, respectively. {\color{blue}Compute the
+%	initial state root -- is this done by the SC?}
+%	\[
+%	\stateroot = \stateTree.\hlget{\MTRoot}().
+%	\]
+%	
+%	\item Set security parameters for the \ac{DKG} ceremony (e.g.\ timeout, minimum number
+%	of sequencers) {\color{blue}DKG}.
+%	
+%	\item Submit all this information in a transaction to the \hlget{\electionregistry} smart
+%	contract:
+%	\begin{align*}
+%		tx_{\mathit{org}} = \big(
+%		&\processid,\ \censusroot,\ \censusorigin,\ \censusuri, \\
+%		&\ballotmode,\ {\color{blue}electionMetadata},\ \stateroot,\ {\color{blue}dkgParameters}
+%		\big).
+%	\end{align*}
+%	
+%\end{enumerate}
+%%
+%Once this transaction is accepted, the election is publicly registered on-chain and the
+%\ac{DKG} phase can begin.
 
 \subsubsection{Encryption key generation}
 \label{sec:vocdoni-protocol:keygen}
 
-In this phase, \keywardens collectively generate the public encryption key.\\
+In this phase, the \keywardens\ collectively generate the public encryption key ($\epk$) that voters will use to encrypt their ballots. Since the process identifier $\processid$ is derived deterministically (see Section~\ref{sec:election-setup}), it is known in advance, so the \ac{DKG} ceremony for the election can be carried out before the process is registered on-chain.
 
-\noi \Keywardens fetch the process parameters ($\processid$, $\ballotmode$, $\censusroot$) from the \hlget{\electionregistry} smart contract and participate in a \ac{DKG} protocol before the timeout set by the organizer expires. If the minimum number of contributions is reached, the public encryption key $\epk$ is derived and made available on-chain. This ensures that no single party controls the secret key, and that decryption later requires threshold participation {\color{blue}(give more details)}.\\
-
-\noi {\color{blue} Alternatively, generate a SNARK proving the EPK has been generated correctly and the contract verifies it.}
+Each \keywarden\ contributes to the ceremony and publishes a proof that its contribution is well-formed. The \hlget{\dkgmanagement} smart contract verifies these proofs, so that correct participation can be checked without revealing any secret. Once a threshold of valid contributions is collected, the joint public key $\epk$ is derived, while the corresponding secret key remains secret-shared among the wardens. In this way, no single party can decrypt on its own, and later tally decryption requires the collaboration of a threshold of wardens (see Section~\ref{sec:vocdoni-protocol:tally}). The resulting $\epk$ is the key that the organizer includes when registering the election (see Section~\ref{sec:election-setup}). The concrete \ac{DKG} construction is given in Appendix~\ref{sec:cryptographic-primitives:dkg}.
 
 \subsubsection{Voting period}
 \label{sec:vocdoni-protocol:votes}
 
 In this phase, voters cast their ballots and send them to the sequencers, who collect and process them. \\
 
-\noi \textbf{(a) Vote casting.} To cast a ballot, a voter does the following: \textit{\color{blue}-- mention that the voter has a (sk, pk, address) as described in Section~\ref{}.}
+\noi \textbf{(a) Vote casting.} Each voter holds an Ethereum key pair $(\sk, \pk)$ with
+associated address $\address$ (see Appendix~\ref{sec:cryptographic-primitives:signatures}).
+To cast a ballot, a voter does the following:
 
 \begin{enumerate}
-	\item Select a sequencer.  
-	\item Retrieve their census membership proof $\censusproof$ to prove eligibility.  
-	\item Fetch parameters $\epk$, $\ballotmode$, and $\processid$ from the \hlget{\electionregistry} smart contract.  
-	\item Select their ballot choice $\ballot$ following the rules of $\ballotmode$.  
-	\item Sample fresh randomness $k \in \F$ and encrypt the ballot using $\epk$:  
-		  \begin{equation}
-		  \label{eq-ciphertext}
-		  	\encryptedballot ={ }\hlget{\Enc}_{\epk}(\ballot; k).
-		  \end{equation}
-	\item Use their Ethereum address $\address$ and the previous $k$ to compute a unique vote identifier:
-		\begin{equation}
-			\label{eq-voteid}
-			\voteid = N + \bigl(\hlget{\Poseidon}(\processid,\address,k) \bmod N\bigr),
-		\end{equation}
-	where $N$ is defined by the protocol as described in Section~\ref{sec:vocdoni-protocol:circuits:state-transition}.
-	\item Use the \ballotcircuit from Section~\ref{sec:vocdoni-protocol:circuits:ballot} to generate a \ac{ZK-SNARK} proof to prove that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly computed and that $\ballot$ satisfies the ballot protocol rules according to $\ballotmode$:
-		\begin{align*}
-		\voteproof ={ } & \hlget{\PProve}(
-			\hlget{\ballotcircuit},
-			\witness = (\ballot, k), 
-			\publicinputs = (\processid, \ballotmode,\\
-			&\epk, \address, \weight, \encryptedballot, \voteid)).
-		\end{align*}	
-	\item Sign the vote identifier with their Ethereum secret key $\sk$ to authenticate the vote and ensure that was cast by a legitimate voter:  
-		\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
-	\item Submit the package  
-	\[\vote = [\processid, \voteid, \encryptedballot, \voteproof, \signature]\]  
-	to the chosen sequencer.  
+	\item Retrieve the census membership proof $\censusproof$ to prove eligibility.
+	\item Fetch the parameters $\epk$, $\ballotmode$, and $\processid$ from the
+	\hlget{\electionregistry} contract.
+	\item Select their ballot choice $\ballot$ following the rules of $\ballotmode$.
+	\item Sample fresh randomness $k \in \F$ and encrypt the ballot using $\epk$:
+	\begin{equation}\label{eq-ciphertext}
+		\encryptedballot = \hlget{\Enc}_{\epk}(\ballot; k).
+	\end{equation}
+	\item Use their address $\address$ and the randomness $k$ to compute a unique vote
+	identifier, mapped into the reserved vote-identifier namespace
+	(see Section~\ref{sec:vocdoni-protocol:state-tree}):
+	\begin{equation}\label{eq-voteid}
+		\voteid = N + \bigl(\hlget{\Poseidon}(\processid, \address, k) \bmod N\bigr).
+	\end{equation}
+	\item Use the \ballotcircuit from Section~\ref{sec:vocdoni-protocol:circuits:ballot} to
+	generate a \ac{ZK-SNARK} proof that Eqs.~\labelcref{eq-ciphertext,eq-voteid} are correctly
+	computed and that $\ballot$ satisfies the ballot rules of $\ballotmode$:
+	\begin{align*}
+		\ballotproof = {} & \hlget{\PProve}(\hlget{\ballotcircuit}, \witness = (\ballot, k), \\
+		& \publicinputs = (\processid, \ballotmode, \epk, \address, \weight,
+		\encryptedballot, \voteid)).
+	\end{align*}
+	\item Sign the vote identifier with their Ethereum secret key $\sk$ to authenticate the vote:
+	\[ \signature = \hlget{\SSign}_{\sk}(\voteid). \]
+	\item Select a sequencer and submit the package
+	\[ \vote = [\processid, \voteid, \encryptedballot, \censusproof, \ballotproof, \signature] \]
+	to the chosen sequencer.
 \end{enumerate}
-
-%\item Sign $\voteid$ using the user's secret key $\sk$ to authenticates the vote and ensure that was cast by a legitimate voter:
-%\[ \signature = \hlget{\SSign}_{\sk}(\voteid).\]
-%\item Send the following data, which includes the encrypted vote, census membership proof, signature\footnote{Note that the address is not send because it can be recomputed from the signature.} and vote proof, to the selected sequencer:
-%\[ \vote = [ \processid, \voteid, \encryptedballot, \censuspf, \voteproof, \signature ]. \]
 
 \noi \textbf{(b) Vote batching.} Upon receiving votes, a sequencer does the following:
 
 \begin{enumerate}
-	\item Retrieve election identifier $\processid$, current state root $\stateroot$, and census root $\censusroot$ from the \hlget{\electionregistry} smart contract and the associated data from the Ethereum data blobs.  
+	\item Retrieve the election identifier $\processid$, the current state root $\stateroot$, and
+	the census root $\censusroot$ from the \hlget{\electionregistry} smart contract, together with
+	the associated data from the Ethereum data blobs.
 	\item Upon receiving a vote
-	\[\vote_i = [\processid, \voteid, \encryptedballot, \voteproof, \signature],\]
-	extract the voter's public key $\pk_i = \hlget{\SPubKey}(\signature)$. -- {\color{blue}Add this function to Appendix.}
-	\item For each $\vote_i$ received, use \verifiercircuit from Section~\ref{sec:vocdoni-protocol:circuits:verifier} to generate a proof 
+	\[ \vote_i = [\processid, \voteid_i, \encryptedballot_i, \censusproof_i, \ballotproof_i, \signature_i], \]
+	recover the voter's public key $\pk_i = \hlget{\SPubKey}(\signature_i)$.
+	\item For each $\vote_i$, use the \verifiercircuit from
+	Section~\ref{sec:vocdoni-protocol:circuits:verifier} to generate a proof
 	\begin{align*}
-		\authenticationproof_i ={ } & \hlget{\PProve}(\hlget{\verifiercircuit}, 
-		\witness = (\ballotproof, \pk, \signature),\\
-		& \publicinputs = (\processid, \ballotmode, \epk, \encryptedballot, \voteid, \\
-		& \address, \weight)).
+		\authenticationproof_i = {} & \hlget{\PProve}(\hlget{\verifiercircuit},
+		\witness = (\pk_i, \signature_i, \ballotproof_i), \\
+		& \publicinputs = (\processid, \ballotmode, \epk, \encryptedballot_i, \voteid_i,\\
+		&\address_i, \weight_i)).
 	\end{align*}
-	This proof ensures that the voter’s \voteproof and \signature are valid.
-	\item Batch a set of $n$ proofs $\{\authenticationproof_i\}_{i = 1}^n$ and batch verify them together using \aggregationcircuit from Section~\ref{sec:vocdoni-protocol:circuits:aggregation}:
+	This proof ensures that $\ballotproof_i$ and $\signature_i$ are valid and that $\address_i$
+	is correctly derived from $\pk_i$. The census membership proof $\censusproof_i$ is not
+	used here; it is retained for the state transition circuit
+	(Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), where eligibility is enforced.
+	\item Batch a set of $n$ authentication proofs $\{\authenticationproof_i\}_{i=1}^{n}$ and verify
+	them together using the \aggregationcircuit from
+	Section~\ref{sec:vocdoni-protocol:circuits:aggregation}:
 	\begin{align*}
-		\aggregationproof = { } &\hlget{\PProve}(\hlget{\aggregationcircuit}, 
-						\witness = (\{\authenticationproof_i\}_{i = 1}^n),\\
-						&\publicinputs = (\{\encryptedballot\}_{i = 1}^n, \{\voteid_i\}_{i = 1}^n),
-						\{\address_i\}_{i = 1}^n,
-						\processid,\\
-						&
-						\ballotmode,
-						\epk
-						).
+		\aggregationproof = {} & \hlget{\PProve}(\hlget{\aggregationcircuit},
+		\witness = (\{\authenticationproof_i\}_{i=1}^{n}), \\
+		& \publicinputs = (\{\encryptedballot_i\}_{i=1}^{n}, \{\voteid_i\}_{i=1}^{n},
+		\{\address_i\}_{i=1}^{n}, \processid, \\
+		&\ballotmode, \epk)).
 	\end{align*}
-	This proof ensures that public inputs corresponding to the global process parameters ($\processid$, $\ballotmode$, $\epk$) are correct and that all $\authenticationproof_i$ are valid.
-	
-	\item Prepare the state transition data that will be stored in an Ethereum blob: pack votes/results into a 4096-cell blob \blobdata. 
-		\begin{itemize}
-			\item Compute data commitment $\blobcom = \hlget{\CCommit}(\blobdata)$. 
-			\item Derive evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, \stateroot^\old, \blobcom).$
-			\item Prepare polynomial $P$ from $\blobdata$.
-			\item Evaluate $y = P(\evalpoint)$.
-			\item Generate opening proof $\openproof$ from $...$.
-			\item The following step (circuit) will prove that $y = P(\evalpoint)$.
-		\end{itemize}
-		
-	\item {\color{blue}Before doing state transitions, we need to prepare the data that will be stored on chain as a blob. Hence, collect xxxx, create commitment. In circuit (next step), we will prove that... .}
-	
-	\item {\color{blue}The sequencer must retrieve the voter's membership proof. Add as a footnote that this can be done by the voter and sent to the sequencer, who verifies it, but we want to minimize the actions of the voter.}
-	
-	\item Finally, prove that all transitions are correct .... with circuit from Section~\ref{sec:vocdoni-protocol:circuits:state-transition}.
-	consistency between data blobs and the on-chain state:
-	
+	This proof ensures that all $\authenticationproof_i$ are valid and share the same global
+	parameters $\processid$, $\ballotmode$, and $\epk$.
+	\item Prepare the state transition data to be published in an Ethereum blob: pack the votes and
+	results into a 4096-cell blob $\blobdata$ and
+	\begin{itemize}
+		\item compute the data commitment $\blobcom = \hlget{\CCommit}(\blobdata)$,
+		\item derive the evaluation point $\evalpoint = \hlget{\Poseidon}(\processid, \stateroot^{\old}, \blobcom)$,
+		\item build the polynomial $P$ from $\blobdata$ and evaluate $y = P(\evalpoint)$,
+		\item produce the opening proof $\openproof$ for the evaluation $(\evalpoint, y)$.
+	\end{itemize}
+	The consistency $y = P(\evalpoint)$ between the blob and the on-chain state is proven inside
+	the state transition circuit.
+	\item Generate the state transition proof with the \statetransitioncircuit from
+	Section~\ref{sec:vocdoni-protocol:circuits:state-transition}:
 	\begin{align*}
-		\stateproof ={ } \hlget{\PProve}(\hlget{\statetransitioncircuit}, 
-		\witness = (), \publicinputs = ()).	
+		\stateproof = {} & \hlget{\PProve}(\hlget{\statetransitioncircuit},
+		\witness = (\aggregationproof, \{\censusproof_i\}_{i=1}^{n},\\
+		&\{\encryptedballot_i\}_{i=1}^{n}, k, \openproof, \dots), \\
+		& \publicinputs = (\censusroot, \stateroot^{\old}, \stateroot^{\new}, \blobcom, \dots)).
 	\end{align*}
-	
-	\item Verify each $\vote$ submission received by generating a state transition proof (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}), ensuring:
-		\begin{itemize}
-			\item correct accumulation of encrypted votes via ElGamal’s homomorphic properties,  
-			\item eligibility of voters (via census Merkle proofs),
-		\end{itemize}
-	\item Submit the updated state root to the smart contract, while the full data are stored in Ethereum blobs.  
-	\martai{If \stateroot changed, repeat last circuit.}
+	The complete input list is given in
+	Section~\ref{sec:vocdoni-protocol:circuits:state-transition}. This proof attests that the
+	encrypted votes are correctly accumulated via ElGamal's homomorphic properties, that every
+	processed vote corresponds to an eligible voter (via the census membership proofs), that vote
+	overwrites are handled consistently, and the blob data matches the committed on-chain state.
+	\item Submit the state transition proof $\stateproof$ and the new state root $\stateroot^{\new}$
+	to the \hlget{\electionregistry} smart contract, while the full data is published in the
+	Ethereum blobs.
 \end{enumerate}
 
-Sequencers repeat this process until the voting deadline set by the organizer.
-
-Upon receiving a valid transaction, the \electionregistry smart contract does the following checks:
+\noi Upon receiving the transaction, the smart contract checks that the submitted previous root
+matches the current on-chain state root and that $\stateproof$ is valid before updating the state
+root to $\stateroot^{\new}$. If the on-chain state root changed while the sequencer was preparing
+the batch (because another sequencer committed first), only the state transition proof must be
+regenerated, as noted in Section~\ref{sec:vocdoni-protocol:circuits:state-transition}. Sequencers
+repeat this process until the voting deadline set by the organizer.
 
 \subsubsection{Tally decryption}
-\label{sec:vocdoni-protocol:deckey-gen}
+\label{sec:vocdoni-protocol:tally}
 
-{\color{blue} After the voting period expires, $t$ out of $n$ sequencers share their decryption shares of the election private key \textbf{to whom?}. Once the threshold is reached, the election secret key can be reconstructed (on-chain or off-chain), enabling the decryption of the aggregated tally.  
-	
-Rewards and penalties for sequencers are managed according to their correct participation: sequencers are rewarded proportionally to the number of votes sequenced, and may be slashed for failing to provide a valid decryption share (see Seciton~\ref{sec:token} for details on incentivation mechanisms.)}
+After the voting period expires, the \hlget{\electionregistry} smart contract stops accepting new state updates, fixing the final state root and thus the aggregated encrypted results. A threshold of $t$ out of $n$ \keywardens\ then cooperate to decrypt this aggregate: rather than reconstructing the election secret key, each participating warden publishes a partial decryption of the encrypted results together with a proof that its contribution is correct with respect to its key share. Once $t$ valid partial decryptions are available, they are combined to recover the plaintext tally. Because only the aggregated results are decrypted and never the individual ballots, voter privacy is preserved throughout the election, and the secret key is never reconstructed by any single party. 
+%
+The resulting tally, together with a proof of correct decryption, is published on-chain during the finalization phase (see Section~\ref{sec:vocdoni-protocol:finalization}), where it is checked by the \resultscircuit\ and the \hlget{\resultsverifier} contract. %\Keywardens\ that fail to provide a valid partial decryption may be penalized; the incentive and slashing mechanisms are described in Section~\ref{sec:token}.
 	
 
 \subsubsection{Election finalization}
-\label{sec:vocdoni-protocol:results}
+\label{sec:vocdoni-protocol:finalization}
 
-In this final phase, the organizer/a sequencer computes the tally and publishes the result, together with a proof of its correct computation, on-chain.
+In this final phase, the organizer (or a sequencer) publishes the election results, together with
+a proof of their correct computation, on-chain.
 
 \begin{enumerate}
-	\item Retrieve $\decryptionkey$ from \dots.
-	\item ...
-	\item Use \resultscircuit from Section~\ref{sec:vocdoni-protocol:circuits:results} to generate a proof 
+	\item Obtain the plaintext results $\{\text{results}_j\}_{j=1}^{n_f}$ and the corresponding
+	decryption proofs $\{\pi^{\mathrm{dec}}_j\}_{j=1}^{n_f}$ from the tally decryption phase
+	(Section~\ref{sec:vocdoni-protocol:tally}), i.e.\ the combination of the \keywardens'
+	partial decryptions of the aggregated encrypted results.
+	\item Retrieve the encrypted results accumulator $\encresults$ and the encryption key $\epk$
+	from the final state, together with their Merkle inclusion proofs against the final state
+	root $\stateroot$.
+	\item Use the \resultscircuit from Section~\ref{sec:vocdoni-protocol:circuits:results} to
+	generate the results proof:
 	\begin{align*}
-		\resultsproof = { } \hlget{\PProve}(\hlget{\resultscircuit}, 
-		\witness = (...), 
-		\publicinputs = (...)).
+		\resultsproof = {} & \hlget{\PProve}(\hlget{\resultscircuit},
+		\witness = (\encresults, \epk,\\ &\merkleInclusionPf^{\encresults},
+		\merkleInclusionPf^{\epk}, \{\pi^{\mathrm{dec}}_j\}_{j=1}^{n_f}), \\
+		& \publicinputs = (\stateroot, \{\text{results}_j\}_{j=1}^{n_f})).
 	\end{align*}
+	\item Submit the results and $\resultsproof$ to the \hlget{\electionregistry} smart contract.
+	The contract verifies the proof with the \hlget{\resultsverifier}, checks that the state root
+	committed in the proof matches the current on-chain state root, and records the results,
+	marking the process as finalized.
 \end{enumerate}
 
-The election is considered finalized once the decrypted tally is available on-chain. At this stage, both the election results and the complete integrity of the process are permanently recorded and publicly auditable.
+\noi The election is considered finalized once the decrypted results are available on-chain. At
+this stage, both the results and the complete integrity of the process are permanently recorded
+and publicly auditable: anyone can recompute the on-chain commitments and check the \ac{ZK-SNARK}
+proofs. In particular, the combination of the final state root, the verified decryption of the
+aggregated results, and the publicly verifiable \ac{ZK-SNARK} state and results proofs guarantees
+the integrity of the entire election.
 
-{\color{blue} Note that, anyone can verify the correctness of the final results by checking the \ac{ZK-SNARK} state proofs and on-chain commitments. Moreover, the combination of the final state root, the decryption of the accumulators, and the publicly verifiable \ac{ZK-SNARK} proofs guarantees the integrity of the entire election.}
-
-\begin{figure}%[H]
-	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow.pdf}}
-	\caption{Vocdoni voting process overview. {\color{blue}Figure is OUTDATED.}}
-	\label{fig:protocol-flow}
-\end{figure}
+%\begin{figure}%[H]
+%	\centerline{\includegraphics[width=370pt,draft=false]{\figs/protocol-flow.pdf}}
+%	\caption{Vocdoni voting process overview. {\color{blue}Figure is OUTDATED.}}
+%	\label{fig:protocol-flow}
+%\end{figure}

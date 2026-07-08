@@ -8,7 +8,7 @@ The \hlset{\orgregistry} smart contract is used to create and manage organizatio
 
 \paragraph{Census management.} 
 
-This contract is only used by the on-chain dynamic census model (see Section~\ref{sec:vocdoni-protocol:census}), the off-chain and \ac{CSP} models store the
+This contract is only used by the on-chain dynamic census model (see Section~\ref{sec:vocdoni-protocol:census}), since the off-chain and \ac{CSP} models store the
 census commitment directly as a parameter and require no such contract. This contract maintains the census as an on-chain \ac{IMT} and exposes (i) the current census root, (ii) the total voting power recorded for a given root, and (iii) the validity of a root, returning the last block at which it was valid. 
 %To bound storage, only a recent window of roots is retained. During each state transition, the \electionregistry\ contract queries the census contract to confirm that the \censusroot\ used in the membership proof is still valid---and no older than the election's creation block---rejecting the transition otherwise. This lets the census grow during the voting period while ensuring sequencers can only prove membership against roots the contract recognizes.
 

@@ -1,27 +1,24 @@
 % !TeX root = ../build/main.tex
 
-The \davinci protocol was designed according to a set of guiding principles: cryptography is the sole source of truth; no single entity must be trusted; the system should be modular, open source, and resilient; and it should remain scalable, automated, and accessible to a wide range of users. Building on these principles, we now discuss the concrete security properties of the protocol, followed by implementation details and performance results. -- {\color{blue}This whole section is still [WIP]}.\\
-
-\noi {\color{blue}$\rightarrow$ check \scriptsize
-	\url{https://ethresear.ch/t/vocdoni-protocol-enabling-decentralized-voting-for-the-masses-with-zk-technology/21036}.}
-
 \subsection{Security discussion}
 \label{sec:analysis:security}
 
-Based on the above principles, the protocol provides a number of concrete security properties that ensure the integrity, confidentiality, and verifiability of voting events. In what follows we discuss how \davinci achieves these properties, with particular emphasis on receipt-freeness, privacy, unlinkability, and robustness against quantum threats.
+Based on the above principles, the protocol provides a number of concrete security properties that ensure the integrity, confidentiality, and verifiability of voting events. In what follows we discuss how \davinci achieves these properties, with particular emphasis on integrity, receipt-freeness, and ballot privacy, before turning to data availability, end-to-end verifiability, and robustness against quantum threats.
+
+\paragraph{Integrity and soundness.} The integrity of the election rests on the knowledge soundness of the \ac{ZK-SNARK} proofs rather than on trust in any operator. No party (including a malicious sequencer) can advance the state from $S_i$ to $S_{i+1}$ without supplying a valid state transition proof, since the settlement contract rejects any update not accompanied by such a proof. Consequently, every counted ballot originates from an eligible census member and every accumulator update follows the protocol rules. Double voting is prevented \emph{without} nullifiers: each voter is bound to a unique, census-authenticated slot in the state tree, so a second submission by the same voter overwrites their previous ballot at that slot rather than adding a new contribution to the tally. Vote identifiers, by contrast, are derived per ballot and therefore differ across submissions, which is precisely what enables individual verifiability without linking a voter to their ciphertext.
 
 \paragraph{Receipt-freeness.} Receipt-freeness prevents voters from proving to others how they voted, thereby mitigating coercion and vote-buying. In \davinci this is achieved through re-encryption, ballot overwrites, and randomized state updates.
 \begin{itemize}
-	\item \textit{Ballot re-encryption}: since our encryption scheme supports re-randomization, that is, a ciphertext can be refreshed with new randomness without changing the underlying message, sequencers exploit this by re-encrypting the received ballots before committing them to the state Merkle tree, making it computationally infeasible to link a submitted ciphertext with the stored one {\color{blue}(give details of what does \textit{computationally infeasible} mean here)}.
-	\item \textit{Handling receipts}: because ballots are re-randomized, voters cannot generate a receipt by revealing the randomness $r$ used in encryption, since the ciphertext on-chain no longer corresponds to their $r$. This blocks vote-selling and coercion.
-	\item \textit{Overwrites}: voters may cast a new ballot at any time, replacing their earlier submission. This ensures that even if coercion occurs, a voter can subsequently change their vote as many times as desired, preserving their ability to express their true choice. When an overwrite occurs, the sequencer substracts the previous ballot from the subtractive accumulator, adds the new ballot to the additive accumulator, and re-encrypts the updated ballot before storing it in the state tree. 
-	\item \textit{Concealing overwrites}: to prevent observers from distinguishing overwrites from routine re-randomizations, sequencers periodically re-encrypt a random subset of stored ballots. This obfuscation ensures that overwrites remain indistinguishable from normal re-randomizations, strengthening receipt-freeness.
+	\item \textit{Ballot re-encryption}: since our encryption scheme supports re-randomization, that is, a ciphertext can be refreshed with new randomness without changing the underlying message, sequencers re-encrypt the received ballots before committing them to the state Merkle tree. Under the decisional Diffie--Hellman (DDH) assumption on BabyJubjub, a re-randomized ciphertext is indistinguishable from a fresh encryption, so linking a submitted ciphertext to its stored counterpart is as hard as solving DDH.
+	\item \textit{Handling receipts}: because ballots are re-randomized, voters cannot generate a receipt by revealing the randomness $k$ used in encryption, since the ciphertext on-chain no longer corresponds to their $k$. This blocks vote-selling and coercion.
+	\item \textit{Overwrites}: voters may cast a new ballot at any time, replacing their earlier submission. This ensures that even if coercion occurs, a voter can subsequently change their vote as many times as desired, preserving their ability to express their true choice. When an overwrite occurs, the sequencer subtracts the previous ballot and adds the new one to the results accumulator, and re-encrypts the updated ballot before storing it in the state tree.
+	\item \textit{Concealing overwrites}: to prevent observers from distinguishing overwrites from routine re-randomizations, sequencers periodically re-encrypt a random subset of stored ballots. This obfuscation ensures that overwrites remain indistinguishable from normal re-randomizations,
+	strengthening receipt-freeness.
 \end{itemize}
 
+\paragraph{Privacy.} Ballots remain secret even though encrypted ballots are publicly stored and processed. Ballot secrecy is preserved through ElGamal encryption, which allows votes to be aggregated without decryption. Because the encryption key is generated through a \ac{DKG} and its secret counterpart is never reconstructed, no single party can decrypt individual ballots: the protocol only invokes threshold decryption on the final aggregate, never on each ballot separately. Under the assumption that at most $t-1$ key wardens are compromised, the shared secret key cannot be reconstructed and no individual ballot ciphertext can be decrypted. Note that, while the content of a ballot stays hidden, the protocol does reveal whether a given voter has cast a vote, that is, turnout is public, but the choice is not.
 
-\paragraph{Privacy.} Ballots remain secret even though encrypted ballots are publicly stored and processed. Ballot secrecy is preserved through ElGamal encryption, which allows votes to be aggregated without decryption. Encrypted ballots are stored in public repositories (e.g., Ethereum blobs). Because of \ac{DKG} sequencers cannot decrypt individual ballots themselves. {\color{blue}The protocol does not reveal the ballot but it does reveal if someone has voted or not.} Individual ballots remain private because the protocol only invokes threshold decryption on the final aggregate, not on each ballot separately.
-
-\paragraph{Quantum resistance.} Quantum computers threaten discrete-logarithm-based cryptography such as ECDSA and ElGamal. For this reason, \davinci is designed in a modular way that would allow to migrate to post-quantum primitives in the longer term. For example,use CRYSTALS-Dilithium, Falcon, or Rainbow, for signature schemes, Brakerski-Gentry-Vaikuntanathan (BGV) or Brakerski/Fan-Vercauteren (BFV) which are lattice-based homomorphic encryption schemes, and ZK-STARKs for post-quantum zero-knowledge proofs. {\color{blue} Add citations to protocols.}
+\paragraph{Quantum resistance.} Quantum computers threaten discrete-logarithm-based cryptography such as ECDSA and ElGamal. For this reason, \davinci is designed in a modular way that would allow migration to post-quantum primitives in the longer term. Candidate replacements include lattice-based signature schemes such as CRYSTALS-Dilithium (ML-DSA) and Falcon, and the hash-based SPHINCS+ (SLH-DSA); lattice-based homomorphic encryption such as BGV or BFV; and ZK-STARKs for transparent, post-quantum ZK proofs.
 
 \paragraph{Data availability.} Ballots and state updates are stored in Ethereum blobs. Since these blobs may eventually be pruned from the blockchain, ensuring long-term data availability is an open problem. Possible solutions include decentralized storage networks or dedicated data-availability layers. This remains an active area of research.
 
@@ -30,19 +27,32 @@ Based on the above principles, the protocol provides a number of concrete securi
 \subsection{Implementation}
 \label{sec:analysis:implementation}
 
-{\color{blue} The system is modular, consisting of interchangeable components that can be rearranged or integrated with external systems via adaptable interfaces. This allows for redundancy, flexibility, and seamless integration with third-party applications, exemplified by our voting-as-a-service APIs. Vocdoni’s voting platform (App) is open source, universally available and user-friendly. The interface is intuitive for all users, including those less familiar with technology, and accommodates voters that use assistive technologies like screen readers. By releasing our code openly, we invite anyone to audit and contribute, enhancing security and fostering community engagement. Transparency prevents security through obscurity and accelerates innovation. We minimize human intervention through smart contracts and cryptographic protocols, reducing costs and human error. Automation ensures consistent operation and frees resources for voter support and auditing. Add link to repositories and details of the software used.}
+\Davinci is implemented as a modular, fully open-source system: the smart contracts, the sequencer node, and the circuits are all publicly available at \url{https://github.com/vocdoni} (in particular \texttt{davinci-contracts}, \texttt{davinci-node}, and \texttt{davinci-circom}). Its components can be recombined or integrated with external services through adaptable interfaces, enabling redundancy and integration with third-party applications such as our voting-as-a-service APIs.
 
-\paragraph{Circuits.}
-\begin{itemize}
-	\item Circuit 1: circom/snarkJS, $\sim 53.000$ constraints.
-	\item Circuit 2: gnark, $\sim 3.1$ million constraints.
-	\item Circuit 3: gnark, 40.000 $\times$ (number of votes) constraints.
-	\item Circuit 4: gnark, $\sim 16$ million constraints.
-\end{itemize}
+\paragraph{Technological stack and circuit compilation.}
+The \davinci circuits are implemented with Circom~\cite{belles2023circom} and gnark~\cite{gnark}, and all use
+the Groth16 proof system~\cite{groth2016size} for its minimal proof size and constant-time verification. Each circuit is compiled over the elliptic curve best suited to its role (see Appendix~\ref{sec:cryptographic-primitives:elliptic-curves}). The ballot circuit is compiled with Circom over BN254 for compatibility with Ethereum's precompiles; its threshold-ElGamal operations run over BabyJubjub, whose base field matches the BN254 scalar field. Ballot authentication and census membership are verified in the verifier circuit over BLS12-377, where the voter's ECDSA
+signature is checked through emulated SECP256K1 arithmetic, so the protocol can reuse standard Ethereum wallet keys. The resulting proofs are recursively combined in the aggregation circuit over BW6-761 before being verified back inside the BN254 state transition circuit. The final tally proof is likewise produced over BN254, since it is verified on-chain by the \resultsverifier\ contract.
 
-\paragraph{MPC for CRS.} Explain the trusted setup ceremony.
+\paragraph{Circuit sizes.} Concrete circuit sizes range from approximately $65$K constraints for the ballot circuit to around $16$M constraints for the state transition circuit, with the aggregation circuit dimensioned for batches of $60$ ballots per transition.
+
+\paragraph{Trusted setup.} Because Groth16 relies on a circuit-specific common reference string (\ac{CRS}, see Appendix~\ref{sec:cryptographic-primitives:zkp}), the parameters for each circuit are generated through an \ac{MPC} ceremony: a universal powers-of-tau phase, followed by a per-circuit phase that binds the parameters to each constraint system. As long as at least one participant in each ceremony discards their secret contribution, the resulting \ac{CRS} is secure. 
+
+\paragraph{Implementation status.} The current implementation includes all five circuits, the Ethereum smart contracts, and the complete state-transition pipeline. The \ac{DKG} component is implemented but not yet integrated into the live protocol. The codebase has not yet undergone an independent security audit.
+% and the design is under peer review for publication.
 
 \subsection{Performance evaluation}
 \label{sec:analysis:performance-evaluation}
 
-{\color{blue} Work in progress.}
+We evaluate \davinci along three axes: voter-side proving, sequencer proving, and on-chain verification, together with the data-availability savings from EIP-4844. All benchmarks use the protocol batch size of $60$ ballots per state transition.
+
+\paragraph{Voter proving.} On consumer hardware (a modern laptop or smartphone), generating a ballot proof takes roughly $10$ seconds in a browser, well within the latency a voter tolerates at casting time and without any specialized hardware.
+
+\paragraph{Sequencer proving.} The recursive aggregation and state transition circuits were benchmarked on batches of $60$ ballots. A single sequencer running on a server with a consumer-grade GPU and at least $16$GiB of RAM produces the final settlement proof in under $3$ minutes; the same proof can be generated on a standard CPU with at least $32$GiB of RAM in roughly $2.5\times$ the time, keeping the sequencer entry barrier low. Proving parallelizes in two ways: about $85\%$ of the per-batch work can be split across worker processes within a single sequencer, and multiple sequencers can advance independent batches concurrently. With $10$ workers behind one GPU sequencer, the settlement proof is generated in under $32$ seconds; two sequencers with $10$ workers each fsustain a throughput of $200$ settled votes per minute.
+
+\paragraph{On-chain verification.} Thanks to Groth16's succinctness, verifying the final settlement proof on Ethereum costs an essentially constant ${\approx}\,480$K gas, independent of the number of ballots in the batch.
+
+\paragraph{Data availability.} \Davinci publishes the data needed to reconstruct each state transition through EIP-4844 blobs. Compared with calldata, blobs substantially reduce data-availability costs by separating large protocol data from permanent Ethereum state. In our
+implementation, the data behind a batch of $60$ votes fits into a single $128$KiB blob, the payload unit defined by EIP-4844.\\
+
+Together, these results indicate that \davinci scales to large elections at predictable settlement costs and practical proving times. Deploying on an Ethereum L2 or an EVM-compatible sidechain would further reduce per-election cost and raise throughput, since the dominant bottleneck on sequencer parallelization is the block time at which successive state transitions can be settled.

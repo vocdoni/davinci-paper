@@ -1,1 +1,7 @@
 % !TeX root = ../build/main.tex
+
+We presented \davinci, a decentralized, E2E-verifiable voting protocol implemented as a specialized ZK rollup. By modeling elections as ZK-verified state transitions settled on Ethereum, \davinci combines public auditability with scalable off-chain execution while minimizing reliance on any single party. Ballot secrecy is achieved through threshold ElGamal encryption under a DKG-generated key, while ciphertext re-randomization and silent revoting strengthen protection against coercion and vote-selling.
+
+To our knowledge, \davinci is the first system to combine a universal ballot abstraction, an open sequencer set, and fully proof-enforced election execution within a single rollup architecture. This enables a reusable voting infrastructure in which elections with different ballot formats and organizers can share the same settlement layer, verifier contracts, and proving pipeline.
+
+Several directions remain open for future work. An important long-term direction is post-quantum migration, particularly through STARK-based proving systems and post-quantum signature and encryption schemes. Another is simplifying the proving architecture through general-purpose zkVM-based implementations, which may reduce development complexity and support larger proving batches. We also plan to integrate with real-world credential providers and conduct large-scale deployment experiments in realistic electoral settings

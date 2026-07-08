@@ -160,7 +160,7 @@ In this section, we present the cryptographic primitives used in the protocol de
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
 
-\Davinci uses different hash functions. On the one side, we use Keccak256~\cite{bertoni2011keccak} for Ethereum address derivation, and Poseidon~\cite{grassi2021poseidon}, MiMC and MiMC-7~\cite{albrecht2016mimc} for arithmetic circuits within zero-knowledge proofs.
+\Davinci uses tow hash functions. On the one side, we use Keccak256~\cite{bertoni2011keccak} for Ethereum address derivation and Poseidon~\cite{grassi2021poseidon} for everywhere else. 
 
 \paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci to compress messages for signing and deriving Ethereum addresses from public keys over $\SEC{\G}$. Keccak256 takes arbitrary-length bitstrings and outputs 256-bit digests: $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. This function is not SNARK-friendly and it is used exclusively in the authentication circuit, where the verification of Ethereum-compatible signatures requires reproducing the original message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:verifier}).
 
@@ -328,7 +328,7 @@ In the protocol, re-encryption is applied not only to newly submitted ballots bu
 \subsection{Distributed key generation scheme}
 \label{sec:cryptographic-primitives:dkg}
 
-To ensure that no single entity controls the decryption key, DAVINCI employs a \ac{DKG} protocol to jointly derive the ElGamal encryption key pair used for ballots encryption~\cite{todocitation}. Participants who contribute to the \ac{DKG} ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols where shares are exchanged in the clear, our construction uses encrypted shares and \ac{ZK-SNARK} proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
+To ensure that no single entity controls the decryption key, DAVINCI employs a \ac{DKG} protocol to jointly derive the ElGamal encryption key pair used for ballots encryption. Participants who contribute to the \ac{DKG} ceremony are called \emph{\keywardens}, and they are each identified by a unique index~$i$. The outcome is a collective public key (\epk) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens. Only a threshold number $t$ out of $n$ \keywardens can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols where shares are exchanged in the clear, our construction uses encrypted shares and \ac{ZK-SNARK} proofs of correctness. This allows the Ethereum smart contract to verify compliance without learning any of the underlying secrets, ensuring both security and verifiability in a fully decentralized setting. 
 
 {\color{blue} Let $t$ be the threshold parameter and $n$ the number of \keywardens, with $t\leq n$. Let $G$ be a generator of the elliptic curve group of order $q$. Each participant $P_i$ runs the following procedure.
 
@@ -391,7 +391,7 @@ After collecting valid encrypted shares, each participant $P_j$ can recover thei
 	\end{itemize}
 \end{mdframed}
 
-This approach ensures that the encryption public key is securely generated in a decentralized way, that each \keywarden learns only their own secret share, and that the correctness of the entire \ac{DKG} procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanism enforced by the smart contract (see Section~\ref{sec:token}).
+This approach ensures that the encryption public key is securely generated in a decentralized way, that each \keywarden learns only their own secret share, and that the correctness of the entire \ac{DKG} procedure is verifiable on-chain. Misbehavior, such as submitting invalid shares, can be detected and penalized through the slashing mechanisms that may be enforced by the smart contract.% (see Section~\ref{sec:token}).
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
