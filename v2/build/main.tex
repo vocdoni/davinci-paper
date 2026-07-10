@@ -3,7 +3,6 @@
 %\documentclass{article}
 
 % CONSIDERATIONS
-% - From \textit{address} to \textit{nullifier} (if you think of an address as a token that allows voters to vote).
 % - From \textit{aggregation or accumulation} (in aggregation circuit) to \textit{batching}. 
 % - Add a section with vulnerabilities.
 % - Include the role of the \textit{workers} as \textit{sequencer} helpers?
@@ -24,18 +23,17 @@
 	Marta Bellés-Muñoz\inst{2} \and
 	Jordi Piñana\inst{1} \and
 	Lucas Menéndez\inst{1} \and 
-	Alex Kampa\inst{1} \and \linebreak %Alex Kampa (AZKR)
+	Alex Kampa\inst{1} \and \linebreak
     Roger Baig\inst{3} \and
 	Jose Luis~Muñoz-Tapia\inst{3}
 }
 
 \institute{
-	Vocdoni Association
-	\and 
-	Pompeu Fabra University
-	\and 
+	Vocdoni Association \and 
+	Pompeu Fabra University \and 
 	Polytechnic University of Catalonia\\ \vspace{0.2cm}
-	\email{\{pau,painan,lucas,alex\}@vocdoni.org}, \email{marta.belles@upf.edu} \\
+	\email{\{pau,painan,lucas,alex\}@vocdoni.org},
+	\email{marta.belles@upf.edu} \\
 	\email{\{roger.baig,jose.luis.munoz\}@upc.edu} 
 }
 
@@ -51,13 +49,17 @@
 \pagestyle{plain}
 \thispagestyle{plain}
 
+% ---- Abstract ----
+
 %\addcontentsline{toc}{section}{\protect\numberline{}Abstract}
 \begin{abstract}
-		\Davinci is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Using recent advancements in \ac{ZK} proof systems and blockchain technology, \davinci transitions to a specialized \ac{ZK} rollup system that inherits network security from settlement layers such as the Ethereum mainnet. The system relies on cryptographic proofs to ensure integrity and security, eliminating the need for centralized authorities. By integrating \acsp{ZK-SNARK} and threshold homomorphic encryption, \davinci enables end-to-end verifiability, privacy, and trustlessness in election processes. The protocol employs distributed key generation among sequencers, coordinated through Ethereum smart contracts, and uses Ethereum data blobs for data availability. With a focus on accessibility, scalability, receipt-freeness, and automation, \davinci aims to facilitate high-frequency and low-cost voting, fostering mass adoption of voting and simplifying civil participation. Moreover, the introduction of the Vocdoni token aligns incentives among participants, ensuring the system's sustainability and enabling decentralized governance. 
-		%
-		Finally, the design of \davinci is grounded in practicality; All components are implemented using current technologies and have undergone proof-of-concept testing. %This ensures that 
-		In sum, the proposed architecture is not merely theoretical, but a viable solution ready for short-term deployment. The source code has been made open source, allowing practitioners and researchers to further investigate its details and potential for future uses.
+	\Davinci is the evolution of the Vocdoni voting protocol, designed to empower civil society by providing essential tools for secure, verifiable, and anonymous digital voting. Using recent advancements in \ac{ZK} proof systems and blockchain technology, \davinci transitions to a specialized \ac{ZK} rollup system that inherits network security from settlement layers such as the Ethereum mainnet. The system relies on cryptographic proofs to ensure integrity and security, eliminating the need for centralized authorities. By integrating \acsp{ZK-SNARK} and threshold homomorphic encryption, \davinci enables end-to-end verifiability, privacy, and trustlessness in election processes. The protocol distributes the election key among a set of key wardens through distributed key generation, coordinates the process through Ethereum smart contracts, and uses Ethereum data blobs for data availability. With a focus on accessibility, scalability, receipt-freeness, and automation, \davinci aims to facilitate high-frequency and low-cost voting, fostering mass adoption of voting and simplifying civil participation.
+	%
+	Finally, the design of \davinci is grounded in practicality: all components are
+	implemented using current technologies and evaluated on production-grade hardware. In sum, the proposed architecture is not merely theoretical, but a viable solution ready for short-term deployment. The source code has been made open source, allowing practitioners and researchers to further investigate its details and potential for future uses.
 \end{abstract}
+
+% ---- Table of contents ----
 
 \setcounter{tocdepth}{3}
 \makeatletter
@@ -69,6 +71,8 @@
 \tableofcontents
 
 \newpage
+
+% ---- Main body ----
 
 \section{Introduction}
 \label{sec:intro}
@@ -102,10 +106,6 @@
 \label{sec:conclusions}
 \input{\secs/conclusions}
 
-%\section{Future work}
-%\label{sec:future-work}
-%\input{\secs/future-work}
-
 \section*{Acknowledgments}
 \addcontentsline{toc}{section}{\protect\numberline{}Acknowledgments}
 \label{sec:acknowledgments}
@@ -117,19 +117,12 @@ The authors would like to thank the following reviewers and contributors for the
 \bibliographystyle{splncs04}
 \bibliography{\bib/bibtex}
 
-\appendix
+% ---- Appendix ----
 
-%\section{Cryptographic primitives} %building blocks
-%\label{sec:cryptographic-primitives}
-%\input{\secs/cryptographic-primitives}
+\appendix
 
 \section{Cryptographic primitives} %building blocks
 \label{sec:cryptographic-primitives}
-\input{\secs/appendix-paper}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% READS
-% 1. Benaloh (2006), “Simple Verifiable Elections.” Classic formulation of end-to-end verifiability ideas. (USENIX/EVT proceedings). https://www.usenix.org/legacy/event/evt06/tech/full_papers/benaloh/benaloh.pdf
-% 2. Benaloh, J. and Tuinstra, D. “Receipt-Free Secret-Ballot Elections” Proceedings of the 26th ACM Symposium on Theory of Computing. Montreal, PQ (May 1994) 544–553. https://dl.acm.org/doi/pdf/10.1145/195058.195407 (<-- definitions of receipt-freeness, privacy, uncoercibility, correctness).
+\input{\secs/appendix}
 
 \end{document}
