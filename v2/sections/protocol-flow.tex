@@ -3,8 +3,8 @@
 In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, tally decryption, and election finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Figs.~\ref{fig:protocol-flow} and~\ref{fig:protocol-flow-results}.
 
 \begin{figure}[p]
-	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/protocol-flow.pdf}}
-	\caption{Message flow of an election: setup and voting. The voting loop runs for every batch; settlement is shown in L1-blob mode, in which the blobs are posted to Ethereum while the batch is proven. Fig.~\ref{fig:protocol-flow-results} continues the flow after the end of the voting period.}
+	\centerline{\includegraphics[width=0.94\textwidth,draft=false]{\figs/protocol-flow.pdf}}
+	\caption{Message flow of an election: setup and voting. The voting loop runs for every batch; settlement is shown in L1-blob mode, in which the blobs are posted to Ethereum while the batch is proven. Solid arrows are calls and dashed arrows replies or events; the \textsf{opt} fragments apply only in the given key mode. Fig.~\ref{fig:protocol-flow-results} continues the flow after the end of the voting period.}
 	\label{fig:protocol-flow}
 \end{figure}
 
@@ -171,10 +171,10 @@ Settlement is permissionless: the proof, the blob openings, and the continuity o
 \end{enumerate}
 If all checks pass, the registry sets the latest state root to $\stateroot^\new$, increases \voterscount by $\numvotes - \numoverwrites$ and \overwrittencount by \numoverwrites, increments \texttt{batchNumber}, records the current time as \lastvoteat, and emits \fn{ProcessStateTransitioned}; in L1-blob mode, it also emits \fn{ProcessStateTransitionedL1} with the Ethereum block and the versioned hash of every blob, so that anyone can locate the data on Ethereum.
 
-\begin{figure}[h]
-	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/l1-settlement.pdf}}
+\begin{figure}[p]
+	\centerline{\includegraphics[width=0.85\textwidth,draft=false]{\figs/l1-settlement.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{Settlement in L1-blob mode. The blob transactions are posted to Ethereum while the batch is proven; the settlement on the rollup proves, from a chain of Ethereum headers anchored at the rollup's L1 origin, that they are part of the Ethereum chain.}
+	\caption{Settlement in L1-blob mode. The blob transactions are posted to Ethereum while the batch is proven; the settlement on the rollup proves, from a chain of Ethereum headers anchored at the rollup's L1 origin, that they are part of the Ethereum chain. Here the blobs of the batch travel in two transactions, mined in blocks $B_1$ and $B_2$.}
 	\label{fig:l1-settlement}
 \end{figure}
 
@@ -194,14 +194,14 @@ where $\mathsf{end}$ is the end time and \lastvoteat the time of the latest sett
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/grace-window.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{The grace window. Honest sequencers stop admitting votes at the end time; transitions keep settling until \graceend, which every settlement resets to its own time plus \grace, up to \texttt{graceMaxTotal} after the end. Results can only be published after \graceend.}
+	\caption{The grace window. Honest sequencers stop admitting votes at the end time; transitions keep settling until \graceend, which every settlement resets to its own time plus \grace, up to \texttt{graceMaxTotal} after the end (Eq.~\eqref{eq:grace-end}). Results can only be published after \graceend. Sequencers flush their queues from shortly before the end. On OP Mainnet, \grace is 300\,s by default (the organizer may choose 240 to 600\,s), \texttt{graceMaxTotal} is 1800\,s, and \texttt{noticeMin} is 60\,s.}
 	\label{fig:grace-window}
 \end{figure}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/process-status.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{Statuses of a process in the registry. Solid transitions are made by the organizer; dashed transitions are made by the registry when results are requested or published.}
+	\caption{Statuses of a process in the registry. Solid transitions are made by the organizer; dashed transitions are made by the registry when results are requested or published. Transitions from the voting states apply to \texttt{READY} and \texttt{PAUSED} alike; a process can be paused only before its end, and the registry leaves a voting state only after the end time and the grace window.}
 	\label{fig:process-status}
 \end{figure}
 
@@ -222,7 +222,7 @@ After the grace window closes, the \hlget{\processregistry} smart contract stops
 
 In this final phase, the election results are published on-chain, together with the evidence of their correct computation. Fig.~\ref{fig:protocol-flow-results} shows the messages of both finalization paths.
 
-\begin{figure}[h]
+\begin{figure}[p]
 	\centerline{\includegraphics[width=0.85\textwidth,draft=false]{\figs/protocol-flow-results.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
 	\caption{Message flow of an election: decryption and finalization. The path depends on who holds the election key; in the threshold path, partial decryptions also wait for the organizer's reveal (locked mode) or for the council's decryption gate.}

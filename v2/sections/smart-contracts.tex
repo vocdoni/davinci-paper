@@ -5,7 +5,7 @@ The \davinci protocol operates on an Ethereum-compatible network, which serves a
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/smart-contracts.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{The \davinci smart contracts and the calls between them. The process registry is the main interface for election operations; it delegates proof verification, blob checks, census root checks, and threshold decryption to the other contracts. Council ceremonies are managed directly on the council manager, and sequencers may record L1 origins directly on the L1 blob verifier.}
+	\caption{The \davinci smart contracts and the calls between them. The process registry is the main interface for election operations; it delegates proof verification, blob checks, census root checks, and threshold decryption to the other contracts. Dashed contracts are used only in L1-blob mode (the L1 blob verifier and the \texttt{L1Block} predeploy) or by on-chain censuses (the census contract).}
 	\label{fig:smart-contracts}
 \end{figure}
 

@@ -20,7 +20,7 @@ Each ballot is defined as an array of integer values subject to a set of configu
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.85\textwidth, draft = false]{\figs/ballot-variables.pdf}
-	\caption{Schematic representation of the parameters that define a ballot in \davinci.}
+	\caption{A ballot in \davinci: an array of 16 fields, of which the first $n_f = \numfields$ are active and the rest must be 0.}
 	\label{fig:ballot-variables}
 \end{figure}
 \vspace{-0.6cm}
@@ -28,13 +28,13 @@ Each ballot is defined as an array of integer values subject to a set of configu
 \noi The ballot mode is stored in the state tree, and given to the ballot circuit, packed into a single integer below $2^{247}$, as shown in Fig.~\ref{fig:ballot-mode-packing}. The packing fixes the range of every parameter: \maxvalue and \minvalue are below $2^{48}$, \minvaluesum and \maxvaluesum below $2^{63}$, and \costexponent, \numfields, and \groupsize below $2^{8}$. When a process is created, the registry rejects a ballot mode that does not fit this packing or that violates $1 \le \numfields \le 16$, $\groupsize \le \numfields$, $\minvalue \le \maxvalue$, or $\minvaluesum \le \maxvaluesum$, and it rejects a process whose worst-case tally could not be decrypted, i.e., one with $\maxvalue \cdot \maxvoters > 10^{12}$.
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=0.85\textwidth,draft=false]{\figs/ballot-mode-packing.pdf}}
+	\centerline{\includegraphics[width=0.78\textwidth,draft=false]{\figs/ballot-mode-packing.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{Packing of the ballot mode into one integer. Numbers below the fields are the position of their least significant bit.}
+	\caption{Packing of the ballot mode into one integer. Numbers below the field boundaries are the bit positions at which the fields start; the widths of the fields are not to scale.}
 	\label{fig:ballot-mode-packing}
 \end{figure}
 
-\paragraph{Definition of constraints.} Given a ballot with $n_f = \numfields$ active fields, each filled with a value $v_i$ for $i = 1, \dots, n_f$, and cast by a voter with weight $\weight$, we enforce the following constraints (captured in Fig.~\ref{fig:ballot-variables}):
+\paragraph{Definition of constraints.} Given a ballot with $n_f = \numfields$ active fields, each filled with a value $v_i$ for $i = 1, \dots, n_f$, and cast by a voter with weight $\weight$, we enforce the following constraints:
 
 \begin{itemize}
 	\item $\groupsize \le \numfields = n_f$,

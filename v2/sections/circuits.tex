@@ -4,7 +4,7 @@ At the core of \davinci lie three proof statements that enforce the correctness 
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuits-flow.pdf}}
-	\caption{Flow of the voter's circuit and the sequencer's \ac{zkVM} programs.}
+	\caption{Flow of the voter's circuit and the sequencer's \ac{zkVM} programs. The batch program verifies the ballot proofs of a whole batch; the results program is used only when a single sequencer holds the election key.}
 	\label{fig:circuits-flow}
 \end{figure}
 
@@ -52,7 +52,7 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Fig.~\ref{fig:circui
 
 \begin{figure}[H]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuit1.pdf}}
-	\caption{Ballot circuit. Public values are framed in green, secret private values in red, and private values bound by \ballotinputshash in orange.}
+	\caption{Ballot circuit. Public values are filled in green, secret private values in red, and private values bound by \ballotinputshash in orange; operations and checks are grey.}
 	\label{fig:circuit-ballot}
 \end{figure}
 
@@ -169,21 +169,20 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 	\vspace{-0.3cm}
 
 \begin{figure}[p]
-	\centering
-	\includegraphics[angle=90,height=0.85\textheight,draft=false]{\figs/batch-program.pdf}
-	\caption{Batch program. The private input blocks (left) feed the groups of constraints (center), which produce the public outputs (right). Private values are framed in red, public values in green.}
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/batch-program.pdf}}
+	\caption{Batch program. The private input blocks (red, left) feed the groups of constraints (center), which produce the public outputs (green, right). The verdict combines all groups: \okflag is 1 only if every group passed, and \failmask records the groups that failed.}
 	\label{fig:batch-program}
 \end{figure}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=0.9\linewidth,draft=false]{\figs/smt-chain.pdf}}
-	\caption{Chain of state tree transitions proven by the batch program. Configuration leaves are read under the old root; then vote identifiers, ballots, refreshes, and the results accumulator are written in a fixed order, each transition starting from the root left by the previous one.}
+	\caption{Chain of state tree transitions proven by the batch program. Configuration leaves are read under the old root; then vote identifiers, ballots, refreshes, and the results accumulator are written in a fixed order, each transition starting from the root left by the previous one; $r_1$ to $r_3$ are the intermediate roots. $H$ is SHA-256 over the 64 coordinates of a ballot or accumulator; $B'$ is a re-encrypted voter ballot, $R'$ a re-encrypted refreshed ballot, and $A$ the results accumulator.}
 	\label{fig:smt-chain}
 \end{figure}
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/re-encryption.pdf}}
-	\caption{Re-encryption in the batch program. A single secret seed and the old state root start a chain of scalars, each consumed by exactly one active ciphertext, first of the voters' ballots and then of the refreshed ballots. The accumulator absorbs the new ballots, the inverse of the overwritten ones, and the encryptions of zero introduced by the refreshes.}
+	\caption{Re-encryption in the batch program. A single secret seed and the old state root start a chain of scalars, each consumed by exactly one active ciphertext, first of the voters' ballots and then of the refreshed ballots. The example has $n_f = 2$ active fields; inactive fields (id) must be the identity and consume no scalar, and $m = n + |\mathcal{R}|$. The accumulator absorbs the new ballots, the inverse of the overwritten ones, and the encryptions of zero introduced by the refreshes.}
 	\label{fig:re-encryption}
 \end{figure}
 
@@ -228,7 +227,7 @@ so, for instance, a batch of 512 new votes with 512 refreshes at $n_f = 16$ need
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/blob-layout.pdf}}
-	\caption{Layout of the cells of the blobs of a state transition.}
+	\caption{Layout of the cells of the blobs of a state transition. Slots are listed once, in increasing order, whether they hold a new vote, an overwrite, or a refresh ($n_{\mathsf{id}} = n$, $n_{\mathsf{up}} = n + |\mathcal{R}|$); vote identifiers enter the packed cells without their top bit. Numbers above the cells are bit offsets; widths are not to scale. The $T$ cells fill $\nblobs = \lceil T / 4096 \rceil \le 32$ blobs, and the registry opens every $(\blobcom_b, z_b, y_b)$ with the point-evaluation precompile.}
 	\label{fig:blob-layout}
 \end{figure}
 
@@ -270,7 +269,7 @@ The results program (\hlset{\resultsprogram}), illustrated in Fig.~\ref{fig:resu
 
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/results-program.pdf}}
-	\caption{Results program. Public values are framed in green and private values in red.}
+	\caption{Results program. Public values are filled in green and private values in red; $\pi^{\texttt{0x3}}$ and $\pi^{\texttt{0x4}}$ are the inclusion proofs of leaves \texttt{0x3} and \texttt{0x4} under \stateroot. The encryption key is also checked to be on the curve, in the prime-order subgroup, and not the identity.}
 	\label{fig:results-program}
 \end{figure}
 

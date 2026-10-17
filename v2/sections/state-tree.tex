@@ -8,7 +8,7 @@ The root of the state tree, denoted $\stateroot$, is committed on-chain and serv
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/state-tree.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{Structure of the state Merkle tree. The 64-bit key space is split into three namespaces: configuration parameters, encrypted ballot slots, and vote identifiers.}
+	\caption{Structure of the state tree, a sparse Merkle tree of depth 64 over SHA-256 whose root is the on-chain state root. The 64-bit key space is split into three namespaces, drawn not to scale: configuration parameters, encrypted ballot slots, and vote identifiers. $H$ denotes SHA-256, with the digest read as a big-endian integer; a leaf hashes as $H(\kappa_{\text{LE8}} \conc v_{\text{LE32}} \conc \texttt{0x01})$ and an internal node as $H(\textit{left} \conc \textit{right})$.}
 	\label{fig:state-tree}
 \end{figure}
 
