@@ -170,7 +170,7 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 
 \begin{landscape}
 	\centering
-	{\setkeys{Gin}{draft=false}\includegraphics[width=\linewidth]{\figs/batch-program.pdf}}
+	\includegraphics[width=\linewidth,draft=false]{\figs/batch-program.pdf}
 	\captionof{figure}{Batch program. The private input blocks (left) feed the groups of constraints (center), which produce the public outputs (right). Private values are framed in red, public values in green.}
 	\label{fig:batch-program}
 \end{landscape}
@@ -246,7 +246,7 @@ The results program (\hlset{\resultsprogram}), illustrated in Fig.~\ref{fig:resu
 	\end{itemize}
 	\noi The public values are 43 32-bit words: \okflag and \failmask in words 0 and 1, \stateroot in words 2 to 9, the low and high halves of $\text{results}_j$ in words $10 + 2(j-1)$ and $11 + 2(j-1)$, and, in word 42, the index of the first decryption proof that failed. The registry reads the first \numfields results.
 
-	\textbf{Private inputs}
+	\noi \textbf{Private inputs}
 	\begin{itemize}
 		\item \private $\encresults$: encrypted results accumulator stored in the state ($16$ ElGamal ciphertexts).
 		\item \private $\epk$: encryption public key.
@@ -265,9 +265,7 @@ The results program (\hlset{\resultsprogram}), illustrated in Fig.~\ref{fig:resu
 		\[\hlget{\CPVerify}_{\epk}\bigl(\encresults_j,\ \text{results}_j,\ \pi^{\mathrm{dec}}_j\bigr) = \true.\]
 		\item \emph{Results range}. Each result is a 64-bit integer, $0 \le \text{results}_j < 2^{64}$, which is below the order $t$ of the BabyJubjub prime-order subgroup, so the plaintext of each ciphertext is unique.
 	\end{itemize}
-	\vspace{-0.3cm}
 %
-\smallskip
 \noi The per-field decryption proofs $\pi^{\mathrm{dec}}_j$ are produced by the key holder, who decrypts the aggregated results, recovers each value by a bounded discrete-logarithm search, and attests, through a discrete-log-equality proof, that the decryption was performed correctly under the election key. By checking these proofs against the public key committed at leaf $\texttt{0x3}$, the program guarantees that the released tally corresponds exactly to the encrypted results accumulated in the final state, without ever exposing the decryption key inside the proof. Inactive fields hold the identity ciphertext, for which only the value zero can be proven. If any constraint fails, the program outputs zero in place of the root and the results, so a consumer that omitted the check of $\okflag$ still could not match a root or read a tally.
 
 \begin{figure}[h]
