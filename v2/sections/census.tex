@@ -49,7 +49,7 @@ where subscripts denote big-endian byte lengths and $\idx$ is a unique index ass
 		\midrule
 		1 & Off-chain static & Fixed Merkle root & Endpoint to obtain the census & The root fixed at creation \\
 		2 & Off-chain dynamic & Latest Merkle root, replaced by the organizer & Endpoint to obtain the latest census & The latest root only \\
-		3 & On-chain & Census contract (\censusvalidator) & Endpoint to obtain the census (sequencers rebuild it from the contract's events) & Any root the contract held since the creation block \\
+		3 & On-chain & Root at creation, for reference; the contract address is stored in \texttt{contractAddress} & Endpoint to obtain the census (sequencers rebuild it from the contract's events) & Any root the contract held since the creation block \\
 		4 & Credential service provider (\ac{CSP}) & Address of the \ac{CSP}'s signing key & Endpoint to obtain an eligibility credential & The \ac{CSP} address (signatures recovered in the proof) \\
 		\bottomrule
 	\end{tabular}
