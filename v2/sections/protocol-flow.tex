@@ -194,7 +194,7 @@ where $\mathsf{end}$ is the end time and \lastvoteat the time of the latest sett
 \begin{figure}[h]
 	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/grace-window.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
-	\caption{The grace window. Honest sequencers stop admitting votes at the end time; transitions keep settling until \graceend, which every settlement resets to its own time plus \grace, up to \texttt{graceMaxTotal} after the end (Eq.~\eqref{eq:grace-end}). Results can only be published after \graceend. Sequencers flush their queues from shortly before the end. On OP Mainnet, \grace is 300\,s by default (the organizer may choose 240 to 600\,s), \texttt{graceMaxTotal} is 1800\,s, and \texttt{noticeMin} is 60\,s.}
+	\caption{The grace window. Honest sequencers stop admitting votes at the end time; transitions keep settling until \graceend, which every settlement resets to its own time plus \grace, up to \texttt{graceMaxTotal} after the end (Eq.~\eqref{eq:grace-end}). Results can only be published after \graceend. Sequencers flush their queues from shortly before the end.}
 	\label{fig:grace-window}
 \end{figure}
 
