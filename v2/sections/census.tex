@@ -40,24 +40,19 @@ where subscripts denote big-endian byte lengths and $\idx$ is a unique index ass
 
 \begin{table}[H]
 	\centering
-	\renewcommand{\arraystretch}{1.25}
-	\small
-	\begin{tabular}{|P{1.3cm}|P{2.2cm}|P{3.1cm}|P{3.3cm}|P{3.9cm}|}
-		\hline
-		Origin & Model & \censusroot & \censusuri & Root a state transition may use \\
-		\hline
-		1 & Off-chain static & Fixed Merkle root & Endpoint to obtain the census & The root fixed at creation \\
-		\hline
-		2 & Off-chain dynamic & Latest Merkle root, replaced by the organizer & Endpoint to obtain the latest census & The latest root only \\
-		\hline
-		3 & On-chain & Census contract (\censusvalidator) & Endpoint to obtain the census, or none & Any root the contract held since the creation block \\
-		\hline
-		4 & Credential service provider (\ac{CSP}) & Address of the \ac{CSP}'s signing key & Endpoint to obtain an eligibility credential & The \ac{CSP} address (signatures recovered in the proof) \\
-		\hline
-	\end{tabular}
-	\vspace{0.5cm}
 	\caption{Summary of census configurations supported by the \davinci protocol.}
 	\label{tab:census-models}
+	\small
+	\begin{tabular}{c p{0.17\textwidth} p{0.2\textwidth} p{0.22\textwidth} p{0.26\textwidth}}
+		\toprule
+		\textbf{Origin} & \textbf{Model} & \textbf{\censusroot} & \textbf{\censusuri} & \textbf{Root a state transition may use} \\
+		\midrule
+		1 & Off-chain static & Fixed Merkle root & Endpoint to obtain the census & The root fixed at creation \\
+		2 & Off-chain dynamic & Latest Merkle root, replaced by the organizer & Endpoint to obtain the latest census & The latest root only \\
+		3 & On-chain & Census contract (\censusvalidator) & Endpoint to obtain the census (sequencers rebuild it from the contract's events) & Any root the contract held since the creation block \\
+		4 & Credential service provider (\ac{CSP}) & Address of the \ac{CSP}'s signing key & Endpoint to obtain an eligibility credential & The \ac{CSP} address (signatures recovered in the proof) \\
+		\bottomrule
+	\end{tabular}
 \end{table}
 
-\paragraph{Uniqueness of ballot slots.} Since a voter's ballot slot is derived from the voter's address by a hash truncated to 63 bits (Section~\ref{sec:vocdoni-protocol:state-tree}), two distinct members of a Merkle census could, in principle, be assigned the same slot, and the ballot of one would then overwrite the ballot of the other. Finding an address whose slot collides with one of $N$ existing members requires about $2^{63}/N$ key generations, which is feasible for a determined attacker with large $N$. Slot uniqueness is therefore part of the census model: on-chain census contracts reject a registration whose slot is already taken, sequencers refuse any off-chain census that contains two members with the same slot, and the batch program rejects a batch that writes the same slot twice. For a \ac{CSP} census, the slot is derived from the index, and the \ac{CSP} must assign a distinct index to each voter.
+\paragraph{Uniqueness of ballot slots.} Since a voter's ballot slot is derived from the voter's address by a hash truncated to 63 bits (Section~\ref{sec:vocdoni-protocol:state-tree}), two distinct members of a Merkle census could, in principle, be assigned the same slot, and the ballot of one would then overwrite the ballot of the other. Finding an address whose slot collides with one of $M$ existing members requires about $2^{63}/M$ key generations, which is feasible for a determined attacker when $M$ is large. Slot uniqueness is therefore part of the census model: on-chain census contracts reject a registration whose slot is already taken, sequencers refuse any off-chain census that contains two members with the same slot, and the batch program rejects a batch that writes the same slot twice. For a \ac{CSP} census, the slot is derived from the index, and the \ac{CSP} must assign a distinct index to each voter.

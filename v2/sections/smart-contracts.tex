@@ -35,6 +35,7 @@ The registry is deployed with immutable parameters that pin the cryptographic id
 		\texttt{latestStateRoot} & Root of the state tree after the last settled transition. \\
 		\voterscount, \overwrittencount & Number of distinct ballot slots written, and number of overwrites. \\
 		\texttt{batchNumber}, \lastvoteat & Number of settled transitions, and time of the last one. \\
+		\texttt{creationBlock} & Block of creation; lower bound for the roots an on-chain census may use. \\
 		\grace & Idle window during which transitions keep settling after the end. \\
 		\metadatauri, \texttt{metadataHash} & Location and SHA-256 digest of the metadata document. \\
 		\texttt{result} & Decrypted tally, one value per ballot field. \\

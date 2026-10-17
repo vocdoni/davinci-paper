@@ -52,18 +52,18 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Fig.~\ref{fig:circui
 
 \begin{figure}[H]
 	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/circuit1.pdf}}
-	\caption{Ballot circuit. Public values are framed in green and private values in red.}
+	\caption{Ballot circuit. Public values are framed in green, secret private values in red, and private values bound by \ballotinputshash in orange.}
 	\label{fig:circuit-ballot}
 \end{figure}
 
-\noi The ballot proof does not authenticate the voter: anyone who knows a voter's address could prove a ballot for it. Authentication is provided by a separate signature over the vote identifier, $\signature = \hlget{\SSign}_{\sk}(\voteid)$, produced with the voter's secp256k1 key and verified by the batch program. Because the vote identifier is bound to the encrypted ballot through $k$ and through \ballotinputshash, the signature authorizes exactly one encrypted ballot.
+\noi The ballot proof does not authenticate the voter: anyone who knows a voter's address could prove a ballot for it. Authentication is provided by a separate signature over the vote identifier, $\signature = \hlget{\SSign}_{\sk}(\voteid)$, produced with the voter's SECP256K1 key and verified by the batch program. Because the vote identifier is bound to the encrypted ballot through $k$ and through \ballotinputshash, the signature authorizes exactly one encrypted ballot.
 
 \subsubsection{Batch program}
 \label{sec:vocdoni-protocol:circuits:batch}
 
-The batch program (\hlset{\batchprogram}), illustrated in Fig.~\ref{fig:batch-program}, is executed by the sequencer to update the global state of the election with a batch of votes. Its purpose is to verify that every vote in the batch is valid, authenticated, and cast by an eligible voter; that the batch has been correctly incorporated into the state Merkle tree, with overwrites and vote identifiers handled consistently; that every stored ballot is a correct reencryption of the ballot the voter proved; that a sample of other stored ballots has been silently reencrypted; that the encrypted results accumulator is updated accordingly; and that the data published in Ethereum blobs is exactly the data needed to rebuild the new state. The correctness of an execution is attested by a ZisK proof wrapped in PlonK over BN254, which we call the \textit{batch proof} and denote as $\hlset{\batchproof}$. It is submitted on-chain and verified by the \hlget{\processregistry} smart contract, ensuring that every accepted state transition complies with the protocol rules.
+The batch program (\hlset{\batchprogram}), illustrated in Fig.~\ref{fig:batch-program}, is executed by the sequencer to update the global state of the election with a batch of votes. Its purpose is to verify that every vote in the batch is valid, authenticated, and cast by an eligible voter; that the batch has been correctly incorporated into the state Merkle tree, with overwrites and vote identifiers handled consistently; that every stored ballot is a correct re-encryption of the ballot the voter proved; that a sample of other stored ballots has been silently re-encrypted; that the encrypted results accumulator is updated accordingly; and that the data published in Ethereum blobs is exactly the data needed to rebuild the new state. The correctness of an execution is attested by a ZisK proof wrapped in PlonK over BN254, which we call the \textit{batch proof} and denote as $\hlset{\batchproof}$. It is submitted on-chain and verified by the \hlget{\processregistry} smart contract, ensuring that every accepted state transition complies with the protocol rules.
 
-To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le n \le 1024$, of which $w$ overwrite a ballot already stored in the state and $n - w$ are the first ballot of their voter. In addition, the sequencer selects a set $\mathcal{R}$ of $r \le 2048$ occupied slots, not written by the batch, whose ballots it reencrypts. Each ballot consists of $16$ ElGamal ciphertexts over BabyJubjub, of which the first $n_f = \numfields$ are active and the rest are the identity. We write $B_i$ for the encrypted ballot proven by voter $i$, $B'_i$ for its reencryption, and $B^\old_i$ for the stored ballot that it overwrites, if any; $R_j$ and $R'_j$ for the stored ballot of the $j$-th refreshed slot and its reencryption; and $A$ for the results accumulator \encresults. A ballot is a vector of 16 ciphertexts, and $B_{i,f}$ denotes its $f$-th ciphertext. In the following, we describe the public outputs, the private inputs, and the constraints of the batch program. The private inputs are organized as the program reads them, in five blocks: ballot proofs, state transition, eligibility, reencryption, and blobs.
+To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le n \le 1024$, of which $w$ overwrite a ballot already stored in the state and $n - w$ are the first ballot of their voter. In addition, the sequencer selects a set $\mathcal{R}$ of $|\mathcal{R}| \le 2048$ occupied slots, not written by the batch, whose ballots it re-encrypts. Each ballot consists of $16$ ElGamal ciphertexts over BabyJubjub, of which the first $n_f = \numfields$ are active and the rest are the identity. We write $B_i$ for the encrypted ballot proven by voter $i$, $B'_i$ for its re-encryption, and $B^\old_i$ for the stored ballot that it overwrites, if any; $R_j$ and $R'_j$ for the stored ballot of the $j$-th refreshed slot and its re-encryption; and $A$ for the results accumulator \encresults. A ballot is a vector of 16 ciphertexts, and $B_{i,f}$ denotes its $f$-th ciphertext. In the following, we describe the public outputs, the private inputs, and the constraints of the batch program. The private inputs are organized as the program reads them, in five blocks: ballot proofs, state transition, eligibility, re-encryption, and blobs.
 
 	\vspace{0.3cm}
 	\noi \textbf{Public outputs}
@@ -84,23 +84,23 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 		%
 		\item \private $\processid$: election identifier.
 		\item \private $\{\merkleInclusionPf^{\kappa}\}_{\kappa \in \{\texttt{0x0}, \texttt{0x2}, \texttt{0x3}, \texttt{0x6}, \texttt{0x7}\}}$: inclusion proofs of the configuration leaves \processid, \ballotmode, \epk, \censusorigin, and \ballotvkhash under $\stateroot^\old$.
-		\item \private $\{\tau^{\voteid}_i\}_{i=1}^{n}$, $\{\tau^{\encryptedballot}_i\}_{i=1}^{n}$, $\{\tau^{\mathcal{R}}_j\}_{j=1}^{r}$, $\tau^{\encresults}$: chains of tree transitions that insert the vote identifiers, write the ballots, refresh the sample, and update the results accumulator (see below).
-		\item \private $\{\reencryptedballot_i\}_{i=1}^{n}$: the reencrypted ballots written to the voters' slots.
+		\item \private $\{\tau^{\voteid}_i\}_{i=1}^{n}$, $\{\tau^{\encryptedballot}_i\}_{i=1}^{n}$, $\{\tau^{\mathcal{R}}_j\}_{j=1}^{|\mathcal{R}|}$, $\tau^{\encresults}$: chains of tree transitions that insert the vote identifiers, write the ballots, refresh the sample, and update the results accumulator (see below).
+		\item \private $\{\reencryptedballot_i\}_{i=1}^{n}$: the re-encrypted ballots written to the voters' slots.
 		\item \private $\{\encryptedballot_i^\old\}$: the $w$ stored ballots that the batch overwrites.
-		\item \private $\{\encryptedballot^{\mathcal{R}}_j\}_{j=1}^{r}$: the stored ballots of the refreshed slots.
+		\item \private $\{\encryptedballot^{\mathcal{R}}_j\}_{j=1}^{|\mathcal{R}|}$: the stored ballots of the refreshed slots.
 		\item \private $\encresults^\old$: current accumulator of votes. \\
 		%
 		\item \private $\{\censuspf_i\}_{i=1}^{n}$: census membership proofs (Merkle paths, or \ac{CSP} signatures with their indexes and weights).\\
 		%
 		\item \private $\epk$: encryption public key.
-		\item \private $\seed$: secret seed of the batch, from which all reencryption randomness is derived.
+		\item \private $\seed$: secret seed of the batch, from which all re-encryption randomness is derived.
 		\item \private $\{\encryptedballot_i\}_{i=1}^{n}$: the voters' encrypted ballots, as proven.\\
 		%
 		\item \private $\{\blobcom_b\}_{b=1}^{\nblobs}$: \ac{KZG} commitments to the blobs.
 	\end{itemize}
 	\textbf{Constraints} \\ \vspace{-0.4cm}
 	\begin{itemize}
-		\item \emph{Ballot proof verification.} Every ballot proof is valid under the ballot verification key of the election. The program first checks that the key is the one committed in the state, $\Sha(\mathsf{vk}) = \ballotvkhash$, and that all proof points are on their curves. It then verifies the $n$ proofs at once with a randomized batch check~\cite{bellare1998batch}: it derives coefficients $\rho_1 = 1$ and $\rho_i = \mathsf{lo}_{128}\bigl(\Sha(\Sha(T) \conc \mathsf{LE64}(i-1))\bigr)$ for $i \ge 2$ from a transcript $T$ of all proofs and public inputs, and checks the single pairing equation obtained as the $\rho$-weighted product of the $n$ Groth16 verification equations, computing every scalar multiplication itself. A batch containing an invalid proof passes this check with probability at most $2^{-128}$. For every $i \in \{1,\dots,n\}$, this establishes
+		\item \emph{Ballot proof verification.} Every ballot proof is valid under the ballot verification key of the election. The program first checks that the key is the one committed in the state, $\Sha(\mathsf{vk}) = \ballotvkhash$, where the key is serialized as its points $\alpha, \beta, \gamma, \delta$ and the coefficients of $L$, each coordinate as four 64-bit little-endian limbs, and the digest is read as a big-endian integer. It also checks that all proof points are on their curves and not the identity, and that the $\BN{\G}_2$ points of the key are in the prime-order subgroup. It then verifies the $n$ proofs at once with a randomized batch check~\cite{bellare1998batch}: it derives coefficients $\rho_1 = 1$ and $\rho_i = \mathsf{lo}_{128}\bigl(\Sha(\Sha(T) \conc \mathsf{LE64}(i-1))\bigr)$ for $i \ge 2$ from the transcript $T = \texttt{"groth16-batch-v2"} \conc A_1 \conc B_1 \conc C_1 \conc x_1 \conc \cdots \conc A_n \conc B_n \conc C_n \conc x_n$ of all proofs $(A_i, B_i, C_i)$ and public inputs $x_i$, encoded as raw limbs (a zero coefficient is replaced by $1$), and checks the single pairing equation obtained as the $\rho$-weighted product of the $n$ Groth16 verification equations, computing every scalar multiplication itself. A batch containing an invalid proof passes this check with probability at most $2^{-128}$. For every $i \in \{1,\dots,n\}$, this establishes
 			$$\hlget{\PVerify}\bigl(\ballotproof_i, (\address_i, \voteid_i, \ballotinputshash_i)\bigr) = \true.$$
 		%
 		\item \emph{Authentication.} Every ballot is signed by the owner of its address. For every $i$, the vote identifier is a 64-bit integer, a public key is recovered from the signature over the 32-byte message $\texttt{0x00}^{24} \conc \voteid_{i,\text{BE8}}$ in the Ethereum personal-message format, and its address is the voter's:
@@ -110,9 +110,9 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 		\begin{itemize}
 			\item If the census is a Merkle tree ($\censusorigin \in \{1,2,3\}$), then for every $i$ the program verifies a Merkle membership proof of the leaf $\address_i \cdot 2^{88} + \weight_i$ (Eq.~\eqref{eq:census-leaf}),
 			\[
-			\hlget{\censusTree}.\hlget{\MTVerify}\big(\address_i \cdot 2^{88} + \weight_i, \censuspf_i, \censusroot\big) = \true,
+			\hlget{\censusTree}.\hlget{\MTVerify}\big(\address_i \cdot 2^{88} + \weight_i, \idx_i, \censuspf_i, \censusroot\big) = \true,
 			\]
-			all proofs share the same root, which is published as \censusroot, no leaf appears twice, and every path has a canonical shape (at most 61 siblings, and no index bit beyond the path length).
+			where $\idx_i$ is the position carried by the proof; all proofs share the same root, which is published as \censusroot, no leaf appears twice, and every path has a canonical shape (at most 61 siblings, and no index bit beyond the path length).
 			\item If $\censusorigin = 4$ (\ac{CSP}), then for every $i$ the program recovers a public key from the credential over the message of Eq.~\eqref{eq:csp-message} and requires all credentials of the batch to recover the same key, whose address is published as \censusroot:
 			\begin{gather*}
 			\pk^{\mathsf{CSP}} = \hlget{\SPubKey}\big((\processid, \address_i, \weight_i, \idx_i), \censuspf_i\big),\\ \censusroot = \mathsf{low\text{-}20}\bigl(\hlget{\Keccak}(\pk^{\mathsf{CSP}})\bigr).
@@ -121,7 +121,7 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 		\end{itemize}
 		\item \emph{Binding.} The values used by the different checks are the same. For every $i$, the address of the census leaf (or credential) equals $\address_i$; the commitment recomputed from the values used below equals the one proven by the voter,
 			\[\ballotinputshash_i = \hlget{\Poseidon}(\processid, \ballotmode, \epk, \address_i, \voteid_i, B_i, \weight_i);\]
-		and the ballot written to the voter's slot is the reencryption computed below. The election key is the one committed in the state: $\Sha(\epk_{x,\text{BE32}} \conc \epk_{y,\text{BE32}})$ equals the value of leaf \texttt{0x3}. Finally, the blob block refers to the same \processid and $\stateroot^\old$ as the state block.
+		and the ballot written to the voter's slot is the re-encryption computed below. The election key is the one committed in the state: $\Sha(\epk_{x,\text{BE32}} \conc \epk_{y,\text{BE32}})$ equals the value of leaf \texttt{0x3}. Finally, the blob block refers to the same \processid and $\stateroot^\old$ as the state block.
 		%
 		\item \emph{Configuration.} The configuration of the election is read from the current state. The program verifies the inclusion proofs of the five configuration leaves under $\stateroot^\old$, in the order \texttt{0x0}, \texttt{0x2}, \texttt{0x3}, \texttt{0x6}, \texttt{0x7}, and requires the value of leaf \texttt{0x0} to be the \processid of the state block:
 			\[\hlget{\stateTree}.\hlget{\MTVerify}(v_\kappa, \kappa, \merkleInclusionPf^{\kappa}, \stateroot^\old) = \true, \qquad \kappa \in \{\texttt{0x0}, \texttt{0x2}, \texttt{0x3}, \texttt{0x6}, \texttt{0x7}\}.\]
@@ -134,24 +134,25 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 			\item For every vote $i = 1,\dots,n$, insert the vote identifier with value zero: $\hlget{\stateTree}.\hlget{\MTInsert}(\voteid_i, 0)$. An insertion of a key already present fails, so a vote identifier can never be reused.
 			\item For every vote $i = 1,\dots,n$, write the ballot digest to the voter's slot, with an insertion if the slot is empty and an update if it is occupied:
 			\[\hlget{\stateTree}.\hlget{\MTInsert}\bigl(\slot_i, \Sha(B'_i)\bigr) \quad \text{or} \quad \hlget{\stateTree}.\hlget{\MTUpdate}\bigl(\slot_i, \Sha(B'_i)\bigr).\] The number of updates is exactly $w$, and the value replaced by each update is $\Sha(B^\old_i)$.
-			\item For every refreshed slot $j = 1,\dots,r$, in strictly increasing order of slots,
+			\item For every refreshed slot $j = 1,\dots,|\mathcal{R}|$, in strictly increasing order of slots,
 			\[\hlget{\stateTree}.\hlget{\MTUpdate}\bigl(\slot^{\mathcal{R}}_j, \Sha(R'_j)\bigr),\]
 			where the replaced value is $\Sha(R_j)$. The refreshed slots are occupied, distinct, and disjoint from the slots written in step 2.
 			\item Update the accumulator: $\hlget{\stateTree}.\hlget{\MTUpdate}(\texttt{0x4}, \Sha(A^\new))$, where the replaced value is $\Sha(A^\old)$. This update is present if and only if the batch writes or refreshes at least one ballot.
 		\end{enumerate}
 		%
-		\item \emph{Reencryption.} Every ballot written to the tree is a reencryption of its source, with randomness derived from the secret seed. The program derives a chain of scalars from the seed and the current root,
-			\[ r_0 = \Sha(\texttt{"davinci-reenc-v1"} \conc \seed \conc \stateroot^\old) \bmod s, \qquad r_{t+1} = \Sha(r_t) \bmod s, \]
-		where $s$ is the order of the BN254 scalar field (the base field of BabyJubjub), and consumes one scalar per active ciphertext, first through the $n$ voters' ballots and then through the $r$ refreshed ballots, field by field (see Fig.~\ref{fig:reencryption}). A ciphertext $(C_1, C_2)$ that consumes $r_t$ becomes $(C_1 + r_t \cdot \BJ{G},\ C_2 + r_t \cdot \epk)$, that is,
-			\[B'_{i,f} = \hlget{\ReEnc}_{\epk}(B_{i,f}; r_t), \qquad R'_{j,f} = \hlget{\ReEnc}_{\epk}(R_{j,f}; r_{t'}).\]
+		\item \emph{Re-encryption.} Every ballot written to the tree is a re-encryption of its source, with randomness derived from the secret seed. The program derives a chain of scalars from the seed and the current root,
+			\[ \eta_0 = \Sha(\texttt{"davinci-reenc-v1"} \conc \seed \conc \stateroot^\old) \bmod s, \qquad \eta_{c+1} = \Sha(\eta_c) \bmod s, \]
+		where $s$ is the order of the BN254 scalar field (the base field of BabyJubjub), and consumes one scalar per active ciphertext, first through the $n$ voters' ballots and then through the $|\mathcal{R}|$ refreshed ballots, field by field (see Fig.~\ref{fig:re-encryption}). where the seed, the root, and every $\eta_c$ enter the hash as 32-byte big-endian integers. A ciphertext $(C_1, C_2)$ that consumes $\eta_c$ becomes $(C_1 + \eta_c \cdot \BJ{G},\ C_2 + \eta_c \cdot \epk)$, that is,
+			\[B'_{i,f} = \hlget{\ReEnc}_{\epk}(B_{i,f}; \eta_c), \qquad R'_{j,f} = \hlget{\ReEnc}_{\epk}(R_{j,f}; \eta_{c'}),\]
+			for the scalars $\eta_c$ and $\eta_{c'}$ that these ciphertexts consume.
 		Inactive fields must be the identity, before and after, in every ballot. The key $\epk$ must be on the curve, not the identity, and in the prime-order subgroup.
 		%
 		\item \emph{Results accumulation.} The new accumulator adds the new ballots, subtracts the overwritten ones, and adds the difference introduced by each refresh, which is an encryption of zero:
-			\[A^\new = A^\old + \sum_{i=1}^{n} B'_i - \sum_{\text{overwrites}} B^\old_i + \sum_{j=1}^{r} \bigl(R'_j - R_j\bigr),\]
+			\[A^\new = A^\old + \sum_{i=1}^{n} B'_i - \sum_{\text{overwrites}} B^\old_i + \sum_{j=1}^{|\mathcal{R}|} \bigl(R'_j - R_j\bigr),\]
 		where sums of ballots are field-wise homomorphic additions of ciphertexts (\hlget{\EncAdd}) and subtraction adds the inverse point.
 		%
 		\item \emph{Silent refresh.} The number of refreshed slots is large enough to hide the overwrites: with $o = \occupiedbefore$, it must hold that $o \ge w$ and
-			\[ r \ \ge\ \min\bigl(\mathsf{target}(n, w),\ o - w\bigr), \qquad \mathsf{target}(n, w) = \min\bigl(2048,\ \max(16,\ 2w,\ n)\bigr).\]
+			\[ |\mathcal{R}| \ \ge\ \min\bigl(\mathsf{target}(n, w),\ o - w\bigr), \qquad \mathsf{target}(n, w) = \min\bigl(2048,\ \max(16,\ 2w,\ n)\bigr).\]
 		%
 		\item \emph{Data blob}. The blob contents are rebuilt from the verified data and bound to the commitments.
 		\begin{itemize}
@@ -167,29 +168,30 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 	\end{itemize}
 	\vspace{-0.3cm}
 
-\begin{figure}[h]
-	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/batch-program.pdf}}
-	\caption{Batch program. The private input blocks (left) feed the groups of constraints (center), which produce the public outputs (right). Private values are framed in red, public values in green.}
+\begin{landscape}
+	\centering
+	{\setkeys{Gin}{draft=false}\includegraphics[width=\linewidth]{\figs/batch-program.pdf}}
+	\captionof{figure}{Batch program. The private input blocks (left) feed the groups of constraints (center), which produce the public outputs (right). Private values are framed in red, public values in green.}
 	\label{fig:batch-program}
-\end{figure}
+\end{landscape}
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/smt-chain.pdf}}
+	\centerline{\includegraphics[width=0.9\linewidth,draft=false]{\figs/smt-chain.pdf}}
 	\caption{Chain of state tree transitions proven by the batch program. Configuration leaves are read under the old root; then vote identifiers, ballots, refreshes, and the results accumulator are written in a fixed order, each transition starting from the root left by the previous one.}
 	\label{fig:smt-chain}
 \end{figure}
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/reencryption.pdf}}
-	\caption{Reencryption in the batch program. A single secret seed and the old state root start a chain of scalars, each consumed by exactly one active ciphertext, first of the voters' ballots and then of the refreshed ballots. The accumulator absorbs the new ballots, the inverse of the overwritten ones, and the encryptions of zero introduced by the refreshes.}
-	\label{fig:reencryption}
+	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/re-encryption.pdf}}
+	\caption{Re-encryption in the batch program. A single secret seed and the old state root start a chain of scalars, each consumed by exactly one active ciphertext, first of the voters' ballots and then of the refreshed ballots. The accumulator absorbs the new ballots, the inverse of the overwritten ones, and the encryptions of zero introduced by the refreshes.}
+	\label{fig:re-encryption}
 \end{figure}
 
-\paragraph{Verdict and public values.} Each group of constraints sets a bit of \failmask when it fails, and all groups are evaluated even after a failure, so the mask helps diagnose a rejected batch. The program sets $\okflag = 1$ if and only if every constraint holds. The public values form 46 32-bit words, laid out as in Table~\ref{tab:batch-outputs}; ZisK pads them to 64 words of 8 bytes each. The proof of an execution with $\okflag = 0$ is a valid proof of a rejected batch, so every consumer of a batch proof must check, besides the proof itself, that $\okflag = 1$ and $\failmask = 0$.
+\paragraph{Verdict and public values.} Each group of constraints sets a bit of \failmask when it fails, and all groups are evaluated even after a failure, so the mask helps diagnose a rejected batch. The program sets $\okflag = 1$ if and only if every constraint holds. The public values form 46 32-bit words, laid out as in Table~\ref{tab:batch-outputs}; a ZisK proof carries 64 such words, of which words 46 to 63 are zero, and on-chain the public values encode each word as 8 little-endian bytes, 512 bytes in total. The proof of an execution with $\okflag = 0$ is a valid proof of a rejected batch, so every consumer of a batch proof must check, besides the proof itself, that $\okflag = 1$ and $\failmask = 0$.
 
 \begin{table}[h]
 	\centering
-	\caption{Public values of the batch program, as 32-bit words. Roots and digests take eight words, in little-endian order.}
+	\caption{Public values of the batch program, as 32-bit words. Roots and digests take eight words, in little-endian order; the registry reads \censusroot as the big-endian integer obtained by reversing these bytes.}
 	\label{tab:batch-outputs}
 	\small
 	\begin{tabular}{p{0.14\textwidth} p{0.27\textwidth} p{0.49\textwidth}}
@@ -213,14 +215,14 @@ To formalize the setting, let the sequencer collect a batch of $n$ votes, $1 \le
 \label{sec:vocdoni-protocol:circuits:blobs}
 The blobs of a state transition carry exactly the data an observer needs to rebuild the new state from the old one, and nothing else. Every cell is a 32-byte big-endian element of the BLS12-381 scalar field. The program lays out the cells as follows (see Fig.~\ref{fig:blob-layout}):
 \begin{enumerate}
-	\item A header cell, $u + 2^{64} \cdot m$, where $m$ is the number of vote identifiers and $u$ the number of updated slots.
-	\item The list of the $m$ vote identifiers, in increasing order and without their most significant bit, followed by the list of the $u$ updated slots, in increasing order, packed four 63-bit integers per cell: $\mathsf{pack4}(a,b,c,d) = a \cdot 2^{189} + b \cdot 2^{126} + c \cdot 2^{63} + d$.
+	\item A header cell, $n_{\mathsf{up}} + 2^{64} \cdot n_{\mathsf{id}}$, where $n_{\mathsf{id}} = n$ is the number of vote identifiers and $n_{\mathsf{up}} = n + |\mathcal{R}|$ the number of updated slots.
+	\item The list of the $n_{\mathsf{id}}$ vote identifiers, in increasing order and without their most significant bit, followed by the list of the $n_{\mathsf{up}}$ updated slots, in increasing order, packed four 63-bit integers per cell: $\mathsf{pack4}(a,b,c,d) = a \cdot 2^{189} + b \cdot 2^{126} + c \cdot 2^{63} + d$.
 	\item For each updated slot, in the same order, the $2 n_f$ points of its new ballot, one cell per point: a point $(x,y)$ is encoded as $y + 2^{254} \cdot (x \bmod 2)$, which identifies the point given the curve equation.
 	\item Zero cells up to the end of the last blob.
 \end{enumerate}
 The updated slots include the new votes, the overwrites, and the refreshes, merged into one sorted list. An observer therefore cannot tell an overwrite from a refresh, which is the purpose of silent revoting; only the first write of a slot is distinguishable, as discussed in Section~\ref{sec:vocdoni-protocol:state-tree}. The results accumulator is not published: an observer that holds the previous state recomputes it as $\encresults^\old + \sum_{u} (B^\new_u - B^\old_u)$ over the updated slots, where $B^\old_u$ is the identity for a previously empty slot, which equals the accumulator of the constraint above. The total number of cells is
 \[
-T = 1 + \bigl\lceil (m + u)/4 \bigr\rceil + 2\, n_f\, u,
+T = 1 + \bigl\lceil (n_{\mathsf{id}} + n_{\mathsf{up}})/4 \bigr\rceil + 2\, n_f\, n_{\mathsf{up}},
 \]
 so, for instance, a batch of 512 new votes with 512 refreshes at $n_f = 16$ needs $1 + 384 + 32768 = 33153$ cells, that is, 9 blobs, and a batch of 512 overwrites, which requires 1024 refreshes, needs 13 blobs.
 
@@ -242,6 +244,8 @@ The results program (\hlset{\resultsprogram}), illustrated in Fig.~\ref{fig:resu
 		\item \public $\stateroot$: final root of the state tree.
 		\item \public $\{\text{results}_j\}_{j=1}^{16}$: decrypted tally, one 64-bit entry per ballot field.
 	\end{itemize}
+	The public values are 43 32-bit words: \okflag and \failmask in words 0 and 1, \stateroot in words 2 to 9, the low and high halves of $\text{results}_j$ in words $10 + 2(j-1)$ and $11 + 2(j-1)$, and, in word 42, the index of the first decryption proof that failed. The registry reads the first \numfields results.
+
 	\textbf{Private inputs}
 	\begin{itemize}
 		\item \private $\encresults$: encrypted results accumulator stored in the state ($16$ ElGamal ciphertexts).
@@ -266,7 +270,7 @@ The results program (\hlset{\resultsprogram}), illustrated in Fig.~\ref{fig:resu
 \noi The per-field decryption proofs $\pi^{\mathrm{dec}}_j$ are produced by the key holder, who decrypts the aggregated results, recovers each value by a bounded discrete-logarithm search, and attests, through a discrete-log-equality proof, that the decryption was performed correctly under the election key. By checking these proofs against the public key committed at leaf $\texttt{0x3}$, the program guarantees that the released tally corresponds exactly to the encrypted results accumulated in the final state, without ever exposing the decryption key inside the proof. Inactive fields hold the identity ciphertext, for which only the value zero can be proven. If any constraint fails, the program outputs zero in place of the root and the results, so a consumer that omitted the check of $\okflag$ still could not match a root or read a tally.
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=0.85\linewidth,draft=false]{\figs/results-program.pdf}}
+	\centerline{\includegraphics[width=\linewidth,draft=false]{\figs/results-program.pdf}}
 	\caption{Results program. Public values are framed in green and private values in red.}
 	\label{fig:results-program}
 \end{figure}

@@ -1,15 +1,15 @@
 % !TeX root = ../build/main.tex
 
-In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, tally decryption, and election finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Fig.~\ref{fig:protocol-flow}.
+In this section we describe the overall flow of the \davinci voting protocol. An election is structured into five main phases: election setup, encryption key generation, voting period, tally decryption, and election finalization. Each phase specifies the interactions between the organizer, \keywardens, voters, sequencers, and the smart contracts that coordinate the election. An overview of the complete process is shown in Figs.~\ref{fig:protocol-flow} and~\ref{fig:protocol-flow-results}.
 
 \begin{figure}[p]
-	\centerline{\includegraphics[height=0.93\textheight,draft=false]{\figs/protocol-flow.pdf}}
-	\caption{Message flow of an election. The voting loop runs for every batch; settlement is shown in L1-blob mode, in which the blobs are posted to Ethereum while the batch is proven. The two alternative finalization paths depend on who holds the election key.}
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/protocol-flow.pdf}}
+	\caption{Message flow of an election: setup and voting. The voting loop runs for every batch; settlement is shown in L1-blob mode, in which the blobs are posted to Ethereum while the batch is proven. Fig.~\ref{fig:protocol-flow-results} continues the flow after the end of the voting period.}
 	\label{fig:protocol-flow}
 \end{figure}
 
 \subsubsection{Election setup}
-\label{sec:election-setup}
+\label{sec:vocdoni-protocol:flow:setup}
 
 For each new election, the organizer performs the following steps:
 
@@ -58,11 +58,11 @@ In this phase, the public encryption key ($\epk$) that voters will use to encryp
 	\label{fig:key-modes}
 \end{figure}
 
-\paragraph{\ac{DKG} automatic mode.} The \keywardens are the operators of a permissionless \ac{DKG} network~\cite{davinci-dkg}, which runs the non-interactive \ac{DKG} protocol of Appendix~\ref{sec:cryptographic-primitives:dkg} in \emph{epochs}. At the start of each epoch, a committee of $n$ operators is drawn by a public lottery among the registered operators, and each committee member submits one contribution that deals, with Feldman verifiable secret sharing~\cite{feldman1987practical}, shares of sixteen independent pool keys at once, together with a Groth16 proof that the contribution is well-formed and that every share is encrypted to its recipient. The \dkgmanager verifies these proofs, so that correct participation can be checked without revealing any secret. Once enough valid contributions are collected, a single proof computes the sixteen pool keys $P_0, \dots, P_{15}$ and a commitment to every member's share of each, and the epoch becomes live. Any $t$ of the $n$ committee members can then decrypt under any pool key, while no smaller coalition learns anything about the secrets. When a process is created in this mode, the \dkgadapter registers it as an application of the newest live epoch, under an application identifier that embeds the adapter's address and a salt derived from the chain, the registry, and \processid, so that no other party can claim it. The application is assigned a free pool key $P_j$, which becomes the election key, $\epk = P_j$.
+\paragraph{\ac{DKG} automatic mode.} The \keywardens are the operators of a permissionless \ac{DKG} network~\cite{davinci-dkg}, which runs the non-interactive \ac{DKG} protocol of Appendix~\ref{sec:cryptographic-primitives:dkg} in \emph{epochs}. At the start of each epoch, a committee of $\nu$ operators is drawn by a public lottery among the registered operators, and each committee member submits one contribution that deals, with Feldman verifiable secret sharing~\cite{feldman1987practical}, shares of sixteen independent pool keys at once, together with a Groth16 proof that the contribution is well-formed and that every share is encrypted to its recipient. The \dkgmanager verifies these proofs, so that correct participation can be checked without revealing any secret. Once enough valid contributions are collected, a single proof computes the sixteen pool keys $P_0, \dots, P_{15}$ and a commitment to every member's share of each, and the epoch becomes live. Any $\theta$ of the $\nu$ committee members, where $\theta$ is the threshold of the epoch, can then decrypt under any pool key, while no smaller coalition learns anything about the secrets. When a process is created in this mode, the \dkgadapter registers it as an application of the newest live epoch, under an application identifier that embeds the adapter's address and a salt derived from the chain, the registry, and \processid, so that no other party can claim it. The application is assigned a free pool key $P_j$, which becomes the election key, $\epk = P_j$.
 
-\paragraph{\ac{DKG} locked mode.} The organizer generates a key pair $(\sk_{\mathsf{org}}, \pk_{\mathsf{org}})$ and provides $\pk_{\mathsf{org}}$, together with a Schnorr proof of possession of $\sk_{\mathsf{org}}$, at creation. The election key is $\epk = P_j + \pk_{\mathsf{org}}$, and the \ac{DKG} contracts refuse every decryption of the application until the organizer reveals $\sk_{\mathsf{org}}$ on-chain, which they check against $\pk_{\mathsf{org}}$. The organizer thus decides when the tally can be opened, but not what it contains, and not even $t$ colluding committee members can open it alone. Losing $\sk_{\mathsf{org}}$ makes the tally permanently undecryptable.
+\paragraph{\ac{DKG} locked mode.} The organizer generates a key pair $(\sk_{\mathsf{org}}, \pk_{\mathsf{org}})$ and provides $\pk_{\mathsf{org}}$, together with a Schnorr proof of possession of $\sk_{\mathsf{org}}$, at creation. The election key is $\epk = P_j + \pk_{\mathsf{org}}$, and the \ac{DKG} contracts refuse every decryption of the application until the organizer reveals $\sk_{\mathsf{org}}$ on-chain, which they check against $\pk_{\mathsf{org}}$. The organizer thus decides when the tally can be opened, but not what it contains, and not even $\theta$ colluding committee members can open it alone. Losing $\sk_{\mathsf{org}}$ makes the tally permanently undecryptable.
 
-\paragraph{Council mode.} The \keywardens are the members of a council: up to sixteen participants invited by an organizer, who run a dedicated key ceremony on the \councilmanager~\cite{davinci-council}. Each member deals a Feldman sharing of a random secret with a Groth16 proof of correct dealing, the election key is the sum of the dealers' public constants, and any $t$ members can decrypt. A council ceremony also fixes when decryption may start, either on a scheduled date or when the organizer of the ceremony opens it, optionally with a fallback date. Several processes may be bound to the same ceremony, provided that the ceremony organizer has allowed the registry's \counciladapter and has authorized the account creating each process; all of them share the ceremony's key.
+\paragraph{Council mode.} The \keywardens are the members of a council: up to sixteen participants invited by an organizer, who run a dedicated key ceremony on the \councilmanager~\cite{davinci-council}. Each member deals a Feldman sharing of a random secret with a Groth16 proof of correct dealing, the election key is the sum of the dealers' public constants, and any $\theta$ of its $\nu$ members can decrypt, for a threshold $\theta$ fixed when the ceremony is created. A council ceremony also fixes when decryption may start, either on a scheduled date or when the organizer of the ceremony opens it, optionally with a fallback date. Several processes may be bound to the same ceremony, provided that the ceremony organizer has allowed the registry's \counciladapter and has authorized the account creating each process; all of them share the ceremony's key.
 
 \paragraph{Sequencer mode.} When the organizer accepts a weaker trust model, a single sequencer acts as the only \keywarden. Before creating the process, the organizer requests from a sequencer the key for the (predictable) identifier \processid. The sequencer derives the secret key from a master secret,
 \[ \sk = \mathsf{HMAC}\text{-}\Sha\bigl(\mathsf{master},\ \texttt{"davinci-election-key-v1"} \conc \texttt{chainID} \conc \texttt{registry} \conc \processid\bigr), \]
@@ -121,7 +121,7 @@ A voter may repeat these steps any number of times while the voting period is op
 Accepted votes are queued, one queue per slot, and their status becomes \emph{pending}; a vote then moves through the states of Fig.~\ref{fig:vote-lifecycle}.\\
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=0.9\textwidth,draft=false]{\figs/vote-lifecycle.pdf}}
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/vote-lifecycle.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
 	\caption{Lifecycle of a vote in a sequencer. A batch that loses a settlement race, or that the registry refuses while the election is paused, returns its votes to the queue; votes still queued when the grace window closes, or that the program rejects, end in error.}
 	\label{fig:vote-lifecycle}
@@ -130,7 +130,7 @@ Accepted votes are queued, one queue per slot, and their status becomes \emph{pe
 \noi \textbf{(c) Vote batching.} A sequencer seals a batch from the queue when it holds enough votes, when its oldest vote has waited long enough, or when the end of the voting period approaches. Waiting for several distinct slots before sealing mixes the votes of different voters in one transition; each wait carries a random jitter, so the settlement time of a batch reveals little about when its votes were cast. The batch takes the oldest vote of each slot, in arrival order, and is sized so that its proof and settlement fit before the deadline of the election, that it respects \maxvoters, and that its blobs fit the limit of the settlement mode. To build the batch, the sequencer:
 \begin{enumerate}
 	\item Draws a fresh secret $\seed$ and a uniformly random refresh set $\mathcal{R}$ of occupied slots not written by the batch, of the size required by the batch program, from the operating system's random number generator. Both exist only in memory, for this batch, and are never logged or stored.
-	\item Reencrypts every ballot along the scalar chain of the seed and the refreshed ballots after them (see Section~\ref{sec:vocdoni-protocol:circuits:batch}).
+	\item Re-encrypts every ballot along the scalar chain of the seed and the refreshed ballots after them (see Section~\ref{sec:vocdoni-protocol:circuits:batch}).
 	\item Applies the batch to a copy of its state tree, producing the chains of tree transitions, the new results accumulator, and the new root.
 	\item Lays out the blob cells, computes the \ac{KZG} commitment $\blobcom_b$ of each blob, the evaluation point $z_b$, the value $y_b = p_b(z_b)$, and the opening proof $\openproof_b$ (see Section~\ref{sec:vocdoni-protocol:circuits:blobs}).
 	\item Computes the public values it expects the batch program to output.
@@ -141,12 +141,12 @@ A batch may reach the chain even if its sequencer later drops it, for instance a
 \label{sec:vocdoni-protocol:flow:settlement}
 The sequencer sends the private inputs of the batch to its prover and obtains the batch proof,
 \begin{align*}
-	(\publicvalues, \batchproof) = {} & \hlget{\VMProve}\bigl(\hlget{\batchprogram},\\ & \witness = (\text{ballot proofs, state transition, eligibility, reencryption, blobs})\bigr).
+	(\publicvalues, \batchproof) = {} & \hlget{\VMProve}\bigl(\hlget{\batchprogram},\\ & \witness = (\text{ballot proofs, state transition, eligibility, re-encryption, blobs})\bigr).
 \end{align*}
 Before using it, the sequencer checks that the proof is valid under the pinned program key and setup, that $\okflag = 1$, and that every public value equals the value it computed itself. It then settles the batch in one of the two data availability modes of the registry.
 
 \begin{itemize}
-	\item \emph{Blob mode} (registry on Ethereum). The sequencer sends a single blob-carrying transaction that carries the $\nblobs \le 6$ blobs of the batch and calls
+	\item \emph{Blob mode} (registry on a chain with native blob transactions, such as Ethereum). The sequencer sends a single blob-carrying transaction that carries the $\nblobs \le 6$ blobs of the batch and calls
 	\begin{align*} \fn{submitStateTransition}\bigl(&\processid, \publicvalues, \batchproof,\\ &\{\blobcom_b\}, \{y_b\}, \{\openproof_b\}\bigr), \end{align*}
 	where $\openproof_b$ is the \ac{KZG} opening proof of blob $b$ at $z_b$.
 	The registry reads the versioned hashes of the blobs of its own transaction.
@@ -163,7 +163,7 @@ Settlement is permissionless: the proof, the blob openings, and the continuity o
 	\item \censusroot is accepted for the census origin of the process (Table~\ref{tab:census-models}); for an on-chain census, the registry asks the census contract for the last block at which the root was current, and requires it to be between the creation block of the process and the current block.
 	\item \occupiedbefore equals the process's \voterscount, the number of distinct slots written so far.
 	\item The batch adds at least one vote, and $\voterscount + (\numvotes - \numoverwrites) \le \maxvoters$.
-	\item There are exactly \nblobs commitments, evaluations, and opening proofs, $\nblobs \ge 1$, and as many versioned hashes: in blob mode, the transaction carries no blob beyond the first \nblobs; in L1-blob mode, the L1 proof yields exactly \nblobs versioned hashes.
+	\item There are exactly \nblobs commitments, evaluations, and opening proofs, $\nblobs \ge 1$, each commitment and opening proof is 48 bytes long, and there are as many non-zero versioned hashes: in blob mode, the transaction carries no blob beyond the first \nblobs; in L1-blob mode, the L1 proof yields exactly \nblobs versioned hashes.
 	\item The digest of the $(\blobcom_b, y_b)$ pairs equals \blobsdigest.
 	\item The ZisK verifier accepts the proof:
 	\[\hlget{\ziskverifier}.\fn{verifySnarkProof}(\texttt{batchProgramVK}, \rootc, \publicvalues, \batchproof).\]
@@ -198,7 +198,7 @@ where $\mathsf{end}$ is the end time and \lastvoteat the time of the latest sett
 \end{figure}
 
 \begin{figure}[h]
-	\centerline{\includegraphics[width=0.85\textwidth,draft=false]{\figs/process-status.pdf}}
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/process-status.pdf}}
 	\setlength{\abovecaptionskip}{5pt}
 	\caption{Statuses of a process in the registry. Solid transitions are made by the organizer; dashed transitions are made by the registry when results are requested or published.}
 	\label{fig:process-status}
@@ -211,7 +211,7 @@ The grace window lets a sequencer include votes cast before the end but settled 
 
 After the grace window closes, the \hlget{\processregistry} smart contract stops accepting new state updates, fixing the final state root and thus the aggregated encrypted results $\encresults$. Every sequencer that follows the election holds $\encresults$ in its own state tree, and the results can only be requested or published from this point on, which guarantees that the decrypted tally is that of the final state. How the tally is decrypted depends on the key mode.
 
-\paragraph{Threshold decryption (\ac{DKG} and council modes).} Any sequencer with a signing key submits the final accumulator $\encresults$, together with its inclusion proof $\merkleInclusionPf^{\encresults}$ under the latest state root, by calling \fn{requestResultsDecryption}. The registry checks that every coordinate of $\encresults$ is canonical, that $\Sha(\encresults)$ is the value of leaf \texttt{0x4} under the latest state root, moves the process to the ended status, and submits the ciphertext of every active field to the key-management contract through its adapter. Fields whose ciphertext is the identity decrypt to zero under any key and are recorded as zero without being submitted. A threshold of $t$ out of $n$ \keywardens\ then cooperate to decrypt each submitted ciphertext $(C_1, C_2)$: rather than reconstructing the election secret key, each participating warden $i$ publishes a partial decryption $D_i = s_i \cdot C_1$, where $s_i$ is its key share, together with a Groth16 proof that $D_i$ is consistent with its committed share. Once $t$ valid partial decryptions are available, anyone combines them by Lagrange interpolation, $M = C_2 - \sum_i \lambda_i D_i$, recovers the plaintext $m$ with $M = m \cdot \BJ{G}$ by a bounded discrete-logarithm search, and submits it; the key-management contract checks that $m$ is the correct combination (with a \ac{ZK} proof in the \ac{DKG} network, and by direct computation in the council) before storing it. In the locked mode, partial decryptions are only accepted after the organizer reveals $\sk_{\mathsf{org}}$, and the combination also removes its contribution. In the council mode, they are only accepted once the ceremony's decryption gate has opened. Because only the aggregated results are decrypted and never the individual ballots, voter privacy is preserved throughout the election, and the secret key is never reconstructed by any single party. Moving the process to the ended status when the decryption is requested matters: the plaintexts become public on the key-management contract before the registry records them, and an organizer that could still cancel the process could otherwise veto a tally after reading it.
+\paragraph{Threshold decryption (\ac{DKG} and council modes).} Any sequencer with a signing key submits the final accumulator $\encresults$, together with its inclusion proof $\merkleInclusionPf^{\encresults}$ under the latest state root, by calling \fn{requestResultsDecryption}. The registry checks that every coordinate of $\encresults$ is canonical, that $\Sha(\encresults)$ is the value of leaf \texttt{0x4} under the latest state root, moves the process to the ended status, and submits the ciphertext of every active field to the key-management contract through its adapter. Fields whose ciphertext is the identity decrypt to zero under any key and are recorded as zero without being submitted. A threshold of $\theta$ out of $\nu$ \keywardens\ then cooperate to decrypt each submitted ciphertext $(C_1, C_2)$: rather than reconstructing the election secret key, each participating warden $i$ publishes a partial decryption $D_i = \mathsf{sh}_i \cdot C_1$, where $\mathsf{sh}_i$ is its key share, together with a Groth16 proof that $D_i$ is consistent with its committed share. Once $\theta$ valid partial decryptions are available, anyone combines them by Lagrange interpolation, $M = C_2 - \sum_i \lambda_i D_i$, recovers the plaintext $m$ with $M = m \cdot \BJ{G}$ by a bounded discrete-logarithm search, and submits it; the key-management contract checks that $m$ is the correct combination (with a \ac{ZK} proof in the \ac{DKG} network, and by direct computation in the council) before storing it. In the locked mode, partial decryptions are only accepted after the organizer reveals $\sk_{\mathsf{org}}$, and the combination also removes its contribution. In the council mode, they are only accepted once the ceremony's decryption gate has opened. Because only the aggregated results are decrypted and never the individual ballots, voter privacy is preserved throughout the election, and the secret key is never reconstructed by any single party. Moving the process to the ended status when the decryption is requested matters: the plaintexts become public on the key-management contract before the registry records them, and an organizer that could still cancel the process could otherwise veto a tally after reading it.
 
 \paragraph{Sequencer decryption (sequencer mode).} The sequencer that holds $\sk$ decrypts each field $j$ of $\encresults$ as $M_j = C_{2,j} - \sk \cdot C_{1,j}$, recovers $\text{results}_j$ with $M_j = \text{results}_j \cdot \BJ{G}$ by a baby-step giant-step search bounded by $\maxvoters \cdot \maxvalue$, and produces a Chaum--Pedersen proof $\pi^{\mathrm{dec}}_j$ that $\log_{\BJ{G}} \epk = \log_{C_{1,j}} M_j$ (see Appendix~\ref{sec:cryptographic-primitives:encryption}). It can do so during the grace window, once nothing is pending, and submit the result as soon as the window closes, provided that the root has not changed.
 
@@ -219,7 +219,14 @@ After the grace window closes, the \hlget{\processregistry} smart contract stops
 \label{sec:vocdoni-protocol:finalization}
 \label{sec:vocdoni-protocol:flow:results}
 
-In this final phase, the election results are published on-chain, together with the evidence of their correct computation.
+In this final phase, the election results are published on-chain, together with the evidence of their correct computation. Fig.~\ref{fig:protocol-flow-results} shows the messages of both finalization paths.
+
+\begin{figure}[h]
+	\centerline{\includegraphics[width=0.85\textwidth,draft=false]{\figs/protocol-flow-results.pdf}}
+	\setlength{\abovecaptionskip}{5pt}
+	\caption{Message flow of an election: decryption and finalization. The path depends on who holds the election key.}
+	\label{fig:protocol-flow-results}
+\end{figure}
 
 \paragraph{Sequencer mode.} The key holder proceeds as follows:
 \begin{enumerate}
