@@ -1,57 +1,43 @@
 % !TeX root = ../build/main.tex
 
-The following section provides an overview of the DAVINCI protocol, describing its main phases and actors without delving into technical details. An election is governed by smart contracts deployed on Ethereum, which ensure transparency, enforce rules, and verify proofs. As shown in Fig.~\ref{fig:protocol-intuition}, the protocol consists of five main phases, from the setup of the election to the publication and verification of the final results. 
-%All the voting process is governed by the rules encoded in three smart contracts: the \textit{process management}, the \textit{sequencer registry}, and the \textit{results verification} smart contract. All these three contracts are deployed on the Ethereum blockchain, and ensure that the execution of all steps is transparent and unalterable. The protocol consists of five phases, as illustrated in Figure~\ref{fig:protocol-intuition} and described below. The first two occur during the preparation period, the subsequent two during the voting period, and the final one takes place in the tally period.
+The following section provides an overview of the DAVINCI protocol, describing its main phases and actors without delving into technical details. An election is governed by smart contracts deployed on a settlement chain, either Ethereum or an Ethereum rollup built on the OP Stack, which ensure transparency, enforce rules, and verify proofs. As shown in Fig.~\ref{fig:protocol-intuition}, the protocol consists of five main phases, from the setup of the election to the publication and verification of the final results. The numbered tags of the figure match the phases described below.
 
-\begin{figure}[h]	
-	\centerline{\includegraphics[width=490pt,draft=false]{\figs/protocol-intuition-flow.pdf}}
+\begin{figure}[h]
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/protocol-intuition-flow.pdf}}
 	\setlength{\abovecaptionskip}{5pt} % Space between figure and caption
-	\caption{Overview of the protocol flow.}
+	\caption{Overview of the protocol flow. Tags mark the phases: (1) election setup, (2) encryption key generation, (3a) vote casting and (3b) vote batching during the voting period, (4) tally decryption, and (5) election finalization.}
 	\label{fig:protocol-intuition}
-	%\setlength{\belowcaptionskip}{0pt} % Space after caption
 \end{figure}
 
-%\vspace{-0.5cm}
-
 \begin{enumerate}
-	\item \textit{Election setup}. 
-	In the first phase, the \emph{organizer} gathers all census data and generates a cryptographic commitment to this data. %using a Merkle tree (MT) root. 
-	Additionally, the organizer defines the voting parameters, including the number of voting options and the vote-counting mechanism (e.g. weighted voting, quadratic voting, etc.). Once these details are set, the organizer submits a transaction to the process management smart contract on the Ethereum blockchain. This transaction publicly records the voting parameters and census commitment, ensuring transparency and preventing any subsequent alterations to the voting setup.\\
+	\item \textit{Election setup}.
+	In the first phase, the \emph{organizer} gathers all census data and generates a cryptographic commitment to this data. Additionally, the organizer defines the voting parameters, including the number of ballot fields, the rules a valid ballot must satisfy (e.g., single choice, approval, weighted or quadratic voting), the voting period, and the maximum number of voters. The organizer also chooses who will hold the election key, as described in the next phase. Once these details are set, the organizer submits a transaction to the process registry smart contract. This transaction publicly records the voting parameters and the census commitment, and derives from them the initial state of the election, ensuring transparency and preventing any subsequent alterations to the voting setup.\\
 	%
-	\item \textit{Encryption key generation.} 
-	A designated group of participants, referred to as \emph{\keywardens}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a \ac{DKG} protocol, ensuring that no single party can control or reconstruct the corresponding private key independently.
-	%Sequencers have a dual role in the protocol. In addition to generating the encryption key, they are also responsible for collecting votes from voters during the election. Consequently, their public key and the necessary information to contact them off-chain must be registered in the sequencer registry smart contract. 
-	Once the encryption public key is securely computed and published in the smart contract, the voting period can start.\\
+	\item \textit{Encryption key generation.}
+	A designated group of participants, referred to as \emph{\keywardens}, collaboratively generate a shared encryption public key, which voters will use to encrypt their votes. This key is established through a \ac{DKG} protocol, ensuring that no single party can control or reconstruct the corresponding private key independently. In \davinci, the \keywardens are either a committee of permissionless operators, which prepares encryption keys in advance and hands one to each new election, or a council of members invited by the organizer. For elections in which the organizer accepts a weaker trust model, a single sequencer can also provide the key. In every case, the encryption public key is recorded in the process registry when the election is created, and the voting period can start.\\
 	%
-	\item \textit{Voting period}. 
+	\item \textit{Voting period}.
 	During the voting period, two actors interact continuously: \textit{voters}, who cast their encrypted ballots, and \emph{sequencers}, independent entities responsible for collecting, verifying, and processing these ballots before committing them to the shared state. Both processes, (\ref{sec:protocol-intuition:vote-casting}) ballot submission by voters and (\ref{sec:protocol-intuition:vote-batching}) vote batching by sequencers, occur continuously and in parallel throughout this phase.
 	The voting period remains open until the deadline defined by the organizer, allowing voters to submit or overwrite ballots at any time, while sequencers periodically process new submissions and update the election state accordingly.\\
-	
-	%to a separate entity called \textit{sequencers}, which are independent participants responsible for collecting, validating, and processing votes before committing them to the shared state. 
-			
+
 	\begin{enumerate}
 		\item \label{sec:protocol-intuition:vote-casting} \textit{Vote casting}.
-		Voters select their preferred choices according to the voting rules established by the organizer and captured in the process management smart contract. Instead of submitting their votes directly on-chain, they send them off-chain to a sequencer of their choice for processing.
-		To ensure privacy, votes are encrypted using the available encryption public key. Additionally, voters compute a unique vote identifier that will allow them to verify that their vote has been included in the final result. Alongside the encrypted vote and the vote identifier, each voter must also provide the following data: a proof of valid voting, demonstrating that the vote complies with the election rules; a proof of eligibility, verifying that they are registered in the census; and a proof of identity ownership, in the form of a digital signature, confirming that they are the legitimate voter and are not impersonating someone else. To mitigate coercion and vote-buying, the protocol allows voters to overwrite their vote any number of times during the voting phase. \\
+		Voters select their preferred choices according to the voting rules established by the organizer and captured in the process registry. Instead of submitting their votes directly on-chain, they send them off-chain to a sequencer of their choice for processing.
+		To ensure privacy, votes are encrypted using the election's encryption public key. Additionally, voters compute a unique vote identifier that will allow them to verify that their vote has been included in the final result. Alongside the encrypted vote and the vote identifier, each voter must also provide the following data: a proof of valid voting, demonstrating that the vote complies with the election rules; a proof of eligibility, verifying that they are registered in the census; and a proof of identity ownership, in the form of a digital signature, confirming that they are the legitimate voter and are not impersonating someone else. To mitigate coercion and vote-buying, the protocol allows voters to overwrite their vote any number of times during the voting phase; only the last ballot counts. \\
 		%
 		\item \label{sec:protocol-intuition:vote-batching} \textit{Vote batching}.
 		During this phase, sequencers collect encrypted votes from multiple voters along with their corresponding proofs, and verify the validity of these submissions. That is, sequencers
-		verify the signatures, to ensure the votes were cast by legitimate voters; they verify the proof of compliance, confirming that each vote adheres to the election voting rules, and the census membership proofs against the commitment to the census data that was originally registered in the process management smart contract. Once the sequencers have processed and verified all votes, they must prove that these verifications were performed correctly. Instead of submitting individual verifications for each vote, they generate a single \ac{ZK} proof that attests to the correctness of all verifications.
-		%they compress multiple individual verification into one.
-		Additionally, the sequencers reencrypt the votes and generate a proof of the correct reencryption computation. While this process does not alter the final tally, it prevents voters from decrypting their original vote. This step mitigates vote selling or coercion, as voters are no longer able to prove their choice to third parties. Finally, sequencers submit the reencrypted votes along with their verification and reencryption proofs to the process management smart contract. The smart contract verifies all the proofs provided by the sequencers to check that they complied with the protocol.\\
+		verify the signatures, to ensure the votes were cast by legitimate voters; they verify the proof of compliance, confirming that each vote adheres to the election voting rules; and they verify the census membership proofs against the commitment to the census data that was originally registered in the process registry. Valid votes are grouped into batches. For each batch, the sequencer reencrypts the votes, so that voters can no longer decrypt or recognize their own ballots, and also reencrypts a random sample of the ballots already stored in the state, so that an observer cannot tell a voter who overwrote a ballot from one whose ballot was merely refreshed. While this process does not alter the final tally, it prevents voters from proving their choice to third parties, which mitigates vote selling and coercion. The sequencer then updates the election state and the encrypted tally, and publishes the data of the batch in Ethereum data blobs.
+		Instead of submitting individual verifications for each vote, the sequencer generates a single \ac{ZK} proof that attests to the correctness of the whole batch: every verification, every reencryption, the state update, and the published data. Finally, the sequencer submits the proof and the new state root to the process registry, which verifies the proof and the blobs and accepts the new state. Settlement is permissionless: any sequencer may submit the next state transition, and the first valid one to land advances the election.\\
 	\end{enumerate}
 
-	\item \textit{Tally decryption}. 
-	At the end of the voting period, the smart contract ceases to accept new state updates. %,effectively finalizing the process.
-	Then, a threshold number of key wardens cooperate to reconstruct a partial decryption key that allows to decrypt the final tally. 
-%	the key wardens cooperate to open the final encrypted tally. Each of them contributes a verifiable decryption share, and once enough such shares have been published, the election outcome can be recovered. This ensures that ballots stay encrypted during the election while still allowing the final result to be publicly obtained and audited once voting has closed.
-%	the key wardens collaborate to enable the decryption of the final tally. 
-	That is, instead of reconstructing the election's private key, each key warden publishes a partial decryption together with a proof that the contribution is correct. 
-	%As soon as a threshold number of valid partial decryptions has been made available, the encrypted tally can be opened and the plaintext results can be recovered. 
+	\item \textit{Tally decryption}.
+	At the end of the voting period, sequencers stop accepting votes and settle the batches they still hold during a short grace window, after which the registry ceases to accept new state updates.
+	Then, a threshold number of \keywardens cooperate to decrypt the final tally.
+	That is, instead of reconstructing the election's private key, each \keywarden publishes a partial decryption together with a proof that the contribution is correct. When the key is held by a single sequencer, that sequencer decrypts the tally itself and proves the decryption.
 	This way, the individual votes remain encrypted throughout the voting period, and only the final aggregated result is decrypted at the end of the election.
 	\\
 	%
-	\item \textit{Election finalization}.	
-	%At the end of the voting period, the smart contract ceases to accept new state updates, effectively finalizing the process.
-	The results and a proof of correctness are submitted to the results verification smart contract. The contract verifies the proof, ensuring that the tally has been derived faithfully from the final state. Once this verification succeeds, the results and the latest state root remain available on-chain, providing an immutable record of the election outcome that can be independently audited by anyone.
+	\item \textit{Election finalization}.
+	The results and a proof of correctness are submitted to the process registry. The registry checks that the decrypted tally corresponds to the encrypted tally committed in the final state: either by verifying a \ac{ZK} proof of the decryption, or by binding the final encrypted tally to the state root before handing it to the \keywardens and reading the decryptions they proved. Once this verification succeeds, the results and the latest state root remain available on-chain, providing an immutable record of the election outcome that can be independently audited by anyone.
 \end{enumerate}

@@ -2,9 +2,9 @@
 
 This section outlines the \davinci voting protocol. 
 First, we introduce the parties involved in the process in Section~\ref{sec:vocdoni-protocol:parties}. 
-In Section~\ref{sec:vocdoni-protocol:smart-contracts} we present the Ethereum smart contracts that rule the \davinci protocol. 
+In Section~\ref{sec:vocdoni-protocol:smart-contracts} we present the smart contracts that rule the \davinci protocol. 
 Then, in Section~\ref{sec:vocdoni-protocol:census}, we describe the census data structures and in Section~\ref{sec:vocdoni-protocol:state-tree} the state Merkle tree. 
-In Section~\ref{sec:vocdoni-protocol:circuits}, we present the \ac{ZK} circuits used to enforce vote validity, authentication, aggregation, state transitions, and results computation. 
+In Section~\ref{sec:vocdoni-protocol:circuits}, we present the proof statements that enforce the protocol: the ballot circuit proven by voters, and the batch and results programs proven by sequencers in a \ac{zkVM}. 
 Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol flow step by step, from the voting setup to the results validation and process finalization.
 
 \subsection{Parties involved}
@@ -23,7 +23,7 @@ Finally, in Section~\ref{sec:vocdoni-protocol:flow}, we detail the full protocol
 \label{sec:vocdoni-protocol:state-tree}
 \input{\secs/state-tree.tex}
 
-\subsection{Circuits}
+\subsection{Circuits and zkVM programs}
 \label{sec:vocdoni-protocol:circuits}
 \input{\secs/circuits.tex}
 

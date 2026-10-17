@@ -5,6 +5,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Document sytle
+\setlength{\emergencystretch}{3em} % fewer overfull lines with long monospace identifiers
 \setcounter{secnumdepth}{3} %enumerate sections up to depth 3 (subsubsection)
 \setlist[itemize,1]{label=$\bullet$} %set the first-level itemize label to use math mode \bullet
 \setlist[enumerate,2]{label=(\alph*),ref=\alph*} %the second-level enumerates (enumerate,2) should only show (a) when referenced (not (3a)).
@@ -229,6 +230,55 @@
 \newcommand{\statetransitionverifier}{\smartcontractstyle{StateTransitionVerifier}}
 \newcommand{\resultsverifier}{\smartcontractstyle{ResultsVerifier}}
 \newcommand{\censusmanagement}{\smartcontractstyle{CensusManagement}}
+\newcommand{\processregistry}{\smartcontractstyle{ProcessRegistry}}
+\newcommand{\ziskverifier}{\smartcontractstyle{ZiskVerifier}}
+\newcommand{\lblobverifier}{\smartcontractstyle{L1BlobVerifier}}
+\newcommand{\lblock}{\smartcontractstyle{L1Block}}
+\newcommand{\dkgadapter}{\smartcontractstyle{DavinciDKGAdapter}}
+\newcommand{\counciladapter}{\smartcontractstyle{CouncilAdapter}}
+\newcommand{\dkgregistry}{\smartcontractstyle{DKGRegistry}}
+\newcommand{\dkgmanager}{\smartcontractstyle{DKGManager}}
+\newcommand{\dkgappmanager}{\smartcontractstyle{DKGAppManager}}
+\newcommand{\councilmanager}{\smartcontractstyle{CouncilManager}}
+\newcommand{\censusvalidator}{\smartcontractstyle{ICensusValidator}}
+
+% Contract methods and events
+\newcommand{\fn}[1]{\texttt{#1}\xspace}
+
+% zkVM programs and proofs
+\newcommand{\batchprogram}{\circuitstyle{BatchProgram}}
+\newcommand{\resultsprogram}{\circuitstyle{ResultsProgram}}
+\newcommand{\aggregatorprogram}{\circuitstyle{AggregatorProgram}}
+\newcommand{\Prog}{\mathcal{P}}
+\newcommand{\VMProve}{\methodstyle{VM.Prove}}
+\newcommand{\VMVerify}{\methodstyle{VM.Verify}}
+\newcommand{\VMExec}{\methodstyle{VM.Execute}}
+\newcommand{\programvk}{\variablestyle{programVK}}
+\newcommand{\rootc}{\variablestyle{rootCVadcopFinal}}
+\newcommand{\publicvalues}{\variablestyle{publicValues}}
+\newcommand{\batchproof}{\variablestyle{batchProof}}
+\newcommand{\ballotinputshash}{\variablestyle{inputsHash}}
+\newcommand{\ballotvkhash}{\variablestyle{ballotVKHash}}
+\newcommand{\blobsdigest}{\variablestyle{blobsDigest}}
+\newcommand{\nblobs}{\variablestyle{nBlobs}}
+\newcommand{\occupiedbefore}{\variablestyle{occupiedBefore}}
+\newcommand{\voterscount}{\variablestyle{votersCount}}
+\newcommand{\overwrittencount}{\variablestyle{overwrittenVotesCount}}
+\newcommand{\maxvoters}{\variablestyle{maxVoters}}
+\newcommand{\seed}{\variablestyle{seed}}
+\newcommand{\slot}{\variablestyle{slot}}
+\newcommand{\keymode}{\variablestyle{keyMode}}
+\newcommand{\grace}{\variablestyle{grace}}
+\newcommand{\graceend}{\variablestyle{graceEnd}}
+\newcommand{\lastvoteat}{\variablestyle{lastVoteAt}}
+\newcommand{\metadatauri}{\variablestyle{metadataURI}}
+\newcommand{\failmask}{\variablestyle{failMask}}
+\newcommand{\okflag}{\variablestyle{ok}}
+\newcommand{\groupsize}{\ballotstyle{groupSize}}
+\newcommand{\Sha}{\methodstyle{SHA256}}
+\newcommand{\SlotOf}{\methodstyle{Slot}}
+\newcommand{\CPProve}{\methodstyle{CP.Prove}}
+\newcommand{\CPVerify}{\methodstyle{CP.Verify}}
 
 % Blobs
 \newcommand{\blobstyle}[1]{{\sf{#1}}\xspace}

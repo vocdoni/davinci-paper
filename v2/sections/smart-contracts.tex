@@ -1,38 +1,67 @@
 % !TeX root = ../build/main.tex
 
-The \davinci protocol operates on an Ethereum-compatible network, which serves as the source of truth for the election. By leveraging an Ethereum virtual machine (EVM) blockchain, all election transitions become immutable and publicly verifiable. To coordinate and validate each phase of the process, DAVINCI deploys a set of smart contracts that enforce protocol rules, verify \ac{ZK} proofs, and maintain on-chain commitments such as state roots, encryption keys, and final results. Together, these contracts provide a trustless execution environment that guarantees the correct and transparent progression of the election without relying on any centralized authority. 
+The \davinci protocol operates on an Ethereum-compatible network, which serves as the source of truth for the election. By leveraging an \ac{EVM} blockchain, all election transitions become immutable and publicly verifiable. To coordinate and validate each phase of the process, \davinci deploys a set of smart contracts that enforce protocol rules, verify \ac{ZK} proofs, and maintain on-chain commitments such as state roots, encryption keys, and final results. Together, these contracts provide a trustless execution environment that guarantees the correct and transparent progression of the election without relying on any centralized authority. The contracts are deployed either on Ethereum, where they read the blobs of their own chain, or on an OP Stack rollup in L1-blob mode, where they verify blobs published on Ethereum. Fig.~\ref{fig:smart-contracts} shows the contracts and their dependencies.
 
-\paragraph{Organization registry.}
+\begin{figure}[h]
+	\centerline{\includegraphics[width=\textwidth,draft=false]{\figs/smart-contracts.pdf}}
+	\setlength{\abovecaptionskip}{5pt}
+	\caption{The \davinci smart contracts and the calls between them. The process registry is the only contract that organizers, sequencers, and voters interact with; it delegates proof verification, blob checks, census root checks, and threshold decryption to the other contracts.}
+	\label{fig:smart-contracts}
+\end{figure}
 
-The \hlset{\orgregistry} smart contract is used to create and manage organizations within the system. Each organization is identified by the Ethereum address of its creator and is associated with a name and a URL pointing to its metadata. At this stage, the contract serves only as a registration mechanism, but it lays the foundation for future extensions, such as managing multiple elections under the same organization.
+\paragraph{Process registry.}
 
-\paragraph{Census management.} 
+The \hlset{\processregistry} smart contract manages the lifecycle of every election (a \emph{process}), from its creation to the registration of final results. It stores, for each process, the record summarized in Table~\ref{tab:process-record}, and it ensures that all transitions follow the protocol. A process is identified by a 31-byte \processid that concatenates the 20-byte address of its creator, a 4-byte prefix taken from the last four bytes of $\Keccak(\texttt{chainID} \conc \texttt{registryAddress})$, and a 7-byte per-creator nonce. The prefix binds identifiers to one registry on one chain, and the nonce makes the identifier of the next process of an organizer predictable, which lets the organizer obtain an encryption key for it before creating it. At creation, the registry validates the parameters, obtains the encryption key, and computes the genesis root of the state tree (see Section~\ref{sec:vocdoni-protocol:state-tree}) on-chain, so the first state transition must start from a root that the registry derived itself.
 
-This contract is only used by the on-chain dynamic census model (see Section~\ref{sec:vocdoni-protocol:census}), since the off-chain and \ac{CSP} models store the
-census commitment directly as a parameter and require no such contract. This contract maintains the census as an on-chain \ac{IMT} and exposes (i) the current census root, (ii) the total voting power recorded for a given root, and (iii) the validity of a root, returning the last block at which it was valid. 
-%To bound storage, only a recent window of roots is retained. During each state transition, the \electionregistry\ contract queries the census contract to confirm that the \censusroot\ used in the membership proof is still valid---and no older than the election's creation block---rejecting the transition otherwise. This lets the census grow during the voting period while ensuring sequencers can only prove membership against roots the contract recognizes.
+The registry is deployed with immutable parameters that pin the cryptographic identity of the protocol: the address of the ZisK verifier; the program verification keys of the batch program and of the results program; the root \rootc of the ZisK setup under which both are wrapped; and \ballotvkhash, the SHA-256 digest of the verification key of the ballot circuit. A state transition or a results proof is accepted only if it was proven by the pinned program under the pinned setup, and a batch is accepted only if it verified ballot proofs under the pinned ballot key. The registry is also deployed with the parameters of the grace window (see Section~\ref{sec:vocdoni-protocol:flow:grace}) and, optionally, with the addresses of a \ac{DKG} manager, a council manager, and an L1 blob verifier. It has no owner and cannot be upgraded: a new protocol release is deployed as a new registry.
+
+\begin{table}[h]
+	\centering
+	\caption{Per-process record stored by the process registry.}
+	\label{tab:process-record}
+	\small
+	\begin{tabular}{p{0.27\textwidth} p{0.66\textwidth}}
+		\toprule
+		\textbf{Field} & \textbf{Content} \\
+		\midrule
+		\texttt{status} & One of \texttt{READY}, \texttt{PAUSED}, \texttt{ENDED}, \texttt{CANCELED}, \texttt{RESULTS} (see Fig.~\ref{fig:process-status}). \\
+		\texttt{organizationId} & Address of the creator, the only account allowed to change the process. \\
+		\texttt{startTime}, \texttt{duration} & Voting period; the end time is $\texttt{startTime} + \texttt{duration}$. \\
+		\maxvoters & Maximum number of distinct voters (ballot slots) the process accepts. \\
+		\ballotmode & Ballot protocol parameters (see Section~\ref{sec:ballot-protocol}). \\
+		\texttt{census} & Census origin, root, \ac{URI}, and, for an on-chain census, contract address. \\
+		\epk & BabyJubjub public key under which ballots are encrypted. \\
+		\keymode, \texttt{dkgEpochId}, \texttt{dkgAid} & Who holds the election key, and the identifiers of the key in the \ac{DKG} or council manager. \\
+		\texttt{latestStateRoot} & Root of the state tree after the last settled transition. \\
+		\voterscount, \overwrittencount & Number of distinct ballot slots written, and number of overwrites. \\
+		\texttt{batchNumber}, \lastvoteat & Number of settled transitions, and time of the last one. \\
+		\grace & Idle window during which transitions keep settling after the end. \\
+		\metadatauri, \texttt{metadataHash} & Location and SHA-256 digest of the metadata document. \\
+		\texttt{result} & Decrypted tally, one value per ballot field. \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\paragraph{ZisK verifier.}
+
+The \hlset{\ziskverifier} contract verifies the PlonK proofs that wrap the \ac{STARK} proofs of the \ac{zkVM}. It exposes a single function,
+\[ \fn{verifySnarkProof}(\programvk, \rootc, \publicvalues, \pi), \]
+which reverts unless $\pi$ is a valid PlonK proof for the public input
+\[ \Sha(\programvk \conc \publicvalues \conc \rootc) \bmod s, \]
+where $s$ is the order of the BN254 scalar field. The public values are the 64 output words of the guest program (512 bytes) and the proof is 768 bytes long, independently of the batch size. Because the program key and the setup root are part of the hashed input, the same verifier contract serves the batch program and the results program, and a proof of any other program or setup fails. The contract is generated by the ZisK setup and contains no \davinci-specific logic; sequencers check the hash of its code against a pinned value before trusting a registry.
+
+\paragraph{Point-evaluation precompile.}
+
+The point-evaluation precompile of EIP-4844, at address \texttt{0x0A}, takes a versioned hash, an evaluation point $z$, a claimed value $y$, a \ac{KZG} commitment, and an opening proof, and succeeds only if the commitment matches the versioned hash and the committed blob polynomial evaluates to $y$ at $z$. The registry calls it once per blob of every state transition, with the point and value that the batch program derived and committed to (see Section~\ref{sec:vocdoni-protocol:circuits:batch}). The precompile is available on Ethereum and on OP Stack chains alike.
+
+\paragraph{L1 blob verifier.}
+
+The \hlset{\lblobverifier} contract is used only by registries deployed in L1-blob mode on an OP Stack rollup. It proves on the rollup that a set of Ethereum blob transactions belongs to the canonical Ethereum chain, and returns the versioned hashes they carry. Its input is a list of Ethereum block headers, newest first, and a list of transactions, each with a \ac{MPT} proof against the transactions root of one of the headers. The verifier hashes every header, checks that each one is the parent of the previous one, and requires one of them, the \emph{anchor}, to be either the current L1 origin exposed by the \lblock system contract or an origin recorded earlier. Every transaction must sit in the anchor or in an older header, at most $\texttt{MAX\_AGE} = 7200$ Ethereum blocks (one day) behind the current origin, and must be a blob-carrying (type-3) transaction, whose list of versioned hashes is returned together with the block number of each. Because the L1 origin advances every few seconds, the verifier also offers a permissionless function, \fn{record}, that stores the current origin's number and hash, so that a proof can later be anchored at that block. The contract has no owner and no other state.
 
 \paragraph{Key management.}
 
-The \hlset{\dkgmanagement} smart contract coordinates the \ac{DKG} process among the \keywardens. It records their contributions, verifies proofs of correct participation, and ensures that a valid encryption public key is produced once the \ac{DKG} round is complete.
+Elections whose key is held by \keywardens rely on external key-management contracts, reached through adapters that the registry deploys in its constructor and that are the only accounts allowed to request decryptions on its behalf. The \hlset{\dkgadapter} connects the registry to the davinci-dkg contracts~\cite{davinci-dkg}: the \dkgregistry, which records the operators eligible for committees; the \dkgmanager, which runs the epochs in which a committee jointly generates a pool of keys and later decrypts ciphertexts; and the \dkgappmanager, which assigns pool keys to applications (here, elections). The \hlset{\counciladapter} connects the registry to the \councilmanager~\cite{davinci-council}, which runs invite-only key ceremonies and their decryptions. Both managers verify a \ac{ZK} proof for every contribution to a key and for every partial decryption, so the registry can read their decrypted values without trusting the parties who submitted them. A registry deployed without a manager simply disables the corresponding key modes.
 
-\paragraph{Election registry.}
+\paragraph{Census contract.}
 
-The \hlset{\electionregistry} smart contract manages the lifecycle of each election, from its creation to the registration of final results. It maintains the election’s current state and ensures that all transitions follow the protocol. 
-
-\paragraph{State transition verifier.}
-
-The \hlset{\statetransitionverifier} is responsible for validating the proofs that attest to correct updates of the election state. It stores the verification key corresponding to the state transition circuit (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}) and checks that each submitted proof correctly links the previous and new state roots. Only transitions verified through this contract are accepted as valid updates by the process registry.
-
-\paragraph{Results verifier.}
-
-The \hlset{\resultsverifier} contract validates the proof of correct tally computation. It contains the verification key for the results circuit (see Section~\ref{sec:vocdoni-protocol:circuits:results}) and ensures that the final results submitted by the organizer match the commitments from the final state. Once verified, the results and their proof are permanently recorded on-chain, providing a tamper-proof reference for the election outcome.\\
-
-%1. OrganizationRegistry: se utiliza para crear una organización (que asocia la address del creador con un nombre y una URL a sus metadatos). No tiene ningún otro rol de momento.
-%2. ProcessRegistry: registra como dices todo el proceso de una election, desde su creación hasta registrar los resultados (incluyendo el stateroot en cada momento). En resumen:
-%Genera el state root inicial (aun no, pero lo hará).
-%Controla el status de la election (ready, pause, ...).
-%Verifica las state transitions y actualiza el state de la election.
-%Verifica los resultados una vez que son calculados.
-%3. (Encara no): Coordinación DKG
-%4. Verifier: Realmente son 2 verifiers, el de las statetransitions y el de los results (uno por cada circuito porque cada uno contiene la verification key que debe).
+This contract is only used by the on-chain census model (see Section~\ref{sec:vocdoni-protocol:census}), since the off-chain and \ac{CSP} models store the census commitment directly as a parameter and require no such contract. An on-chain census implements the \hlset{\censusvalidator} interface: it maintains the census as a lean \ac{IMT} that only grows, and exposes the current census root and, for any root, the last block at which that root was current (zero for a root it never held). During each state transition, the \processregistry queries the census contract to confirm that the \censusroot used in the membership proofs was current at some block no older than the election's creation block, rejecting the transition otherwise. This lets the census grow during the voting period while ensuring sequencers can only prove membership against roots the contract recognizes.

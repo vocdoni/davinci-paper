@@ -1,55 +1,45 @@
 % !TeX root = ../build/main.tex
 %
 % ============================================================================
-% PAPER VERSION of Appendix A (Cryptographic primitives).
+% Appendix A (Cryptographic primitives).
 % Standard schemes are cited rather than derived; only DAVINCI-specific detail
 % is spelled out. Every \hlset anchor that the body \hlget's is preserved, so
-% no hyperlink dangles. Drop in via \include in place of the spec-version file.
+% no hyperlink dangles.
 % ============================================================================
 
-%hash-based commitments: trees
-%authentication: signatures
-%confidentiality: encryption
-%decentralized trust: DKG
-%verifiability: ZKPs
-
-In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; digital signatures for voter authentication; encryption schemes for ballot confidentiality; \ac{DKG} for decentralizing trust in the election keys; and zero-knowledge proofs (\acp{ZK-SNARK}) for verifiability of computations. Standard primitives are cited rather than re-derived; we spell out only the operations and instantiations specific to \davinci.
+In this section, we present the cryptographic primitives used in the protocol described in Section~\ref{sec:vocdoni-protocol}. We first introduce elliptic curves as the underlying algebraic setting, and then describe the following building blocks, each tied to a specific role in the system: hash functions and Merkle trees for commitments to structured data; polynomial commitments for data availability; digital signatures for voter authentication; encryption schemes for ballot confidentiality; \ac{DKG} for decentralizing trust in the election keys; and zero-knowledge proofs (\acp{ZK-SNARK} and \acp{zkVM}) for verifiability of computations. Standard primitives are cited rather than re-derived; we spell out only the operations and instantiations specific to \davinci.
 
 \subsection{Elliptic curves}
 \label{sec:cryptographic-primitives:elliptic-curves}
 
-\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient in-circuit operations. On the one hand, SECP256K1~\cite{brown2010sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{wood2014ethereum} is chosen because it is the curve supported by Ethereum's precompiled contracts for ZK proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost. Then, BabyJubjub~\cite{belles2021twisted} is used as an inner curve for elliptic curve operations within arithmetic circuits. Finally, BLS12-377~\cite{bowe2020zexe} and BW6-761~\cite{elhousni2020optimized} are used to enable recursive proof composition. More specifically, BLS12-377 acts as the inner curve for constructing proofs, while BW6-761 serves as the outer curve that verifies those proofs within larger ZK-SNARK circuits. This pairing enables succinct verification and composability of ZK-SNARKs within other ZK-SNARKs, which we use for \davinci's aggregation and state transition logic. Below, we give the details of these curves.
+\Davinci relies on multiple elliptic curves to ensure interoperability with Ethereum, compatibility with available cryptographic primitives, and efficient operations inside proofs. On the one hand, SECP256K1~\cite{brown2010sec} is used because Ethereum public keys are elements of this curve. As \Davinci assumes each voter holds a standard Ethereum address, cryptographic operations such as digital signatures and identity verification rely on SECP256K1 to match the Ethereum ecosystem. On the other hand, BN254~\cite{wood2014ethereum} is chosen because it is the curve supported by Ethereum's precompiled contracts for pairing-based proof verification, which makes it the optimal choice for verifying SNARK proofs on-chain with minimal gas cost; both the ballot proofs and the PlonK wrapper of the \ac{zkVM} proofs live on it. Then, BabyJubjub~\cite{belles2021twisted} is used as an inner curve for the encryption of ballots, since its base field is the scalar field of BN254 and its arithmetic is therefore native to the ballot circuit. Finally, BLS12-381 is the curve of the \ac{KZG} commitments that Ethereum uses for data blobs~\cite{eip4844}; \davinci only uses its scalar field, in which blob cells and evaluation points live. Below, we give the details of these curves.
 
 \paragraph{Parameters.}
 
 \begin{itemize}
 	%
 	\item[$\bullet$] $p = \tt{\hspace{0.04cm}0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f}$ (256-bit prime).
-	\item[$\bullet$] $q = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).	
+	\item[$\bullet$] $q = \tt{\hspace{0.01cm}0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}$ (256-bit prime).
 	%
 	\item[$\bullet$] $r = \tt{0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47}$ (254-bit prime).
 	\item[$\bullet$] $s = \tt{\hspace{0.03cm}0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001}$ (254-bit prime).
 	\item[$\bullet$] $t = \tt{\hspace{0.07cm}0x60c89ce5c263405370a08b6d0302b0bab3eedb83920ee0a677297dc392126f1}$ (251-bit prime).
 	%
-	\item[$\bullet$] $u = \tt{0x122e824fb83ce0ad187c94004faff3eb926186a81d14688528275ef8087be41707ba638e584e9190}$
-	\item[] \hspace{0.53cm} $\tt{3cebaff25b423048689c8ed12f9fd9071dcd3dc73ebff2e98a116c25667a8f8160cf8aeeaf0a437e69}$
-	\item[] \hspace{0.53cm} $\tt{13e6870000082f49d00000000008b}$ (761-bit prime).
-	\item[$\bullet$] $v = \tt{0x01ae3a4617c510eac63b05c06ca1493b1a22d9f300f5138f1ef3622fba094800170b5d4430000000}$
-	\item[] \hspace{0.52cm} $\tt{8508c00000000001}$ (377-bit prime).
-	\item[$\bullet$] $w = \tt{0x12ab655e9a2ca55660b44d1e5c37b00159aa76fed00000010a11800000000001}$ (253-bit prime).
+	\item[$\bullet$] $u = \tt{0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f624}$
+	\item[] \hspace{0.53cm} $\tt{1eabfffeb153ffffb9feffffffffaaab}$ (381-bit prime).
+	\item[$\bullet$] $v = \tt{0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001}$ (255-bit prime).
 	%
 \end{itemize}
 
 \paragraph{Elliptic curve groups.}
 \begin{itemize}
 	%
-	\item SECP256K1 curve: $\SEC{E}/\F_p$ defined by equation $\SEC{E}: y^2 = x^3 + 7$, with group $\SEC{\G}$ of prime order $q$. 
+	\item SECP256K1 curve: $\SEC{E}/\F_p$ defined by equation $\SEC{E}: y^2 = x^3 + 7$, with group $\SEC{\G}$ of prime order $q$.
 	%
-	\item BN254 curve: $\BN{E}/\F_r$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $s$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{s^{12}}$ and has order $s$. 
-	\item BabyJubjub curve: $\BJ{E}/\F_s$ defined by equation $\BJ{E}: 168700 x^2 + y^2 = 1 + 168696 x^2y^2$, with subgroup $\BJ{\G}$ of prime order $t$. 
+	\item BN254 curve: $\BN{E}/\F_r$ defined by equation \( \BN{E}: y^2 = x^3 + 3\), with subgroups $\BN{\G}_1, \BN{\G}_2$ of prime order $s$, and an efficiently computable pairing \(e:\BN{\G}_1\times\BN{\G}_2 \rightarrow \BN{\G}_T,\) where $\BN{\G}_T \subset \F_{r^{12}}$ and has order $s$.
+	\item BabyJubjub curve: $\BJ{E}/\F_s$ defined by the twisted Edwards equation $\BJ{E}: 168700 x^2 + y^2 = 1 + 168696 x^2y^2$, of order $8t$, with subgroup $\BJ{\G}$ of prime order $t$. Its identity is the point $(0, 1)$, and the inverse of $(x, y)$ is $(-x, y)$.
 	%
-	\item BW6-761 curve: $\BW{E}/\F_u$ defined by equation $\BW{E}: y^2 = x^3 - 1$, with subgroups $\BW{\G}_1, \BW{\G}_2$ of prime order $v$, and an efficiently computable pairing \({e}:\BW{\G}_1\times\BW{\G}_2 \rightarrow \BW{\G}_T,\) where $\BW{\G}_T \subset \F_{v^{6}}$ and has order $v$ as well. 
-	\item BLS12-377 curve: $\BLS{E}/\F_v$ defined by equation \(\BLS{E}: y^2 = x^3 + 1,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $w$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{w^{12}}$ and has order~$w$. 
+	\item BLS12-381 curve: $\BLS{E}/\F_u$ defined by equation \(\BLS{E}: y^2 = x^3 + 4,\) with subgroups $\BLS{\G}_1, \BLS{\G}_2$ of prime order $v$, and an efficiently computable pairing \({e}:\BLS{\G}_1\times\BLS{\G}_2 \rightarrow \BLS{\G}_T,\) where $\BLS{\G}_T \subset \F_{u^{12}}$ and has order~$v$. In the body of the paper, we write $q_{\mathsf{BLS}} = v$.
 	%
 \end{itemize}
 
@@ -59,82 +49,73 @@ In this section, we present the cryptographic primitives used in the protocol de
 	\item $\F_p$: base field of the SECP256K1 curve.
 	\item $\F_q$: scalar field of $\SEC{\G}$.
 	%
-	\item $\F_r$: base field of the BN254 curve.	
-	\item $\F_s$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$ and base field of the BabyJubjub curve.
-	\item $\F_t$: scalar field of $\BJ{\G}$.
+	\item $\F_r$: base field of the BN254 curve.
+	\item $\F_s$: scalar field of $\BN{\G}_1, \BN{\G}_2, \BN{\G}_T$ and base field of the BabyJubjub curve. Ballot coordinates, Poseidon inputs and outputs, and census leaves are elements of $\F_s$.
+	\item $\F_t$: scalar field of $\BJ{\G}$, to which election secret keys and encryption randomness belong.
 	%
-	\item $\F_u$: base field of the BW6-761 curve.
-	\item $\F_v$: scalar field of $\BW{\G}_1, \BW{\G}_2, \BW{\G}_T$ and base field of the BLS12-377 curve.
-	\item $\F_w$: scalar field of $\BLS{\G}_1, \BLS{\G}_2, \BLS{\G}_T$.
+	\item $\F_u$: base field of the BLS12-381 curve.
+	\item $\F_v$: scalar field of $\BLS{\G}_1, \BLS{\G}_2, \BLS{\G}_T$, to which blob cells and evaluation points belong.
 	%
 \end{itemize}
 
 \paragraph{Generators.}\mbox{}\\
 
-\noi We denote by $\hlget{\SEC{G}}$ the generator of $\SEC{\G}$ as defined in~\cite{brown2010sec}, $\hlget{\BN{G}}$ the generator of $\BN{\G}_1$ as defined in~\cite{wood2014ethereum}, $\hlget{\BJ{G}}$ the generator of $\BJ{\G}$ as defined in~\cite{erc2494}, $\hlget{\BW{G}}$ the generator of $\BW{\G}_1$ as defined in~\cite{eip3026}, and $\hlget{\BLS{G}}$ the generator of $\BLS{\G}_1$ as defined in~\cite{eip2539}.
+\noi We denote by $\hlget{\SEC{G}}$ the generator of $\SEC{\G}$ as defined in~\cite{brown2010sec}, $\hlget{\BN{G}}$ the generator of $\BN{\G}_1$ as defined in~\cite{wood2014ethereum}, $\hlget{\BJ{G}}$ the generator of $\BJ{\G}$ as defined in~\cite{erc2494} (the point usually called \emph{Base8}), and $\hlget{\BLS{G}}$ the standard generator of $\BLS{\G}_1$~\cite{eip4844}.
 
 \begin{itemize}
 	\item
 	$
-	\hlset{\SEC{G}} = 
+	\hlset{\SEC{G}} =
 	(\tt{0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,0x483ada7726} \allowbreak
 	\rule{1.37cm}{0pt}
 	\tt{a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8}).
 	$
-	\item 
+	\item
 	$
 	\hlset{\BN{G}}\hspace{0.14cm} = \: (\tt{0x01}, \tt{0x02}).
 	$
-	
+
 	\item
 	$
-	\hlset{\BJ{G}}\hspace{0.18cm} = 
-	\hspace{0.09cm} (\tt{0x0b9feffffffffaaabfffffffffffffffeffffffffffffffffffffffffffffff}, 
-	\tt{0x17fffffffff} \\
+	\hlset{\BJ{G}}\hspace{0.18cm} =
+	\hspace{0.09cm} (\tt{0x0bb77a6ad63e739b4eacb2e09d6277c12ab8d8010534e0b62893f3f6bb957051},
+	\tt{0x25797} \\
 	\rule{1.37cm}{0pt}
-	\tt{ffffffffffffffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141}).				
+	\tt{203f7a0b24925572e1cd16bf9edfce0051fb9e133774b3c257a872d7d8b}).
 	$
-	\item 
+	\item
 	$
-	\hlset{\BW{G}}\hspace{0.085cm} = 
-	\hspace{0.09cm} (\tt{0x1075b020ea190c8b277ce98a477beaee6a0cfb7551b27f0ee05c54b85f56fc779017ffac15520}\\
+	\hlset{\BLS{G}}\hspace{0.07cm} =
+	\hspace{0.06cm}(\tt{0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac} \\
 	\rule{1.37cm}{0pt}
-	\tt{ac11dbfcd294c2e746a17a54ce47729b905bd71fa0c9ea097103758f9a280ca27f6750dd0356133}\\
-	\rule{1.37cm}{0pt}		
-	\tt{e82055928aca6af603f4088f3af66e5b43d, 0x58b84e0a6fc574e6fd637b45cc2a420f952589884} \\
+	\tt{586c55e83ff97a1aeffb3af00adb22c6bb, 0x08b3f481e3aaa0f1a09e30ed741d8ae4fcf5} \\
 	\rule{1.37cm}{0pt}
-	\tt{c9ec61a7348d2a2e573a3265909f1af7e0dbac5b8fa1771b5b806cc685d31717a4c55be3fb90b6f} \\
-	\rule{1.37cm}{0pt}
-	\tt{c2cdd49f9df141b3053253b2b08119cad0fb93ad1cb2be0b20d2a1bafc8f2db4e95363)}.
-	$
-	\item 
-	$
-	\hlset{\BLS{G}}\hspace{0.07cm} = 
-	\hspace{0.06cm}(\tt{0x008848defe740a67c8fc6225bf87ff5485951e2caa9d41bb188282c8bd37cb5cd5481512ffcd3} \\
-	\rule{1.37cm}{0pt}
-	\tt{94eeab9b16eb21be9ef,0x01914a69c5102eff1f674f5d30afeec4bd7fb348ca3e52d96d182ad44} \\
-	\rule{1.37cm}{0pt}
-	\tt{fb82305c2fe3d3634a9591afd82de55559c8ea6}).
+	\tt{e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1}).
 	$
 \end{itemize}
 
 \subsection{Hash functions}
 \label{sec:cryptographic-primitives:hash}
 
-\Davinci uses two hash functions: Keccak256~\cite{bertoni2011keccak} for Ethereum address derivation and message hashing under ECDSA, and Poseidon~\cite{grassi2021poseidon} for every in-circuit computation.
+\Davinci uses three hash functions: Keccak256~\cite{bertoni2011keccak} for Ethereum compatibility, SHA-256~\cite{fips180-4} for the state tree and every hash computed by the \ac{zkVM} programs and verified by smart contracts, and Poseidon~\cite{grassi2021poseidon} for every hash computed by the ballot circuit.
 
-\paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci to compress messages for signing and to derive Ethereum addresses from public keys over $\SEC{\G}$. It maps arbitrary-length bitstrings to 256-bit digests, $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. As it is not SNARK-friendly, it is used only in the authentication circuit, where verifying Ethereum-compatible signatures requires reproducing the message hash computed by Ethereum clients (see Section~\ref{sec:vocdoni-protocol:circuits:verifier}).
+\paragraph{Keccak256.} Keccak256 is the standard hash function used by Ethereum and is employed in \davinci to compress messages for signing, to derive Ethereum addresses from public keys over $\SEC{\G}$, and to hash Ethereum block headers when the registry verifies blob transactions in L1-blob mode. It maps arbitrary-length bitstrings to 256-bit digests, $\hlset{\Keccak} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. Inside the \ac{zkVM}, it is used only by the authentication and \ac{CSP} checks of the batch program (see Section~\ref{sec:vocdoni-protocol:circuits:batch}), where verifying Ethereum-compatible signatures requires reproducing the message hash computed by Ethereum clients.
 
-\paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient evaluation inside arithmetic circuits. It is used in \davinci for computing commitments, vote identifiers, and Merkle tree roots, and for refreshing the re-encryption randomness during state transitions. We write $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ denotes tuples of $\F_s$-elements of any length and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}.
+\paragraph{SHA-256.} SHA-256 maps arbitrary-length bitstrings to 256-bit digests, $\hlset{\Sha} : \{0,1\}^* \rightarrow \{0,1\}^{256}$. It is a precompile of the \ac{EVM} and an accelerated operation of the ZisK \ac{zkVM}, which makes it the natural choice for every value that is computed in a \ac{zkVM} program and checked by a contract: the nodes and leaves of the state tree, the digests of ballots, accumulators, and verification keys stored in it, the derivation of ballot slots, the chain of re-encryption scalars, the evaluation points of the blobs and the digest of their openings, the transcript of the batched ballot proof verification, and the digest of the public values of a \ac{zkVM} proof. When a digest must be interpreted as a field element, it is read as a big-endian integer and reduced modulo the field order, unless stated otherwise.
+
+\paragraph{Poseidon.} Poseidon is a SNARK-optimized hash function designed for efficient evaluation inside arithmetic circuits. It is used in \davinci for computing vote identifiers, the commitment to the ballot circuit's inputs, the per-field encryption randomness of a ballot, the nodes of the census tree, and the challenges of decryption proofs. We write $\hlset{\Poseidon} : \mathfrak{F}_s \rightarrow \F_s$, where $\mathfrak{F}_s$ denotes tuples of $\F_s$-elements of any length and $\F_s$ is the field described in Section~\ref{sec:cryptographic-primitives:elliptic-curves}. A single Poseidon permutation accepts at most 16 inputs, so longer tuples are hashed in two levels: the tuple is split into consecutive chunks of at most 16 elements, each chunk is hashed, and the chunk digests are hashed together. For a ballot of 16 fields, the commitment \ballotinputshash covers $71$ elements (the process identifier, the packed ballot mode, the two coordinates of the key, the address, the vote identifier, the $64$ coordinates of the ciphertexts, and the weight), so it is computed as
+\begin{align*}
+\ballotinputshash = \hlget{\Poseidon}\bigl(&\Poseidon(x_{1..16}), \Poseidon(x_{17..32}), \Poseidon(x_{33..48}),\\ &\Poseidon(x_{49..64}), \Poseidon(x_{65..71})\bigr).
+\end{align*}
 
 \subsection{Merkle trees}
 \label{sec:cryptographic-primitives:merkle-trees}
 
-\davinci uses two Merkle-tree variants as hash-based accumulators: a \emph{sparse Merkle tree} (SMT) for the election state, and an \emph{incremental Merkle tree} (IMT) for the census. Both are instantiated with the Poseidon hash function over the BN254 scalar field, and only the root of each tree is published on-chain, so that large datasets can be committed and verified with minimal on-chain storage.
+\davinci uses two Merkle-tree variants as hash-based accumulators: a \emph{sparse Merkle tree} (SMT) for the election state, and a \emph{lean incremental Merkle tree} (IMT) for the census. Only the root of each tree is published on-chain, so that large datasets can be committed and verified with minimal on-chain storage.
 
-\paragraph{Sparse Merkle tree (state tree).} Following~\cite{baylina2019sparse}, the state tree is a fixed-depth binary tree in which each leaf encodes a key--value pair and empty leaves are represented explicitly, supporting both inclusion and non-inclusion proofs. The key determines a unique root-to-leaf path independent of insertion order, which makes membership and emptiness checks cheap to verify inside a \ac{ZK-SNARK}. \davinci uses an SMT of depth $64$ for the state tree, whose key space is partitioned into disjoint regions for configuration parameters, encrypted ballots, and vote identifiers (see Section~\ref{sec:vocdoni-protocol:state-tree}).
+\paragraph{Sparse Merkle tree (state tree).} Following~\cite{baylina2019sparse}, the state tree is a binary tree of maximum depth $64$ in which each leaf encodes a key--value pair and empty subtrees are represented by a constant, supporting both inclusion and non-inclusion proofs. The key determines a unique root-to-leaf path independent of insertion order, which makes membership and emptiness checks cheap to verify inside a proof. As in the circomlib construction, a leaf is placed at the shallowest level at which its path is unique, and a transition is proven by the processor of~\cite{baylina2019sparse}, which checks the old root and computes the new one from the same list of siblings, for insertions, updates, and deletions. \davinci instantiates the tree with SHA-256, with leaf hash $\Sha(\kappa_{\text{LE8}} \conc v_{\text{LE32}} \conc \texttt{0x01})$ and node hash $\Sha(L \conc R)$, as implemented by the arbo library~\cite{arbo}. Its key space is partitioned into disjoint regions for configuration parameters, encrypted ballots, and vote identifiers (see Section~\ref{sec:vocdoni-protocol:state-tree}).
 
-\paragraph{Incremental Merkle tree (census tree).} The census is maintained as an IMT, a binary tree optimized for sequential insertion: voters are appended at consecutive leaf positions rather than at key-derived paths, so the tree grows only as needed and appending a voter recomputes hashes along a single path. Each leaf stores a voter's identifier and weight. Concretely, the Ethereum address and weight packed into a single field element (see Section~\ref{sec:vocdoni-protocol:census}) and only the root $\censusroot$ is published on-chain.
+\paragraph{Lean incremental Merkle tree (census tree).} The census is maintained as a lean \ac{IMT}~\cite{leanimt}, a binary tree optimized for sequential insertion: voters are appended at consecutive leaf positions rather than at key-derived paths, so the tree grows only as needed and appending a voter recomputes hashes along a single path. A node without a right sibling is promoted to the next level without hashing, so a proof contains only the non-empty siblings of the path. Each leaf stores a voter's identifier and weight; concretely, the Ethereum address and weight packed into a single field element (see Section~\ref{sec:vocdoni-protocol:census}). Nodes are hashed with two-input Poseidon over $\F_s$, and only the root $\censusroot$ is published on-chain. The batch program accepts proofs of at most 61 siblings.
 
 \paragraph{Tree operations.} To support state transitions and in-circuit verification, each tree $\tree{}$ exposes the following operations:
 \begin{itemize}
@@ -145,32 +126,37 @@ In this section, we present the cryptographic primitives used in the protocol de
 	\item $\tree.\hlset{\MTNonMembershipProof}(\leaf)$: returns a proof that the given leaf is not included in the tree.
 	\item $\tree.\hlset{\MTVerify}(\leaf, path, \MTProof, \root{})$: returns $\true$ if and only if $\MTProof$ shows that $\leaf$ is stored at $path$ under the claimed root.
 \end{itemize}
-These operations let sequencers evolve the state off-chain while keeping every update independently verifiable on-chain and within ZK circuits. Additional details on the tree structures and their leaf encodings are given in Sections~\ref{sec:vocdoni-protocol:census} and~\ref{sec:vocdoni-protocol:state-tree}.
+These operations let sequencers evolve the state off-chain while keeping every update independently verifiable on-chain and within \ac{ZK} proofs. Additional details on the tree structures and their leaf encodings are given in Sections~\ref{sec:vocdoni-protocol:census} and~\ref{sec:vocdoni-protocol:state-tree}.
 
 \subsection{Commitment scheme}
 \label{sec:cryptographic-primitives:commitments}
 
-\davinci commits to the data published in each Ethereum blob using the KZG polynomial commitment scheme~\cite{kate2010constant}, the same scheme that underlies EIP-4844; it therefore reuses Ethereum's BLS12-381 structured reference string rather than requiring a dedicated ceremony. The blob payload is encoded as a polynomial $P$; the sequencer commits to $P$ and later proves a single evaluation, which lets the state transition circuit check consistency between the blob data and the on-chain state (see Section~\ref{sec:vocdoni-protocol:circuits:state-transition}). We use two operations:
+\davinci commits to the data published in each Ethereum blob using the KZG polynomial commitment scheme~\cite{kate2010constant} over BLS12-381, the same scheme that underlies EIP-4844; it therefore reuses Ethereum's structured reference string rather than requiring a dedicated ceremony. A blob of $N = 4096$ cells $d_0, \dots, d_{N-1} \in \F_v$ defines the unique polynomial $P$ of degree less than $N$ with $P(\omega_i) = d_i$, where $\omega_i$ are the $N$-th roots of unity of $\F_v$ in bit-reversed order. Its value at a point $z$ outside the domain is given by the barycentric formula
+\[
+P(z) = \frac{z^N - 1}{N} \sum_{i=0}^{N-1} \frac{d_i\, \omega_i}{z - \omega_i},
+\]
+which the batch program evaluates with $N$ multiplications and one batched inversion, without any pairing. The sequencer commits to $P$ and proves a single evaluation at a point derived from the commitment itself, which lets the registry check, with one call to the point-evaluation precompile, that the blob published on-chain is the one whose contents the batch program derived (see Section~\ref{sec:vocdoni-protocol:circuits:batch}). We use two operations:
 \begin{itemize}
-	\item $\hlset{\CCommit}(P)$: outputs a succinct commitment $C$ to the polynomial $P$.
+	\item $\hlset{\CCommit}(P)$: outputs a succinct commitment $C \in \BLS{\G}_1$ to the polynomial $P$, encoded in 48 bytes. Its \emph{versioned hash}, $\texttt{0x01} \conc \Sha(C)_{[1..32]}$, is what a blob-carrying transaction exposes.
 	\item $\hlset{\CVerify}(C, z, y, \pi)$: returns $\true$ if and only if $\pi$ is a valid proof that $P(z) = y$ for the polynomial committed in $C$.
 \end{itemize}
+Because the evaluation point is a hash of the commitment, the process identifier, and the old state root, a sequencer cannot choose the commitment after the point, and a commitment prepared for another election or another state does not open to the value the batch program computed. By the Schwartz--Zippel lemma, two distinct blobs agree at a random point with probability at most $N / v \approx 2^{-243}$.
 
 \subsection{Digital signature scheme}
 \label{sec:cryptographic-primitives:signatures}
 
 \Davinci uses the elliptic curve digital signature algorithm (ECDSA)~\cite{johnson2001ecdsa} over the SECP256K1 curve, so that voters authenticate with standard Ethereum wallets without managing additional keys. We use ECDSA in its standard form and refer to~\cite{johnson2001ecdsa} for the full algorithms; here we only fix the notation used throughout the protocol:
 \begin{itemize}
-	\item $\hlset{\SSign}_{\sk}(\msg)$: produces a signature $\sigma$ on message $\msg$ under the secret key $\sk$.
+	\item $\hlset{\SSign}_{\sk}(\msg)$: produces a signature $\sigma = (r, s, \mathit{recid})$ on message $\msg$ under the secret key $\sk$.
 	\item $\hlset{\SVer}_{\pk}(\msg, \sigma)$: returns $\true$ if $\sigma$ is a valid signature on $\msg$ under the public key $\pk$.
 	\item $\hlset{\SPubKey}(\msg, \sigma)$: recovers the signer's public key $\pk$ from a message and its signature; this is the operation Ethereum exposes as \texttt{ecrecover}.
 \end{itemize}
-An Ethereum address is derived from a public key as the low-order 20 bytes of its Keccak digest, $\address = \mathsf{low\text{-}20}\bigl(\hlget{\Keccak}(\pk)\bigr)$. Because SECP256K1 is defined over a 256-bit field that differs from the native field of our \ac{ZK-SNARK} circuits, signature verification is performed in-circuit through a specialized gadget that emulates SECP256K1 arithmetic (see Section~\ref{sec:vocdoni-protocol:circuits:verifier}).
+An Ethereum address is derived from a public key as the low-order 20 bytes of its Keccak digest, $\address = \mathsf{low\text{-}20}\bigl(\hlget{\Keccak}(\pk)\bigr)$. Messages are signed in the Ethereum personal-message format: the signed digest of a message $\msg$ of $\ell$ bytes is $\Keccak(\texttt{"\textbackslash x19Ethereum Signed Message:\textbackslash n"} \conc \ell \conc \msg)$, with $\ell$ written in decimal. A voter signs the 32-byte message formed by 24 zero bytes followed by the 8-byte big-endian vote identifier, and a \ac{CSP} signs the 92-byte message of Eq.~\eqref{eq:csp-message}. Inside the \ac{zkVM}, signatures are verified by recovering the public key with a secp256k1 precompile and comparing its address.
 
 \subsection{Encryption scheme}
 \label{sec:cryptographic-primitives:encryption}
 
-To preserve ballot secrecy while enabling tallying, \davinci employs a threshold variant of the ElGamal cryptosystem instantiated over the BabyJubjub curve~\cite{sutikno1998implementation}. This scheme offers two properties crucial for the protocol: \emph{additive homomorphism}, which allows the aggregation of encrypted votes without decryption, and \emph{re-encryption}, which enables ciphertext randomization without altering the underlying plaintext. Together, these properties allow sequencers to tally votes while preventing voters from producing receipts that could be used for coercion or vote selling. The corresponding public key is generated collectively by the \keywardens\ via the distributed key generation protocol of Section~\ref{sec:cryptographic-primitives:dkg}, ensuring that no single entity can decrypt ballots unilaterally.
+To preserve ballot secrecy while enabling tallying, \davinci employs a threshold variant of the ElGamal cryptosystem instantiated over the BabyJubjub curve~\cite{sutikno1998implementation}. This scheme offers two properties crucial for the protocol: \emph{additive homomorphism}, which allows the aggregation of encrypted votes without decryption, and \emph{re-encryption}, which enables ciphertext randomization without altering the underlying plaintext. Together, these properties allow sequencers to tally votes while preventing voters from producing receipts that could be used for coercion or vote selling. The corresponding public key is generated collectively by the \keywardens\ via the distributed key generation protocol of Section~\ref{sec:cryptographic-primitives:dkg}, ensuring that no single entity can decrypt ballots unilaterally, or, in the sequencer key mode, by a single sequencer.
 
 \paragraph{Encryption and decryption.}
 Given a message $m$, the ElGamal encryption algorithm maps it into a group element $M$ of $\BJ{\G}$ and outputs a ciphertext as follows:
@@ -199,12 +185,12 @@ Given a message $m$, the ElGamal encryption algorithm maps it into a group eleme
 	\end{minipage}
 \end{mdframed}
 
-Since the plaintext message space is small, recovering $m$ from $M$ is efficient: although the mapping $m \mapsto M$ is not generally invertible, it can be reversed by brute-force search or optimized techniques such as baby-step giant-step~\cite{blake1995elliptic}.
+Since the plaintext message space is small, recovering $m$ from $M$ is efficient: although the mapping $m \mapsto M$ is not generally invertible, it can be reversed by brute-force search or optimized techniques such as baby-step giant-step~\cite{blake1995elliptic}, in time proportional to the square root of the bound on $m$. The registry bounds every tally by $10^{12} < 2^{40}$, so each field is recovered with about $2^{20}$ group operations.
 
-\paragraph{Homomorphic addition and re-encryption.} ElGamal encryption is additively homomorphic. Given two ciphertexts $(C_1, C_2)$ and $(C_1', C_2')$, their component-wise sum $(C_1 + C_1',\, C_2 + C_2')$ is a valid ciphertext that decrypts to the sum of the two underlying messages, which allows sequencers to aggregate encrypted ballots directly. Re-encryption exploits the same property by adding an encryption of zero to a ciphertext, yielding a fresh ciphertext of the same message under new randomness and making it computationally infeasible to link the re-encrypted ballot with the original submission.
+\paragraph{Homomorphic addition and re-encryption.} ElGamal encryption is additively homomorphic. Given two ciphertexts $(C_1, C_2)$ and $(C_1', C_2')$, their component-wise sum $(C_1 + C_1',\, C_2 + C_2')$ is a valid ciphertext that decrypts to the sum of the two underlying messages, which allows sequencers to aggregate encrypted ballots directly; adding the inverse of a ciphertext subtracts its message, which the batch program uses to remove overwritten ballots from the accumulator. Re-encryption exploits the same property by adding an encryption of zero to a ciphertext, yielding a fresh ciphertext of the same message under new randomness and making it computationally infeasible to link the re-encrypted ballot with the original submission.
 
 \begin{mdframed}
-	\begin{minipage}[t]{0.53\textwidth}
+	\begin{minipage}[t]{0.50\textwidth}
 		\begin{itemize}
 			\item[$\bullet$] $\hlset{\EncAdd}_{\pk}(\enc \in {(\BJ{\G})}^2, \enc' \in {(\BJ{\G})}^2)$:
 			\begin{enumerate}
@@ -214,7 +200,7 @@ Since the plaintext message space is small, recovering $m$ from $M$ is efficient
 			\end{enumerate}
 		\end{itemize}
 	\end{minipage}
-	\begin{minipage}[t]{0.45\textwidth}
+	\begin{minipage}[t]{0.48\textwidth}
 		\begin{itemize}
 			\item[$\bullet$] $\hlset{\ReEnc}_{\pk}(\enc \in {(\BJ{\G})}^2; k\in\F_t)$: \vspace{0.1cm}
 			\begin{enumerate}
@@ -226,20 +212,54 @@ Since the plaintext message space is small, recovering $m$ from $M$ is efficient
 	\end{minipage}
 \end{mdframed}
 
-In the protocol, re-encryption is applied not only to newly submitted ballots but also to ballots already stored in the state tree. By refreshing the randomness of both new and existing ciphertexts, sequencers ensure that it is indistinguishable whether a ballot has been overwritten or merely re-randomized. This mechanism is essential for receipt-freeness: voters cannot produce a verifiable receipt of their choice, and adversaries cannot detect or prove whether a particular vote has been replaced (see Section~\ref{sec:analysis}).
+In the protocol, re-encryption is applied not only to newly submitted ballots but also to ballots already stored in the state tree. By refreshing the randomness of both new and existing ciphertexts, sequencers ensure that it is indistinguishable whether a ballot has been overwritten or merely re-randomized. This mechanism is essential for receipt-freeness: voters cannot produce a verifiable receipt of their choice, and adversaries cannot detect or prove whether a particular vote has been replaced (see Section~\ref{sec:analysis}). In the batch program, the randomness of each re-encryption is a scalar of the chain of Section~\ref{sec:vocdoni-protocol:circuits:batch}, a SHA-256 output reduced modulo $s$, which the curve arithmetic implicitly reduces modulo $t$.
+
+\paragraph{Proof of correct decryption.} To publish a decryption without revealing the secret key, the key holder proves that the decrypted point is consistent with the public key using a Chaum--Pedersen proof of equality of discrete logarithms~\cite{chaum1992wallet}, made non-interactive with the Fiat--Shamir transform~\cite{fiat1986prove}. For a ciphertext $(C_1, C_2)$ and a claimed message $m$, let $D = C_2 - m \cdot \BJ{G}$; the statement is that $\log_{\BJ{G}} \pk = \log_{C_1} D$, which holds exactly when $m$ is the decryption of the ciphertext under $\sk$.
+\begin{mdframed}
+	\begin{minipage}[t]{0.52\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\CPProve}_{\sk}(\enc, m)$:
+			\begin{enumerate}
+				\item Sample $w \sample \F_t$.
+				\item Compute $A_1 = w \cdot \BJ{G}$, $A_2 = w \cdot C_1$.
+				\item Compute the challenge $e$ as a Poseidon hash of $\pk$, $C_1$, $D$, $A_1$, and $A_2$.
+				\item Output $\pi = (A_1, A_2, z = w + e \cdot \sk \bmod t)$.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+	\begin{minipage}[t]{0.46\textwidth}
+		\begin{itemize}
+			\item[$\bullet$] $\hlset{\CPVerify}_{\pk}(\enc, m, \pi)$:
+			\begin{enumerate}
+				\item Recompute $D$ and $e$.
+				\item Check $z \cdot \BJ{G} = A_1 + e \cdot \pk$.
+				\item Check $z \cdot C_1 = A_2 + e \cdot D$.
+			\end{enumerate}
+		\end{itemize}
+	\end{minipage}
+\end{mdframed}
+The results program additionally requires all points to be on the curve and all coordinates and scalars to be canonical, so that each statement has a single encoding.
 
 \subsection{Distributed key generation scheme}
 \label{sec:cryptographic-primitives:dkg}
 
-To ensure that no single entity controls the decryption key, \davinci employs a \ac{DKG} protocol to jointly derive the threshold ElGamal encryption key pair used for ballot encryption. Participants who contribute to the ceremony are called \emph{\keywardens}. The outcome is a collective public key ($\epk$) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens\ so that only a threshold $t$ out of $n$ of them can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols in which shares are exchanged in the clear, our construction distributes encrypted shares together with \ac{ZK-SNARK} proofs of correctness, so that the \hlget{\dkgmanagement}\ smart contract can verify each contribution without learning any of the underlying secrets and slash misbehaving participants. We use the non-interactive distributed key generation protocol of~\cite{kampa2026dkg} and refer the reader to that work for the full construction and its security analysis.
+To ensure that no single entity controls the decryption key, \davinci employs a \ac{DKG} protocol to jointly derive the threshold ElGamal encryption key pair used for ballot encryption. Participants who contribute to the ceremony are called \emph{\keywardens}. The outcome is a collective public key ($\epk$) that is published on-chain and used by voters to encrypt their ballots, while the corresponding private key is secret-shared among the \keywardens\ so that only a threshold $t$ out of $n$ of them can later collaborate to decrypt the tally. Unlike classical \ac{DKG} protocols in which shares are exchanged in the clear, our construction distributes encrypted shares together with \ac{ZK-SNARK} proofs of correctness, so that the key-management smart contracts can verify each contribution without learning any of the underlying secrets. We use the non-interactive distributed key generation protocol of~\cite{kampa2026dkg}, in which each dealer publishes a Feldman verifiable secret sharing~\cite{feldman1987practical} of its contribution, with every share encrypted to its recipient and a Groth16 proof that the dealing is consistent, and we refer the reader to that work for the full construction and its security analysis. The permissionless \ac{DKG} network deals sixteen independent keys per run, so that one run serves sixteen elections, and the invite-only council deals a single key per ceremony; both decrypt by collecting $t$ partial decryptions $D_i = s_i \cdot C_1$, each with a proof of consistency with the committed share $s_i$, and combining them by Lagrange interpolation in the exponent.
 
 \subsection{Zero-knowledge proof systems}
 \label{sec:cryptographic-primitives:zkp}
 
-Zero-knowledge succinct non-interactive arguments of knowledge (\acp{ZK-SNARK}) are the backbone of \davinci's integrity guarantees: voters prove that their encrypted ballots are well-formed and rule-compliant without revealing their choices, and sequencers prove that vote aggregation and state transitions were carried out correctly. For a circuit $\mathcal{C}$ with public inputs $\publicinputs$ and witness $\witness$, we write:
+Zero-knowledge proofs are the backbone of \davinci's integrity guarantees: voters prove that their encrypted ballots are well-formed and rule-compliant without revealing their choices, and sequencers prove that ballot verification, vote aggregation, and state transitions were carried out correctly.
+
+\paragraph{\acp{ZK-SNARK}.} For a circuit $\mathcal{C}$ with public inputs $\publicinputs$ and witness $\witness$, we write:
 \begin{itemize}
 	\item $\hlset{\PProve}(\mathcal{C}, \witness, \publicinputs)$: outputs a proof $\pi$ that the prover knows a witness satisfying $\mathcal{C}$ for the given public inputs, using the circuit's proving key.
 	\item $\hlset{\PVerify}(\pi, \publicinputs)$: returns $\true$ if and only if $\pi$ is valid for $\publicinputs$, using the circuit's verification key.
 \end{itemize}
+The ballot circuit uses the Groth16 proof system~\cite{groth2016size} over BN254, chosen for its constant-size proofs and cheap verification. A Groth16 proof $(A, B, C) \in \BN{\G}_1 \times \BN{\G}_2 \times \BN{\G}_1$ for public inputs $x$ is valid if $e(A, B) = e(\alpha, \beta) \cdot e(L_x, \gamma) \cdot e(C, \delta)$, where $\alpha, \beta, \gamma, \delta$ belong to the verification key and $L_x$ is a linear combination of its elements with coefficients $x$. The batch program verifies $n$ such proofs at once by checking a single random linear combination of their equations~\cite{bellare1998batch}, with 128-bit coefficients derived by hashing all the proofs and public inputs; an invalid proof passes with probability at most $2^{-128}$.
 
-All \davinci circuits use the Groth16 proof system~\cite{groth2016size}, chosen for its constant-size proofs and cheap on-chain verification. Although they share the proving system, the circuits are instantiated over different curves according to their role: the ballot circuit over BN254, the authentication (verifier) circuit over BLS12-377, the aggregation circuit over BW6-761, and the state transition and results circuits over BN254 (the latter because their proofs are verified on-chain through Ethereum's native precompiles). Further details on the circuits are provided in Section~\ref{sec:vocdoni-protocol:circuits} and a summary of the instantiations can be found in Fig.~\ref{fig:circuits-flow}.
+\paragraph{Zero-knowledge virtual machines.} For a guest program $\Prog$, compiled to RISC-V, and a private input $\witness$, we write:
+\begin{itemize}
+	\item $\hlset{\VMProve}(\Prog, \witness)$: executes $\Prog$ on $\witness$ and outputs the public values $\publicvalues$ it commits and a proof $\pi$ of the execution.
+	\item $\hlset{\VMVerify}(\programvk, \publicvalues, \pi)$: returns $\true$ if and only if $\pi$ proves that the program identified by \programvk, executed on some input, committed $\publicvalues$.
+\end{itemize}
+\Davinci uses the ZisK \ac{zkVM}~\cite{zisk}. The execution is proven with FRI-based \acp{STARK} over the Goldilocks field, aggregated recursively into a single VADCOP-final \ac{STARK}, and wrapped in a PlonK proof over BN254~\cite{gabizon2019plonk}, whose single public input is $\Sha(\programvk \conc \publicvalues \conc \rootc) \bmod s$. The program key \programvk is the root of a commitment to the compiled program, and \rootc identifies the setup of the VADCOP-final circuit. The \ac{STARK} part is transparent and relies only on collision-resistant hashing, while the PlonK wrapper relies on a universal structured reference string and on the hardness of discrete logarithms in the BN254 groups. Further details on the programs are provided in Section~\ref{sec:vocdoni-protocol:circuits} and a summary of the instantiations can be found in Fig.~\ref{fig:circuits-flow}.
