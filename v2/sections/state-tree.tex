@@ -27,8 +27,7 @@ The lowest indices of the tree are reserved for a small set of process parameter
 (\processid, \ballotmode, \epk, \censusorigin, \ballotvkhash); the remaining entry is a mutable accumulator (\encresults) updated on every state transition. In all cases these keys
 occupy deterministic, well-known positions and use a negligible portion of the key space. The entries are:
 \begin{itemize}
-	\item \texttt{0x0}: the election identifier (\processid), read as a 248-bit integer.
-	\footnote{The indices \texttt{0x1} and \texttt{0x5} are currently unused: \texttt{0x1} is
+	\item \texttt{0x0}: the election identifier (\processid), read as a 248-bit integer.\footnote{The indices \texttt{0x1} and \texttt{0x5} are currently unused: \texttt{0x1} is
 		reserved for backward compatibility (historically used for alternative census structures),
 		and \texttt{0x5} is reserved for future use (an earlier design stored a separate subtractive
 		results accumulator there; the current design keeps a single net results accumulator at
@@ -72,7 +71,6 @@ As a result, collisions do not compromise correctness or liveness, but merely re
 
 Note that the maximum number of vote identifiers that can be stored is bounded by the size of this namespace ($2^{D-1}$),
 which upper-bounds the total number of votes and overwrites that can be processed throughout the election.
-This capacity is orders of magnitude larger than any realistic election workload: historical elections peak at $\approx 10^{9}$ votes~\cite{reuters2024india}, ensuring that identifier exhaustion is practically impossible and that collisions are exceptionally rare
-\footnote{Based on the birthday paradox, the probability of at least one collision occurring is given by $P=1 - e^{-n^2/2d}$, where $n$ is the number of vote identifiers and $d = 2^{D-1}$. For a large-scale national election of $10^8$ votes emitted, this probability is vanishingly small ($\approx0.054\%$), and for an extreme workload of $10^9$ votes, the probability of a single collision is only $\approx5.3\%$, meaning that the need to resample $k$ remains highly improbable.}.
+This capacity is orders of magnitude larger than any realistic election workload: historical elections peak at $\approx 10^{9}$ votes~\cite{reuters2024india}, ensuring that identifier exhaustion is practically impossible and that collisions are exceptionally rare\footnote{Based on the birthday paradox, the probability of at least one collision occurring is given by $P=1 - e^{-n^2/2d}$, where $n$ is the number of vote identifiers and $d = 2^{D-1}$. For a large-scale national election of $10^8$ votes emitted, this probability is vanishingly small ($\approx0.054\%$), and for an extreme workload of $10^9$ votes, the probability of a single collision is only $\approx5.3\%$, meaning that the need to resample $k$ remains highly improbable.}.
 
 Together, the state tree provides a compact and tamper-proof commitment to the current status of the election. At the end of the election, the final state root together with the on-chain verification of all transitions serves as a complete cryptographic record of the election, encapsulating both the tally and the integrity of the entire voting procedure.

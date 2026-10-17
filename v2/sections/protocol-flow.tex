@@ -178,6 +178,7 @@ If all checks pass, the registry sets the latest state root to $\stateroot^\new$
 	\label{fig:l1-settlement}
 \end{figure}
 
+\medskip
 \noi \textbf{(e) Concurrent sequencers and synchronization.} Several sequencers may serve the same election, and each builds its batches on the latest state root it knows. When two of them prepare a transition from the same root, the first one to land advances the election, and the settlement of the other reverts because its $\stateroot^\old$ is no longer the latest root. The losing sequencer returns its votes to the queue, synchronizes, and builds its next batch on the new root; a lost race costs only the gas of the reverted transaction and, in L1-blob mode, the posted blobs. To synchronize, a sequencer fetches the blobs of every transition settled by others, checks them against the versioned hashes recorded by the settlement, decodes the vote identifiers and the updated slots with their ballots, recomputes the results accumulator from the ballots it already holds, applies the updates to its tree, and requires the resulting root to equal the one recorded on-chain. Queued votes whose identifier appears in the tree are thereby settled. An observer runs the same procedure for every transition, which checks the election, and its encrypted tally, independently of the sequencers. Sequencers apply transitions only once they are buried under a configurable number of blocks, and they detect deeper reorganizations of the settlement chain, in which case they roll back the affected transitions and replay the chain from the published blobs.
 
 \subsubsection{End of the voting period}
@@ -247,6 +248,7 @@ In this final phase, the election results are published on-chain, together with 
 
 \paragraph{\ac{DKG} and council modes.} Once every submitted ciphertext has been decrypted, any sequencer calls \fn{finalizeResultsFromDKG} for the process. The registry reads the stored plaintexts through the adapter, requires all of them to be available and, for a council process, the decryption gate to be open, fills in the zero-valued fields, records the results, sets the status to \texttt{RESULTS}, and emits \fn{ProcessResultsSet}. Both this call and the request are permissionless, and every signing sequencer is ready to make them; to avoid duplicate transactions, each sequencer waits a random delay and sends a call only if it is still missing.
 
+\medskip
 \noi The election is considered finalized once the decrypted results are available on-chain. At
 this stage, both the results and the complete integrity of the process are permanently recorded
 and publicly auditable: anyone can recompute the on-chain commitments and check the proofs. In particular, the combination of the final state root, the verified decryption of the
