@@ -56,7 +56,7 @@ The ballot circuit (\hlset{\ballotcircuit}), illustrated in Fig.~\ref{fig:circui
 	\label{fig:circuit-ballot}
 \end{figure}
 
-\noi The ballot proof does not authenticate the voter: anyone who knows a voter's address could prove a ballot for it. Authentication is provided by a separate signature over the vote identifier, $\signature = \hlget{\SSign}_{\sk}(\voteid)$, produced with the voter's SECP256K1 key and verified by the batch program. The signature authenticates the vote identifier, and the ballot proof binds the ciphertext and the other inputs to it through \ballotinputshash; as long as $k$ is fresh for every ballot, distinct ballots of a voter have distinct identifiers.
+\noi The ballot proof does not authenticate the voter: anyone who knows a voter's address could prove a ballot for it. Authentication is provided by a separate signature over the vote identifier, $\signature = \hlget{\SSign}_{\sk}(\voteid)$, produced with the voter's SECP256K1 key and verified by the batch program. The signature authenticates the vote identifier, and the ballot proof binds the ciphertext and the other inputs to it through \ballotinputshash; with a fresh $k$ for every ballot, distinct ballots of a voter get freshly derived identifiers, subject to the collision rejection of Section~\ref{sec:vocdoni-protocol:state-tree}.
 
 \subsubsection{Batch program}
 \label{sec:vocdoni-protocol:circuits:batch}

@@ -107,7 +107,7 @@ To cast a ballot, a voter does the following:
 	to the chosen sequencer, where \censusproof is only present for a \ac{CSP} census.
 	\item Follow the status of the vote through its identifier. Once the vote is settled, obtain from any sequencer an inclusion proof of the leaf \voteid under the state root, and check it against the root recorded in the \processregistry.
 \end{enumerate}
-A voter may repeat these steps any number of times while the voting period is open; each new ballot, once settled, replaces the previous one in the voter's slot. All ballots of one voter should be sent to the same sequencer, which settles them in the order they were cast; across sequencers, the ballot settled last prevails.\\
+A voter may repeat these steps any number of times while the voting period is open; each new ballot, once settled, replaces the previous one in the voter's slot. The protocol enforces that the ballot settled last prevails. An honest sequencer settles the ballots of a slot in the order in which it received them, which is not necessarily the order in which the voter created them, and ballots sent to different sequencers have no common order; voters should therefore send their ballots to one sequencer, one after another.\\
 
 \noi \textbf{(b) Vote admission.} Upon receiving a vote $\vote_i$, a sequencer runs every per-vote check of the batch program before accepting it, so that a single invalid vote cannot invalidate a batch:
 \begin{enumerate}
