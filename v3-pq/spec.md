@@ -1,6 +1,7 @@
 # DAVINCI v3-PQ — Post-Quantum Protocol Specification
 
-**Status:** draft v1.0 · 2026-10-20 · v2 remains the deployed protocol. Reviewed: three
+**Status:** draft v1.1 · 2026-10-20 · **unified Blake3 profile** (supersedes v1.0's
+mixed Poseidon2/SHA-256/Blake3 profile) · v2 remains the deployed protocol. Reviewed: three
 adversarial soundness rounds (protocol reviewer) + audience-representative sign-off; a final
 consolidated review gates implementation (Phase 0 of the migration plan).
 **Audience:** engineers who already know [DAVINCI v2](https://spec.davinci.vote). This document only
@@ -40,6 +41,7 @@ inherited non-PQ dependencies (§12.5).
 | Voter authentication | ECDSA (secp256k1) | Hash-preimage proof in-STARK; `hybrid` verifies **both**; `hybrid-legacy` admits unenrolled voters on ECDSA (§11) |
 | CSP credentials | ECDSA | SLH-DSA (SPHINCS+) [FIPS 205] |
 | Batch proof | ZisK, verifies Groth16 (BN254 precompiles) | ZisK [ZISK], verifies ballot STARKs (Blake3 precompile) |
+| Protocol hash | Poseidon (circuits) + SHA-256 (state) + Keccak (Ethereum) | **Blake3 everywhere the protocol chooses** (§2); keccak/SHAKE/SHA-2 survive only as fixed islands |
 | Tally bound | maxValue·maxVoters ≤ 10^12 (BSGS limit) | ≤ 2^61 (field headroom; no search) |
 
 ![What changes from v2 to v3-PQ](figures/architecture-delta.svg)
@@ -123,44 +125,59 @@ What this buys you:
   profile for DA-sensitive deployments. One *encapsulation* yields `(ct, K)` with a 32-byte
   shared secret `K`; arbitrary payloads are carried KEM-DEM style (encapsulate, derive a
   wrapping key from `K`, then DEM-encrypt — §2.1).
-- **Poseidon2** — Poseidon2 over Goldilocks with ZisK-precompile-compatible constants
-  [POS2]. Used for all **in-circuit** hashing (commitments, PRF masks, voteID, binding
-  hashes, census paths) — a width-8 instance inside the ballot AIR — and, via the width-16
-  ZisK precompile, wherever guests recompute those values. A Poseidon2 digest is 4 field
-  elements, serialized as 4×8 B LE (32 bytes).
-- **Blake3** — standard Blake3 [B3]. Used for the ballot proof's **Merkle trees and
-  Fiat–Shamir challenger** (32-byte digests, byte-oriented transcript). Chosen because it is
-  ~100× faster than Poseidon2 in software — measured on the prototype circuit: proving
-  3.24 s → 0.69 s, proofs 544 → 324 KB — while the batch guest verifies it through ZisK's
-  standard-conformant `blake3f` precompile at near-identical invocation counts (one rate-8
-  Poseidon2 permutation = one 64-byte Blake3 block; ≈ +14% per-invocation cost — a
-  deliberate trade of single-digit sequencer cost for ~5× voter proving speed). Blake3 is
-  never used inside an AIR.
-- **SHA-256** — unchanged: the state SMT, package digests, and everything contracts check.
-- **256-bit values in circuits** (DEM keys, SHA-256 digests crossing into Goldilocks
+- **Blake3** — standard Blake3 [B3] is **the protocol hash, everywhere the protocol gets to
+  choose**: the ballot STARK's Merkle trees and Fiat–Shamir challenger; all in-circuit
+  hashing (PRF masks, commitments, voteID, nullifiers — via a re-laid Blake3 AIR section,
+  §6); the census tree; the state SMT and the nullifier SMT; `pkgDigest`/`ctsDigest`; and
+  every DEM/PRF/key-derivation role through Blake3's standard *keyed*, *derive_key* and
+  *XOF* modes (§2.1). Digests are 32 bytes. Rationale: fastest software hash in the browser
+  (~1.4 GB/s in WASM; measured on the prototype: proving 3.24 s → 0.69 s, proofs
+  544 → 324 KB), a standard-conformant ZisK precompile (`blake3f`) for every guest
+  recomputation, and a conservative, long-studied ARX design (§12.4). One hash = one
+  implementation to audit on each platform (AIR, guest, browser, warden).
+- **Hash islands the protocol cannot choose**, stated plainly: **keccak256** for values
+  Solidity contracts must compute (blob evaluation points $z_b$, the v2 processID prefix,
+  the origin-3 running registration commitment of §8.2) and for hybrid-mode Ethereum
+  addresses; **SHAKE** inside ML-KEM and **SHA-2** inside SLH-DSA (FIPS-fixed internals of
+  black-box primitives); **Poseidon2** inside ZisK's own prover (an inherited proof-system
+  dependency — framing in §12.4; [POS2]). Poseidon2 and SHA-256 hold **no
+  application-level role** in v3.1.
+- **256-bit values in circuits** (DEM keys, Blake3 digests crossing into Goldilocks
   arithmetic): encoded as **eight 32-bit limbs**, each range-checked < 2^32. Never as four
   64-bit limbs (not injective: $p^4 < 2^{256}$), and never reduced mod $p$.
 
 ### 2.1 DEM (authenticated encryption for warden payloads)
 
-Hash-based, precompile-friendly, normative for **every protocol payload** (voter→warden is
+Built from Blake3's standard modes, normative for **every protocol payload** (voter→warden is
 pure KEM+PRF and needs no DEM; this DEM covers batch payloads, batch-key share wrapping, and
 ceremony deliveries):
-`keystream block j = HMAC-SHA-256(k, nonce ‖ LE64(j))` (HMAC, not raw hashing — the needed
-assumption is that HMAC-SHA-256 is a PRF (§2.4), a conservative standard one); ciphertext =
-plaintext ⊕ keystream; `tag = HMAC-SHA-256(k_mac, nonce ‖ AAD ‖ ciphertext)`;
-`(k, k_mac) = HKDF-SHA-256(K, "enc"/"mac")` from the KEM/batch secret. `nonce = SHA-256(AAD)`.
-The AAD is the canonical serialization of a **DEM context** that always includes a purpose
-tag, the election context, the **batch number or ceremony (session, attempt) identifier**,
-sender and recipient — unique per encryption *including retries* (a ceremony restart is a new
-attempt id ⇒ fresh masks, keys and nonces; the same derived key and nonce never encrypt two
-different plaintexts). Payloads are bounded below 2^32 blocks; receivers verify the full tag
-before releasing any plaintext. AES-256-GCM may be used by clients for unrelated local
-storage/transport, never as a substitute encoding of protocol payloads.
+- **Key separation**: `k_enc = Blake3.derive_key("davinci v3-pq DEM enc key", K)` and
+  `k_mac = Blake3.derive_key("davinci v3-pq DEM mac key", K)` — fixed application context
+  strings, exactly the standard derive_key mode. `derive_key` creates *separation, not
+  entropy*: `K` must be a ≥256-bit KEM secret or CSPRNG secret.
+- **Keystream**: keyed-Blake3 **XOF** — `keystream = Blake3.keyed(k_enc, nonce ‖ AAD).xof()`,
+  with the counter being the XOF output offset (bounded: payloads < 2^32 blocks, no offset
+  wraparound); ciphertext = plaintext ⊕ keystream. An XOF is a seekable output stream, not
+  repeated hashing of previous output.
+- **Authentication**: encrypt-then-MAC — `tag = Blake3.keyed(k_mac, nonce ‖ AAD ‖ ciphertext)`;
+  receivers verify the **full 32-byte tag before releasing any plaintext**.
+- **Uniqueness**: `nonce = Blake3(AAD)`; the AAD is the canonical, length-unambiguous
+  serialization of a **DEM context** that always includes a purpose tag, the election
+  context, the **batch number or ceremony (session, attempt) identifier**, sender and
+  recipient — unique per encryption *including retries* (a ceremony restart is a new attempt
+  id ⇒ fresh masks, keys and nonces; the same derived key and nonce never encrypt two
+  different plaintexts).
+
+Honest label: these are standard Blake3 modes, but their composition is a
+**protocol-specific authenticated-encryption construction — not a standardized AEAD**; the
+needed assumption is keyed-Blake3's PRF security (§12.4). AES-256-GCM may be used by clients
+for unrelated local storage/transport, never as a substitute encoding of protocol payloads.
 
 ### 2.2 Domain-separated contexts
 
-Every derived value uses a purpose-tagged context; nothing is derived without one.
+Every derived value uses a purpose-tagged context; nothing is derived without one. Purpose
+tags map to Blake3 `derive_key` context strings; the tuple itself is serialized canonically
+(fixed order, length-prefixed variable fields).
 
 | Purpose | Context contents |
 |---|---|
@@ -168,12 +185,17 @@ Every derived value uses a purpose-tagged context; nothing is derived without on
 | `maskCtx(i, f)` — PRF pad for masked shares | `("v3/mask", pkgCtx, recipient i, field f)` |
 | `hCtx(i)` — share/pad commitment | `("v3/hcommit", pkgCtx, recipient i)` |
 | `commitCtx` — package commitment | `("v3/pkgcommit", pkgCtx)` — the `ctx` argument of `pkgCommit` (§5.1) |
-| `nullCtx` — revocation nullifier | `("v3/null", protocolVersion, chainID, registry, processID)` — **predecessor-only**: `NULL = Poseidon2(nullCtx, sk, prevPkgDigest)` with `sk` the voter's census-bound secret or `sk_pkg` (§11). Never depends on the successor package, batch, or recipients. |
+| `nullCtx` — revocation nullifier | `("v3/null", protocolVersion, chainID, registry, processID)` — **predecessor-only**: `NULL = Blake3(nullCtx ‖ sk ‖ prevPkgDigest)` with `sk` the voter's census-bound secret or `sk_pkg` (§11). Never depends on the successor package, batch, or recipients. |
 | `slotCtx` / `refreshCtx` — slot leaves | `"davinci-slot-v3"` / `"davinci-refresh-v3"` (§7) |
 
 The package's mask nonce is its **voteID** — public, unique per package, authenticated, and
 independent of the masked values (it derives from the secret `k`, §5.2, before any masking),
 so wardens can recompute every `maskCtx` from public data with no circularity.
+
+**Byte→field mapping (normative).** Blake3 outputs bytes; masks and other derived field
+elements are obtained as **LE128 of 16 XOF bytes, reduced mod $p$** — statistical distance
+from uniform ≈ $2^{-96}$, negligible. Never `LE64(8 bytes) mod p`: its distance is
+≈ $2^{-32}$, which is not.
 
 ### 2.3 Protocol parameters
 
@@ -185,8 +207,9 @@ so wardens can recompute every `maskCtx` from public data with no circularity.
 | Warden evaluation points | $x_i = i$, $i \in 1..\nu$ | Shamir positions, pairwise distinct, nonzero |
 | Max votes per batch | profile-dependent (§8.6) | in-guest verification cost + the 32-blob batch cap inherited from v2's batch program (see §8.6) |
 | Max refreshed slots per batch | 2048, rule as v2 | unchanged |
-| Nullifier tree | SHA-256 SMT, depth 256 | full-width nullifiers (no truncation into the 64-bit key space) |
-| Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS, **Blake3 Merkle/challenger** | ≈102-bit conjectured FRI soundness (§12.4); profile pinned in full by `ballotVKHash` |
+| Nullifier tree | Blake3 SMT, depth 256 | full-width nullifiers (no truncation into the 64-bit key space) |
+| Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈102-bit conjectured FRI soundness (§12.4); profile pinned in full by `ballotVKHash` |
+| Commitments | **salted unkeyed Blake3**, domain-separated | hiding from an independent 256-bit CSPRNG salt (or the secret inputs); binding from collision resistance. Keyed-Blake3 is reserved for MACs/PRFs — a MAC is not automatically a hiding/binding commitment |
 
 ### 2.4 Terminology for software engineers
 
@@ -228,8 +251,13 @@ of the document assumes them.
   exactly the Tornado Cash / Semaphore pattern. Here: marks a vote package as replaced.
 - **Accumulator** (as used here) — just a running sum vector of field elements maintained by
   the batch program. *Not* an RSA or Merkle accumulator.
+- **Blake3** — a modern general-purpose hash: ARX design (add–rotate–xor, the ChaCha/BLAKE/
+  BLAKE2 lineage; BLAKE was a SHA-3 finalist), extremely fast in software, with standard
+  built-in modes for keyed hashing (MAC), key derivation (`derive_key`) and arbitrary-length
+  output (XOF). v3's single protocol hash.
 - **DEM / AEAD** — symmetric authenticated encryption (ciphertext + tamper-proof tag), the
-  AES-GCM role; v3 instantiates it from SHA-256/HMAC so zk-proofs about it stay cheap (§2.1).
+  AES-GCM role; v3 instantiates it from Blake3's keyed + XOF modes so one hash covers it and
+  zk-proofs about it stay cheap (§2.1).
 - **Domain separation** — namespacing every hash/PRF input with a purpose tag and context so
   a value from one context can never be replayed in another — the same reason EIP-712 typed
   signing exists (§2.2).
@@ -323,22 +351,25 @@ the voter's browser — except the *revote metadata* the chosen sequencer needs 
 | 3 | `voteID` | 8 B LE | §5.2; also the package's mask nonce (§2.2) |
 | 4 | `E` | ν·16·8 B = 2,048 B | masked shares, row-major (warden-major, field-minor), canonical LE |
 | 5 | `cts` | ν·1,088 B = 17,408 B | ML-KEM ciphertexts, warden order 1..ν |
-| 6 | `h` | ν·32 B = 512 B | commitments $h_i = \mathrm{Poseidon2}(hCtx(i), s_{i,1..16}, K_i)$ ($K_i$ as 8×32-bit limbs) |
-| 7 | `pkgCommit` | 32 B | $\mathrm{Poseidon2}(slot, pk_{\text{voter}}, \mathrm{prevPkgDigest}, \mathrm{sharesDigest}, \mathrm{salt}, \mathrm{commitCtx})$ — hiding comes from `salt`, an independent **256-bit CSPRNG commitment salt** kept in the package opening (share entropy alone is NOT enough: given θ−1 shares and a candidate ballot, the whole polynomial is determined); `prevPkgDigest = 0^{32}` for a first vote |
+| 6 | `h` | ν·32 B = 512 B | commitments $h_i = \mathrm{Blake3}(hCtx(i) \,\|\, s_{i,1..16} \,\|\, K_i)$ — salted unkeyed Blake3 per §2.3 (the secret $K_i$ and shares are the hiding material here) |
+| 7 | `pkgCommit` | 32 B | $\mathrm{Blake3}(\mathrm{commitCtx} \,\|\, slot \,\|\, pk_{\text{voter}} \,\|\, \mathrm{prevPkgDigest} \,\|\, \mathrm{sharesDigest} \,\|\, \mathrm{salt})$ — hiding comes from `salt`, an independent **256-bit CSPRNG commitment salt** kept in the package opening (share entropy alone is NOT enough: given θ−1 shares and a candidate ballot, the whole polynomial is determined); `prevPkgDigest = 0^{32}` for a first vote |
 | 8 | `hybridSig` | 65 B or absent | hybrid mode only: ECDSA over `pkgDigest`, Ethereum personal-message format (§11) |
 
 `CanonicalPackage` = the concatenation of fields 1–7 exactly as listed (fixed order, fixed
-sizes, no framing). **`pkgDigest = SHA-256(CanonicalPackage)`** is the package's chain
+sizes, no framing). **`pkgDigest = Blake3(CanonicalPackage)`** is the package's chain
 identity: it is the value stored at the vote-ID leaf, the input to revocation nullifiers, and
-what complaints reference. `sharesDigest = Poseidon2` sponge over all $s_{i,f}$ in the same
-row-major order. The ballot STARK (~400 KB) accompanies the package to the sequencer but is
-**not** published in blobs.
+what complaints reference. **`sharesDigest = Blake3(h_1 ‖ … ‖ h_ν)`** — despite the name it
+binds the shares *through* the per-warden commitments $h_i$ (each AIR-bound to the exact
+$(s_i, K_i)$ used in masking, fixed order and count), which is equivalent binding at an
+eighth of the in-circuit hashing cost. The ballot STARK (~325 KB) accompanies the package to
+the sequencer but is **not** published in blobs.
 
 ### 5.2 Construction (browser, pseudocode)
 
 ```text
 k         = fresh random scalar (or PRF(sk, "v3/k", processID, counter) in recovery mode)
-voteID    = N + trunc63(Poseidon2(processID, address, k))        # trunc63 = lowest 63 bits;
+voteID    = N + trunc63(Blake3("v3/voteid" || processID || address || k))
+                                                                 # trunc63 = lowest 63 bits;
                                                                  # N = 2^63 (v2's namespace offset)
 for f in 1..nf:
     poly_f = random polynomial, degree θ-1, poly_f(0) = ballot[f]
@@ -346,12 +377,13 @@ for f in nf+1..16:  poly_f = random polynomial with poly_f(0) = 0  # inactive fi
 s[i][f]   = poly_f(i)                                            # ν shares per field
 for i in 1..ν:
     (ct[i], K[i]) = MLKEM.Encaps(pk_warden[i])                   # fresh randomness per package, NEVER reused
-    for f in 1..16: e[i][f] = s[i][f] + PRF(K[i], maskCtx(i, f)) mod p
-    h[i]  = Poseidon2(hCtx(i), s[i][1..16], K[i])
-salt      = fresh 256-bit CSPRNG value                           # hiding salt, kept in the opening
-pkgCommit = Poseidon2(slot, pk_voter, prevPkgDigest, sharesDigest, salt, commitCtx)
-ctsDigest = SHA-256(ct[1] || .. || ct[ν])                        # binds the ciphertext bytes (§6)
-proof     = BallotSTARK.prove(...)                               # §6
+    for f in 1..16: e[i][f] = s[i][f] + PRF(K[i], maskCtx(i, f)) mod p   # PRF = keyed-Blake3 XOF, §2.2 mapping
+    h[i]  = Blake3(hCtx(i) || s[i][1..16] || K[i])
+salt        = fresh 256-bit CSPRNG value                         # hiding salt, kept in the opening
+sharesDigest = Blake3(h[1] || .. || h[ν])
+pkgCommit   = Blake3(commitCtx || slot || pk_voter || prevPkgDigest || sharesDigest || salt)
+ctsDigest   = Blake3(ct[1] || .. || ct[ν])                       # binds the ciphertext bytes (§6)
+proof       = BallotSTARK.prove(...)                             # §6
 ```
 
 ML-KEM encapsulation costs ~1–2 ms per warden in browser WASM [KEMB]; the dominant client
@@ -381,7 +413,7 @@ ciphertext, so the *voter's proof* identifies what to remove:
 - Each voter has, per election, a chain of packages $P_0 \to P_1 \to \dots$; exactly one is
   **live**. A revote package $P_{t+1}$ consumes $P_t$: the STARK proves knowledge of $P_t$'s
   opening (same slot, same key) and the nullifier derivation
-  $\mathrm{NULL}_t = \mathrm{Poseidon2}(\mathrm{nullCtx}, sk, \mathrm{pkgDigest}_t)$, where
+  $\mathrm{NULL}_t = \mathrm{Blake3}(\mathrm{nullCtx} \,\|\, sk \,\|\, \mathrm{pkgDigest}_t)$, where
   `sk` is the voter's census-bound secret (or the self-chosen `sk_pkg` for unenrolled hybrid
   voters — §11).
 - The batch program checks $P_t$ **was admitted and is settled**: an inclusion proof of
@@ -416,26 +448,27 @@ The Groth16 circuit is replaced by a STARK over Goldilocks, proven in the browse
 the production descendant of the davinci-stark prototype [DST], minus its elliptic-curve
 section. No trusted setup.
 
-**Public inputs** (all as Goldilocks elements/limbs):
-`inputsHash` (4 limbs) · `voteID` · `slot` · `authMode` flag · `isRevote` flag ·
-`prevPkgDigest` (8×32-bit limbs; zero when `isRevote=0`) · `NULL` (4 limbs; zero when
-`isRevote=0`).
+**Public inputs: the raw public vector.** There is no binding hash (v1.0's `inputsHash` is
+removed): the proof exposes the public statement **directly as a pinned, ordered vector of
+Goldilocks elements/limbs** — at least: `version` · `processID` · `packedBallotMode` ·
+`voteID` · the identity binding (`address` limbs and `pk_PQ` or the legacy branch's
+`H(sk_pkg)`) · `slot` · `authMode` · `isRevote` · `weight` · all `E` coordinates (ν·16
+elements) · all `h_i` (ν × 8×32-bit limbs) · `pkgCommit` limbs · `ctsDigest` limbs ·
+`prevPkgDigest` limbs · `NULL` limbs — **≈ 420+ elements at ν=16**. The vector layout is
+length-prefixed per ν and never truncates. `ctsDigest = Blake3(cts)` is computed *outside*
+the circuit and enters as opaque limbs — this **binds** the ciphertext bytes without proving
+anything about ML-KEM.
 
-In words, the proof pins down every public byte of the package plus the election context, so
-the batch program can check "this proof authorizes exactly these bytes".
-**`inputsHash`** is the Poseidon2 binding of the **complete CanonicalPackage plus election
-context**, computed exactly as:
-`Poseidon2(version, processID, packedBallotMode, wardenSetHash, censusRoot, voteID, slot,
-authMode, weight, H2(E), ctsDigest, H2(h_1..h_ν), pkgCommit)` where `H2` is the Poseidon2
-sponge over the listed values in package order and **`ctsDigest = SHA-256(cts)`** enters as
-8×32-bit limbs. The voter computes `ctsDigest` *outside* the circuit (the circuit treats it
-as opaque limbs — this **binds** the ciphertext bytes without proving anything about ML-KEM);
-the batch program recomputes `SHA-256(cts)` and the full `inputsHash` from the package body
-and rejects on any mismatch. Nothing in the admitted package — including the ciphertexts —
-can differ from what the voter authorized. The `slot` public input (derived from the census
-identity per the census-origin rule, proven against the in-circuit census membership path)
-is what the batch program uses for the state transition, and `authMode` pins which §11
-authentication branch the proof took.
+**Statement contract (normative).** The batch program **constructs the expected public
+vector itself** — from the canonical package it admits, the authenticated election
+parameters, the authenticated census data (§8.2), and the predecessor metadata — and
+verifies the proof against *that* vector. It never verifies a supplied vector and then
+processes different package data. Inside the AIR, every value used by ballot validation,
+share generation, masking, commitments and nullifier derivation is constrained equal to
+these publics, so an admitted package is byte-for-byte the one the voter's proof authorized.
+`censusRoot` is **not** a ballot public input: membership is the batch program's job (§8.2).
+Privacy note: the inner proof's public inputs live at the voter→sequencer/guest boundary —
+they are **not** published in blobs beyond what the package itself already publishes.
 
 **The proof shows:**
 1. **Ballot validity** — v2's ballot protocol (ranges, uniqueness, cost sum vs
@@ -448,12 +481,27 @@ authentication branch the proof took.
    value. Cost: ν·16·(θ−1) ≈ 1.8k multiplications at ν=16, θ=8 — trivial for the AIR.
 3. **Mask consistency** — $e_{i,f} = s_{i,f} + \mathrm{PRF}(K_i, \mathrm{maskCtx}(i,f))$ with
    the same $(s_i, K_i)$ committed in $h_i$.
-4. **voteID derivation** from `(processID, address, k)` and the `inputsHash` binding above.
-5. **Authentication** (§11): knowledge of `sk` with `H(sk)` bound in the census leaf — or,
-   for an unenrolled hybrid voter (`pk_PQ = 0`), knowledge of the self-chosen `sk_pkg` bound
-   in the chain's first `pkgCommit` (§11), with identity resting on `hybridSig`. For a
-   revote, additionally the predecessor opening (same slot, same key) and the `NULL`
-   derivation of §5.3.
+4. **voteID derivation** from `(processID, address, k)` (Blake3, §5.2), with all of these
+   bound in the public vector.
+5. **Authentication** (§11): knowledge of `sk` with `H(sk) = pk_PQ`, where `pk_PQ` is a
+   public input that the **batch program** binds to the authenticated census leaf (§8.2) —
+   census membership itself is *not* proven in the ballot AIR. For an unenrolled hybrid
+   voter (census `pk_PQ = 0` means "no enrolled key" — the proof never requires
+   `H(sk_pkg) = 0`): knowledge of the self-chosen `sk_pkg` bound in the chain's first
+   `pkgCommit` (§11), with identity resting on `hybridSig`. For a revote, additionally the
+   predecessor opening (same slot, same key) and the `NULL` derivation of §5.3.
+
+**The in-AIR Blake3 section.** All in-circuit hashing runs in a **re-laid Blake3 section**
+(~25–32 rows per compression at the circuit's width; ~45 compressions at ν=5, ~110 at ν=16).
+It MUST constrain full standard-Blake3 semantics, not merely a compression gadget:
+canonical input bytes, exact lengths and zero padding; correct IV / keyed / `derive_key`
+initialization per mode; the full 7-round schedule with both feed-forward halves; the
+64-byte-block and 1024-byte-chunk structure with correct counters and
+`CHUNK_START`/`CHUNK_END`/`ROOT` flags; correct chaining between compressions; XOF
+output-block counters (an XOF is a seekable stream, not repeated hashing); outputs
+constrained equal to the values consumed elsewhere in the AIR; and selector/phase
+constraints that cannot skip or disconnect any check. Negative test vectors regenerate
+otherwise-correct traces with wrong flags, counters, lengths or chaining values.
 
 What the proof deliberately does **not** show: that `ct_i` decapsulates to the committed
 $K_i$. Proving ML-KEM in-circuit would drag SHAKE through the AIR. Instead, mismatched
@@ -461,30 +509,36 @@ transport is *harmless to integrity* (no tally proof ever runs Decaps — §10.2
 excludable* (complaints — §9.2). A STARK-friendly verifiable encryption removing this
 trade-off is the main tracked upgrade (§15).
 
-**Indicative numbers** (estimates until the v3 circuit is benchmarked; the prototype [DST]
-with the Blake3 profile measured **0.69 s native proving, 2.1 ms verification and 324 KB
-proofs** for a *larger* trace — its earlier Poseidon2 profile measured 3.2 s / 12 ms /
-544 KB): trace ≤ 2048 × ~200 columns, a few seconds of desktop-browser proving (mobile
-slower — to be benchmarked; the ~325 KB proof uploads once to one sequencer and is never
-stored on-chain). Blake3-profile adoption conditions (from review): fix the vendored
-challenger's wasm32 query-sampler bug; pin the exact transcript (observe/sample schedule,
-domain-separated initialization, MMCS layout and shape checks) into `ballotVKHash`;
-implement full Blake3 chunk/tree semantics over the `blake3f` precompile with boundary-length
-test vectors; measure real browser and whole-batch guest costs before deployment guarantees.
+**Indicative numbers.** Measured on the prototype [DST]: the Blake3 Merkle/challenger profile
+proves in **0.69 s native** (vs 3.2 s for the old Poseidon2 profile) with **~324 KB proofs**;
+a standalone Blake3 compression AIR costs ≈3.4 ms/compression at its wide layout. The
+full-Blake3 ballot (re-laid in-AIR section) is a **projection, not a measurement**:
+**~0.7 s native at ν=5 to ~1.4 s at ν=16**, ~325 KB proofs — to be re-benchmarked once the
+re-laid AIR exists (equal cell counts do not guarantee equal proving cost; the degree and
+quotient profile must be recomputed). Browser proving is expected at a few × native (mobile
+slower — to be benchmarked; the proof uploads once to one sequencer and is never stored
+on-chain). Standing adoption gates (from review): fix the vendored challenger's wasm32
+query-sampler bug; production hiding CSPRNG; pin the exact transcript (observe/sample
+schedule, domain-separated initialization, MMCS layout and shape checks) into
+`ballotVKHash`; implement full Blake3 chunk/tree semantics over the `blake3f` precompile
+with boundary-length test vectors (0/63/64/65/1023/1024/1025 B); measure real browser and
+whole-batch guest costs before deployment guarantees.
 
 ---
 
 ## 7. State tree changes
 
-Same SHA-256 sparse Merkle tree, depth 64, same namespaces as v2, three changes:
+Same sparse-Merkle-tree structure, depth 64, same namespaces as v2 — now hashed with
+**Blake3** (leaf: `Blake3(key_LE8 ‖ value_32 ‖ 0x01)`, node: `Blake3(left ‖ right)`), plus
+four changes:
 
 ![State tree v3 layout](figures/state-tree-v3.svg)
 
 1. **Vote-ID leaves carry the package digest**: `voteID → pkgDigest` (v2 stored 0). This lets
    revotes and complaints authenticate a package *body* against the chain.
 2. **Slot leaves are chained opaque digests** (no ballot data):
-   - first vote / overwrite: `leaf = SHA-256("davinci-slot-v3" ‖ pkgDigest ‖ s_batch)`
-   - refresh: `leaf' = SHA-256("davinci-refresh-v3" ‖ leaf ‖ s_batch)`
+   - first vote / overwrite: `leaf = Blake3("davinci-slot-v3" ‖ pkgDigest ‖ s_batch)`
+   - refresh: `leaf' = Blake3("davinci-refresh-v3" ‖ leaf ‖ s_batch)`
    with `s_batch` the sequencer's secret batch seed (proven in-guest, never published — the
    same trust class as v2's re-encryption seed). A refresh needs only the **public current
    leaf** plus the refresher's own secret, so **any sequencer can refresh any occupied slot**
@@ -492,10 +546,25 @@ Same SHA-256 sparse Merkle tree, depth 64, same namespaces as v2, three changes:
    update types produce fresh-looking 32-byte values; this plus the padded accumulator is
    what replaced re-encryption-based silent revoting.
 3. **Config namespace**: `0x3` = `wardenSetHash` (§4) instead of an encryption key; `0x4` =
-   `SHA-256(A)` (the accumulator value itself is published in every batch's blobs); `0x5`
-   (reserved in v2) = the root of the **nullifier tree**, a dedicated SHA-256 SMT of depth
-   256. A nullifier is a Poseidon2 digest serialized to 32 bytes (4×8 B LE), used directly
-   as the 256-bit key; leaf value = 1.
+   `Blake3(A)` (the accumulator value itself is published in every batch's blobs); `0x5`
+   (reserved in v2) = the root of the **nullifier tree**, a dedicated Blake3 SMT of depth
+   256. A nullifier is a 32-byte Blake3 digest used directly as the 256-bit key; leaf
+   value = 1.
+4. **Genesis predicate replaces on-chain genesis computation.** The EVM has no Blake3
+   precompile, so the registry no longer computes the genesis root itself. Instead it stores
+   the election parameters and an **initialization flag**, and the **first transition's batch
+   proof constructs the genesis tree deterministically in-guest** from the registry-supplied
+   parameters — the canonical empty tree plus *exactly* the prescribed config leaves, the
+   zero accumulator in its prescribed encoding, an empty nullifier tree, no slots, no
+   packages, correct initial counters — and proves `oldRoot` equals that construction.
+   Membership proofs under a prover-chosen root are **never** accepted as a substitute (they
+   show presence, not absence of extra state). Registry rules: the genesis branch is
+   selected by the stored initialization flag (never caller input); parameters come from
+   registry storage, not calldata; the first transition and initialization are recorded
+   atomically; thereafter `oldRoot == storedRoot` always, and re-initialization is
+   impossible; the outer proof binds the full `(chainID, registry, processID)` (not just
+   v2's 4-byte prefix); and an **initialization-only transition** (zero ballots) is an
+   explicit path so empty elections can still finalize.
 
 ---
 
@@ -515,17 +584,36 @@ exposes a standard-conformant Blake3 compression precompile (`blake3f`); the mea
 on the prototype verifier is **7,601 compressions per proof** (vs 7,515 permutations for the
 Poseidon2 profile — same Merkle structure), giving a *modeled* in-guest cost of roughly 1M
 steps per ballot (to be benchmarked). The guest implements Blake3's chunk/tree layout over
-the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier configuration (AIR identity, FRI profile,
-Poseidon2 constants) is pinned via `ballotVKHash` at config leaf `0x7`, as in v2.
+the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier
+configuration (AIR identity, FRI profile, transcript and hash profile) is pinned via
+`ballotVKHash` at config leaf `0x7`, as in v2, and the guest constructs each proof's expected
+public vector per the §6 statement contract.
 
 ### 8.2 Census, authentication, binding
-As v2 for census membership and slot derivation. Authentication follows the election's
-**auth policy** (§11): `pq-only` relies on the in-STARK preimage proof alone; `hybrid`
+Census membership is verified **here**, as in v2 (not in the ballot AIR): the program
+authenticates the census leaf `Blake3(address ‖ weight ‖ pk_PQ)` with a Merkle path under an
+accepted root, derives the slot by the census-origin rule, and proves the **join equality**:
+
+$$\text{ballot publics } (\text{identity key},\, weight,\, slot,\, authMode) \;=\; \text{authenticated census values and policy}$$
+
+The census root it checks is bound in the **batch statement** and must be accepted under the
+election's origin-specific registry policy — never chosen freely by the prover. `authMode` is
+derived from the immutable election auth policy plus the creation-time enrollment snapshot
+(§11) and compared against the proof's public input — never prover-chosen. Authentication
+then follows the policy: `pq-only` relies on the in-STARK preimage proof alone; `hybrid`
 *additionally* verifies `hybridSig` (ECDSA over `pkgDigest`, secp256k1 precompile, recovered
 address = census address) for every package; `hybrid-legacy` dispatches per census leaf as
-specified in §11. The program recomputes `ctsDigest`, `inputsHash` and `pkgDigest` from the
-package body and matches them against the proof's public inputs and the inserted leaf value
-— so an admitted package is byte-for-byte the one the voter's proof authorized (§6).
+specified in §11. The program recomputes `ctsDigest` and `pkgDigest` from the package body
+and constructs the proof's full expected public vector from that body (§6 statement
+contract) — so an admitted package is byte-for-byte the one the voter's proof authorized.
+
+**On-chain censuses and the PQKeyRegistry (origin 3).** Contracts cannot hash Blake3
+cheaply, so on-chain censuses maintain an incremental **keccak256 running commitment** of
+their authorized registrations (one `keccak256(prev, entry)` per registration — Solidity-
+native). A permissionless **census-root conversion proof** — a small ZisK guest — attests
+"running commitment `c` corresponds to Blake3 lean-IMT root `r`"; the registry verifies it
+and stores the accepted `(c, r)` pair, and batches then use `r` under the origin-3 root
+policy. No unauthenticated off-chain root ever enters the system.
 
 ### 8.3 State transitions
 In fixed order, each proven against the previous root, as v2: (1) insert
@@ -565,7 +653,11 @@ an opaque byte stream per section), 4096 cells per blob ⇒ 126,976 B per blob. 
 order: header · new packages (CanonicalPackage bytes) · slot-update list
 (slot index 8 B + new leaf 32 B — so a refresh costs 40 B framed, vs ~1–2 KB in v2) ·
 nullifiers (32 B each) · accumulator value $A'$ (ν·16·8 B) · warden payload (§8.5).
-Byte-exact cell maps live in the davinci-zkvm normative docs, as in v2.
+Byte-exact cell maps live in the davinci-zkvm normative docs, as in v2. One divergence from
+v2's blob flow: the evaluation point becomes
+$z_b = \mathrm{keccak256}(\text{processID} \,\|\, \text{stateRoot}^{old} \,\|\, \text{blobCommitment}_b) \bmod q_{BLS}$
+— keccak because the **registry contract** computes it (Solidity-native; the guest recomputes
+it via the keccak precompile, one call per blob — a §2 island).
 
 Per-package size: `72 + ν·(160 + ct_len)` bytes (72 B fixed fields; per warden: 128 B of
 masked shares + 32 B commitment + one ciphertext) ⇒ **20,040 B** at ν=16/ML-KEM-768;
@@ -672,7 +764,7 @@ $G_f(0)=0$ doesn't change the interpolation at 0.
 
 Wardens run their **own provers**: the witness contains their secrets, and a shared proving
 service used by θ wardens would itself hold reconstruction capability. Proving cost scales
-with total casts (a few Poseidon2 permutations per package; as an **unvalidated projection**
+with total casts (a few Blake3 compressions per package; as an **unvalidated projection**
 — archive, payload and ceremony checks included — on the order of 10^8 guest steps for a
 million-cast election, to be benchmarked with the v3 implementation before warden hardware
 guidance is given).
@@ -701,9 +793,9 @@ ceremony prevents that:
    $c_{k,f,1..\theta-1}$, defining $g_{k,f}(x) = \sum_j c_{k,f,j} x^j$ — **the constant term
    is structurally absent, so $g_{k,f}(0) = 0$ by construction** (this is the
    "zero-certificate": the committed coefficient vector simply has no degree-0 entry).
-3. Dealer $k$ publishes (in a session blob): a hiding Poseidon2 commitment to its
-   coefficients; **per-recipient hiding evaluation commitments**
-   $cm_{k,i} = \mathrm{Poseidon2}(g_{k,1..16}(i), r_{k,i})$; the KEM-DEM ciphertexts to each
+3. Dealer $k$ publishes (in a session blob): a hiding commitment to its coefficients
+   (salted unkeyed Blake3, §2.3); **per-recipient hiding evaluation commitments**
+   $cm_{k,i} = \mathrm{Blake3}(g_{k,1..16}(i) \,\|\, r_{k,i})$; the KEM-DEM ciphertexts to each
    co-participant $i$ encrypting $(g_{k,1..16}(i), r_{k,i})$; and a **ZisK dealer proof**
    that the committed coefficients, the evaluation commitments, and the ciphertexts are all
    consistent, under the recipients' registered keys and this session's context.
@@ -723,10 +815,10 @@ revoked set $R$; that is the documented θ-gated metadata leakage (§12.2).
 
 ## 11. Census and authentication
 
-- **Census trees** migrate from Poseidon-BN254 to Poseidon2-Goldilocks (a breaking format
-  change; same lean-IMT structure). Leaf encoding:
-  `leaf = Poseidon2(address, weight, pk_PQ)` with `pk_PQ = H(sk)` for a CSPRNG-generated
-  secret, or `pk_PQ = 0` for a not-yet-enrolled voter (hybrid censuses only).
+- **Census trees** migrate from Poseidon-BN254 to **Blake3** (a breaking format change; same
+  lean-IMT structure; membership verified by the batch program, §8.2). Leaf encoding:
+  `leaf = Blake3(address ‖ weight ‖ pk_PQ)` with `pk_PQ = H(sk)` for a CSPRNG-generated
+  secret, or `pk_PQ = 0` for a not-yet-enrolled voter (hybrid-legacy censuses only).
 - **PQ-key enrollment.** The Ethereum wallet signs an enrollment message binding
   `address ↔ pk_PQ`; the signature *authorizes* the binding and is never key entropy (a
   future ECDSA break must not reveal PQ secrets). Enrollment paths per census origin:
@@ -744,7 +836,7 @@ revoked set $R$; that is the documented θ-gated metadata leakage (§12.2).
     package key**: the voter generates `sk_pkg` (CSPRNG; kept with the package opening). The
     first package binds `H(sk_pkg)` inside `pkgCommit`. Every later package in the chain
     proves knowledge of the *same* `sk_pkg` (predecessor opening) and derives its nullifier
-    as `NULL = Poseidon2(nullCtx, sk_pkg, prevPkgDigest)`. The batch program dispatches per
+    as `NULL = Blake3(nullCtx ‖ sk_pkg ‖ prevPkgDigest)`. The batch program dispatches per
     leaf: `pk_PQ ≠ 0` ⇒ both authenticators against the census key; `pk_PQ = 0` ⇒ mandatory
     `hybridSig` + the `sk_pkg` clause. Anyone can count the legacy-status census members
     (leaf contents are public census data) — though not, of course, which *final* packages
@@ -759,7 +851,8 @@ revoked set $R$; that is the documented θ-gated metadata leakage (§12.2).
   census contract later accepts. Enrolling *after* an election was created affects
   subsequent elections only — an existing package chain never changes keys mid-election.
 - **CSP censuses**: credentials become SLH-DSA signatures [FIPS 205] over the v2 message
-  format extended with `pk_PQ`; verification is pure hashing via the SHA-256 precompile.
+  format extended with `pk_PQ`; verification is pure hashing via the SHA-256 precompile
+  (SLH-DSA's internal SHA-2 is a FIPS island, §2 — not an application-level hash choice).
 - Slot derivation, participation visibility, census origins 1–4 mechanics: as v2, with the
   enrollment additions above. The v2 census invariants (slot uniqueness across the census;
   stable distinct CSP indexes) remain assumptions of integrity.
@@ -810,6 +903,19 @@ three known defects (weight-bound bypass at `maxValueSum=0`; wraparound-prone co
 weak hiding-PCS blinding RNG with a constant fallback seed) are normatively fixed in v3
 (§6.1; 256-bit CSPRNG blinding seed, fail-closed).
 
+**Where Poseidon2 still lives, honestly.** Blake3 replaces Poseidon2 in application hashing
+and the ballot proof system. Poseidon2 remains an **inherited ZisK proof-system dependency**:
+a break there may compromise accepted state transitions and tally integrity, and can thereby
+compromise privacy *during protocol execution* (e.g. forged transitions could mark packages
+consumed without authorization and mislead honest wardens into revealing a skewed aggregate).
+Passive confidentiality of archived ballot transport and masking no longer relies on
+application-level Poseidon2. "Repairable" means future executions can migrate to a repaired
+verifier — not that past disclosures or finalized decisions can be undone. Why the move: the
+Poseidon2 cryptanalysis landscape is young and moving — round-estimate revisions [TOSC25],
+the EF Poseidon attack-reward program [PINIT], and the FreeLunch family of algebraic attacks
+on arithmetization-oriented primitives [FL24] — while Blake3 carries long-standing ARX
+analysis. This is a conservatism call, not a response to any full-round break.
+
 ### 12.5 Out of scope / inherited
 EIP-4844 KZG commitments (Ethereum's own PQ roadmap), organizer/sequencer Ethereum accounts,
 hybrid-mode ECDSA (by construction), and the BN254 PlonK wrapper around ZisK proofs —
@@ -823,11 +929,11 @@ proofs) — tracked as the final migration phase.
 
 | Metric | v2 | v3-PQ (estimates unless marked measured) |
 |---|---|---|
-| Browser proving | seconds (Groth16, 35.5 MiB key download) | a few seconds desktop (STARK, Blake3 profile; no key download; prototype measured 0.69 s native on a larger trace) |
+| Browser proving | seconds (Groth16, 35.5 MiB key download) | projected 0.7–1.4 s native (ν-dependent, re-laid full-Blake3 AIR — to be benchmarked; no key download; the Blake3-trees prototype measured 0.69 s native) |
 | Ballot upload to sequencer | ~2 KB | ~20 KB package + ~325 KB proof (proof not stored on-chain) |
 | DA per ballot | ~2 KB | 1.7–20.5 KB depending on ν and KEM (§8.6 table) |
 | DA per refresh | ~1–2 KB | 40 B (framed) |
-| Batch proving | 2.3–4.0×10^8 steps | + ~1M steps × votes for STARK verification (7,601 Blake3 compressions/proof **measured**) |
+| Batch proving | 2.3–4.0×10^8 steps | + ~1M steps × votes for STARK verification (7,601 Blake3 compressions/proof **measured**); state-tree hashing −30%/byte vs v2's SHA-256 (Blake3 precompile 97 vs 137 units/B); commitment recomputations +13% vs a Poseidon2 precompile |
 | Tally | θ partial decryptions of one accumulator + BSGS | archive-linear warden jobs (§10.1) + one ceremony + on-chain Lagrange |
 | Registry tally cap | 10^12 | 2^61 |
 
@@ -856,7 +962,7 @@ proofs) — tracked as the final migration phase.
 
 ## 15. Tracked upgrades
 
-1. **STARK-friendly verifiable encryption** (RLWE-LPR with a Poseidon2-based FO transform) to
+1. **STARK-friendly verifiable encryption** (RLWE-LPR with a Blake3-based FO transform) to
    prove warden transport at admission — removes the complaint window entirely. Requires its
    own security review before adoption.
 2. **PQ re-randomizable package representation** — would restore v2-grade resistance to
@@ -877,6 +983,9 @@ proofs) — tracked as the final migration phase.
 - [P3] Polygon Zero, *Plonky3*. https://github.com/Plonky3/Plonky3
 - [ZISK] Polygon, *ZisK zkVM*. https://github.com/0xPolygonHermez/zisk
 - [POS2] L. Grassi et al., *Poseidon2: A Faster Version of the Poseidon Hash Function*, ePrint 2023/323.
+- [TOSC25] *Poseidon and Neptune: Gröbner Basis Cryptanalysis Exploiting Subspace Trails*, IACR ToSC. https://tosc.iacr.org/index.php/ToSC/article/view/12244
+- [FL24] A. Bariant et al., *The Algebraic FreeLunch: Efficient Gröbner Basis Attacks Against Arithmetization-Oriented Primitives*, CRYPTO 2024 (ePrint 2024/347).
+- [PINIT] Ethereum Foundation, *Poseidon Initiative — cryptanalysis attack reward program*. https://www.poseidon-initiative.info
 - [B3] J. O'Connor, J.-P. Aumasson, S. Neves, Z. Wilcox-O'Hearn, *BLAKE3: one function, fast everywhere*. https://blake3.io
 - [ETHS] StarkWare, *ethSTARK Documentation*, ePrint 2021/582.
 - [EIP4844] V. Buterin et al., *EIP-4844: Shard Blob Transactions*, 2022.
