@@ -19,7 +19,8 @@ Shor's algorithm — so a future quantum computer decrypts **past elections retr
 under Ethereum's finality assumptions), but **ballot privacy must be post-quantum today**.
 v3-PQ removes the quantum-vulnerable primitives from the ballot *confidentiality* path: no
 shared-key homomorphic encryption, no pairings, no DKG, no Groth16. Ballot secrecy rests on
-polynomial secret sharing, hashes, STARKs, and one NIST-standardized KEM — the KEM is never
+polynomial secret sharing, hashes, STARKs, and one NIST-standardized KEM (a post-quantum
+"public-key lockbox" — all such terms are defined plainly in §2.4). The KEM is never
 proven inside the voter's circuit (the batch guest performs encapsulations, and rare complaint
 proofs perform decapsulations; see §8.5, §9.2). During the hybrid period voter authentication
 still *also* uses ECDSA (§11), and the settlement wrapper and KZG blob commitments remain
@@ -42,6 +43,69 @@ inherited non-PQ dependencies (§12.5).
 | Tally bound | maxValue·maxVoters ≤ 10^12 (BSGS limit) | ≤ 2^61 (field headroom; no search) |
 
 ![What changes from v2 to v3-PQ](figures/architecture-delta.svg)
+
+---
+
+## Protocol intuition — read this first
+
+*A plain-English walkthrough of a v3 election, phase by phase, mapped onto the v2 flow you
+already know. Every term used loosely here gets a precise definition from §2 onward; the
+jargon cheat-sheet is §2.4.*
+
+**Setup.** The organizer creates the election exactly as in v2 — census, ballot rules,
+duration. One thing changed: instead of waiting for a key ceremony, the organizer points at a
+committee of ν key wardens (say 5, or 16), each of which has already published a post-quantum
+"lockbox" public key: anyone can lock a small secret so that only that warden can open it.
+There is **no election encryption key** — nothing is generated jointly, and v2's whole DKG
+phase is simply gone.
+
+**Casting.** The voter's browser takes each ballot value and splits it into ν puzzle pieces,
+one per warden, using the Shamir trick: any θ pieces (the *threshold* — e.g. 3 of 5) fit
+together to reconstruct the value, while θ−1 or fewer are pure noise that says nothing at
+all. The browser then hides each piece under a one-time mask (a random-looking number added
+to it), locks each mask key into the matching warden's lockbox, and attaches a STARK proof —
+generated right there in the browser — that the whole construction is consistent: the pieces
+encode one valid ballot that follows the election rules, the masks match their commitments,
+and the voter is who they claim to be. The published vote (a *package*) is just masked
+pieces + locked boxes + commitments. Everything visible is noise; nothing about the choice
+can be read from it, now or ever, by anything short of θ wardens cooperating.
+
+**Voting period.** Sequencers collect packages and settle batches with a zkVM proof, as in
+v2. The chain maintains one new object: a public **running total** — for each warden, the sum
+of all masked pieces addressed to it. Adding masked numbers keeps them masked, so the running
+total is public yet unreadable. A revote cancels the voter's previous package through an
+unlinkable **nullifier** (same idea as Tornado/Semaphore nullifiers), and the batch proof
+subtracts the old package's pieces from the running total. Meanwhile, refreshes keep
+re-hashing slot entries so an outside observer still cannot tell who revoted — v2's "silent
+revoting", achieved by different means.
+
+**End of election.** After the grace window come two short new phases: first a
+**complaint window**, where any warden that finds a broken package — a lockbox that doesn't
+open to what was promised — can prove that on-chain and have the package excluded; then the
+exclusion list freezes.
+
+![Election timeline: the two new phases before results](figures/timeline.svg)
+
+**Results.** Any θ wardens now each do one job: open all their lockboxes, strip their own
+masks off their column of the frozen running total, and publish the resulting **partial
+sum** — with a proof that they did exactly that and nothing else. The punchline: those θ
+partial sums are θ points on a single polynomial, and that polynomial's value at zero *is*
+the exact election result. The smart contract draws the unique curve through the θ points and
+reads it at zero — ordinary integer math, done on-chain. No decryption ever happens, because
+there is nothing to decrypt.
+
+![How the tally emerges from θ partial sums](figures/tally-algebra.svg)
+
+What this buys you:
+- **There is no decryption key.** Not distributed, not threshold-shared — it does not exist,
+  and neither does the ceremony machinery that managed it in v2.
+- **Harvest-now-decrypt-later is dead below θ wardens.** The published pieces are
+  information-theoretic noise; the only cryptography protecting them is the lockboxes
+  (ML-KEM) and hashes — both post-quantum.
+- **Every step is proof-checked** — browser proof, batch proof, warden proofs — so voters,
+  sequencers and wardens are checked, not trusted, for correctness.
+- **The tally is exact integer arithmetic.** No decryption failures, no noise budgets, no
+  brute-force search at the end.
 
 ---
 
@@ -73,7 +137,7 @@ Hash-based, precompile-friendly, normative for **every protocol payload** (voter
 pure KEM+PRF and needs no DEM; this DEM covers batch payloads, batch-key share wrapping, and
 ceremony deliveries):
 `keystream block j = HMAC-SHA-256(k, nonce ‖ LE64(j))` (HMAC, not raw hashing — the needed
-assumption is that HMAC-SHA-256 is a PRF, a conservative standard one); ciphertext =
+assumption is that HMAC-SHA-256 is a PRF (§2.4), a conservative standard one); ciphertext =
 plaintext ⊕ keystream; `tag = HMAC-SHA-256(k_mac, nonce ‖ AAD ‖ ciphertext)`;
 `(k, k_mac) = HKDF-SHA-256(K, "enc"/"mac")` from the KEM/batch secret. `nonce = SHA-256(AAD)`.
 The AAD is the canonical serialization of a **DEM context** that always includes a purpose
@@ -114,10 +178,55 @@ so wardens can recompute every `maskCtx` from public data with no circularity.
 | Nullifier tree | SHA-256 SMT, depth 256 | full-width nullifiers (no truncation into the 64-bit key space) |
 | Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS | ≈102-bit conjectured FRI soundness (§12.4) |
 
-Mini-glossary for non-cryptographers: **AIR** = the constraint system of a STARK (its
-"circuit"); **hiding PCS** = the polynomial commitment is randomized so proofs leak nothing
-about private inputs (zero-knowledge); **witness** = the prover's private inputs; **dealer** =
-a party that distributes shares of a secret it generated.
+### 2.4 Terminology for software engineers
+
+Plain definitions, anchored in things an Ethereum engineer already knows. Skim once; the rest
+of the document assumes them.
+
+- **KEM** (Key Encapsulation Mechanism; here **ML-KEM**, the standardized Kyber) — a
+  public-key *lockbox*: anyone can "encapsulate" against your public key and obtain a fresh
+  32-byte shared secret plus a ciphertext; only you (with the private key) can recover that
+  secret from the ciphertext. Think of it as the post-quantum replacement for ECDH key
+  exchange — except there is no shared-curve math and the two parties never need to be online
+  together.
+- **PRF** (pseudorandom function) — a keyed hash used as a deterministic random-number
+  generator: same key + input ⇒ same output, and without the key the outputs are
+  indistinguishable from random. Mentally: `keccak256(key, input)` used the way you'd use a
+  seeded RNG. Here PRFs expand a KEM secret into the masks that hide shares.
+- **Shamir secret sharing** — split a value into ν pieces by choosing a random polynomial of
+  degree θ−1 whose value at x=0 is the secret, and handing out its values at x=1..ν. Any θ
+  pieces determine the polynomial (and hence the secret); any θ−1 pieces are statistically
+  independent of it — noise, not "hard to crack".
+- **Threshold θ-of-ν** — ν parties hold pieces; any θ of them suffice to act (here: tally);
+  fewer than θ learn nothing and can block nothing except by being too few.
+- **Lagrange interpolation** — given θ points, there is exactly one polynomial of degree
+  ≤ θ−1 through them; evaluating it at x=0 recovers a Shamir secret. "Draw the unique curve
+  through the points, read it at zero." A few multiplications and additions — cheap even in
+  Solidity.
+- **STARK** — a zero-knowledge proof system built only from hashes (no trusted setup, no
+  elliptic curves, post-quantum). Bigger proofs than Groth16 (hundreds of KB), but
+  browser-provable and cheap to verify.
+- **AIR** — the constraint system of a STARK: its "circuit".
+- **FRI** — the polynomial-checking engine inside a STARK; the reason STARK verification is
+  mostly hashing.
+- **Hiding PCS** — the polynomial commitment inside the STARK is randomized so the proof
+  leaks nothing about private inputs; this is what makes the proof *zero-knowledge* rather
+  than merely succinct.
+- **Witness** — the prover's private inputs (the ballot, the shares, the keys). Never leaves
+  the prover.
+- **Nullifier** — a one-way tag published to mark something as spent without revealing what;
+  exactly the Tornado Cash / Semaphore pattern. Here: marks a vote package as replaced.
+- **Accumulator** (as used here) — just a running sum vector of field elements maintained by
+  the batch program. *Not* an RSA or Merkle accumulator.
+- **DEM / AEAD** — symmetric authenticated encryption (ciphertext + tamper-proof tag), the
+  AES-GCM role; v3 instantiates it from SHA-256/HMAC so zk-proofs about it stay cheap (§2.1).
+- **Domain separation** — namespacing every hash/PRF input with a purpose tag and context so
+  a value from one context can never be replayed in another — the same reason EIP-712 typed
+  signing exists (§2.2).
+- **Dealer** — a party that generates a secret and distributes shares of it (used in the
+  tally ceremony, §10.3).
+- **CSPRNG** — a cryptographically secure random generator (`crypto.getRandomValues`,
+  `/dev/urandom`); "fresh CSPRNG randomness" means sampled from this, never derived.
 
 ---
 
@@ -245,8 +354,9 @@ ballots — encapsulations are fresh per package, enforced by convention and by 
 CSPRNG randomness**, and the client stores the package opening — including the commitment
 salt — (needed to revote). Optional *recovery mode* derives them **and the salt** as
 `PRF(sk_voter, purpose, processID, counter)` with distinct purpose tags (salt included:
-`"v3/salt"`), so any device holding `sk` can reconstruct past packages — with the documented trade-off that whoever later
-obtains `sk` can also reconstruct that voter's own historical ballots. Counter recovery: the
+`"v3/salt"`). Any device holding `sk` can then reconstruct past packages. The documented
+trade-off: whoever later obtains `sk` can also reconstruct that voter's own historical
+ballots. Counter recovery: the
 client trial-derives counters 0,1,2…, computes each candidate `pkgDigest`, and checks which
 are admitted (vote-ID leaves) and which are consumed (nullifier tree) to find its live
 package; gaps from collision-resamples (§14) are skipped naturally.
@@ -301,6 +411,8 @@ section. No trusted setup.
 `prevPkgDigest` (8×32-bit limbs; zero when `isRevote=0`) · `NULL` (4 limbs; zero when
 `isRevote=0`).
 
+In words, the proof pins down every public byte of the package plus the election context, so
+the batch program can check "this proof authorizes exactly these bytes".
 **`inputsHash`** is the Poseidon2 binding of the **complete CanonicalPackage plus election
 context**, computed exactly as:
 `Poseidon2(version, processID, packedBallotMode, wardenSetHash, censusRoot, voteID, slot,
@@ -373,6 +485,9 @@ Same SHA-256 sparse Merkle tree, depth 64, same namespaces as v2, three changes:
 
 ## 8. The batch program (ZisK guest)
 
+In one line: the batch program is the referee — it re-checks every vote package, applies the
+state updates, and maintains the masked running total.
+
 Same role, same settlement flow, same public-output pattern (`ok`/`failMask`, old/new roots,
 counters, census root, blobs digest) as v2. The constraint groups change as follows.
 
@@ -403,7 +518,12 @@ overwrites), then refresh the sample $\mathcal{R}$ (§7.2; sample-size rule as v
 
 ### 8.4 Accumulator update and the batch pad
 $$A' = A + \sum_{\text{new pkgs}} E \; - \sum_{\text{consumed pkgs}} E \; + \; B$$
-where $B \in \mathbb{F}^{\nu \times 16}$ is a fresh **uniform** batch pad derived in-guest
+
+In words: the new accumulator is the old one, plus the masked shares of every package this
+batch adds, minus the masked shares of every package it revokes, plus a fresh secret pad $B$
+whose only job is to hide *which* rows were subtracted.
+
+Here $B \in \mathbb{F}^{\nu \times 16}$ is a fresh **uniform** batch pad derived in-guest
 from the secret batch seed. Without $B$, the public batch delta minus the (public) new-package
 sums would equal $-\sum_{\text{consumed}} E$, letting anyone identify revoked packages by
 matching public `E` rows. $B$ is deliberately *unstructured* — a Shamir-codeword-shaped pad
@@ -481,7 +601,7 @@ still tallies correctly from wardens that can open it (§10.2); warden $i$ eithe
 the window or sits out.
 
 ### 9.3 Liveness
-The tally needs ≥ θ wardens that complete the archive scan (and any complaints) inside the
+The tally needs at least θ wardens (the tally threshold) that complete the archive scan (and any complaints) inside the
 window, complete the ceremony (§10.3), and publish proven contributions — plus, as in v2,
 timely inclusion of their transactions, **plus complaint capacity (proving + fees + window
 length) provisioned for the election's admitted-cast bound in the worst case (§9.2)**.
@@ -490,6 +610,9 @@ Fewer ⇒ results are lost, exactly as v2's "θ of ν wardens take part in decry
 ---
 
 ## 10. Tally: warden sums and Lagrange
+
+In one line: this is where the masked running total becomes the election result — in public,
+with proofs, and without any decryption key.
 
 ### 10.1 What each participating warden computes
 After the exclusion freeze, each participating warden $i$:
@@ -505,6 +628,10 @@ After the exclusion freeze, each participating warden $i$:
 4. computes, over $\mathrm{Active} = \mathrm{Admitted} \setminus (R \cup X)$:
 
 $$S_{i,f} = A_{\text{cast},i,f} - \sum_{v \in X \setminus R} e_{v,i,f} - \sum_{v \in \mathrm{Active}} \mathrm{PRF}(K_{v,i}, \mathrm{maskCtx}) - \sum_{b} B_{b,i,f} + G_f(i)$$
+
+In words: start from the frozen running total; remove the rows of excluded-but-never-revoked
+packages; strip your own masks for every counted package; strip the batch pads; add your
+blinding share.
 
 One-line sanity check: $A_{\text{cast}}$ = (masked shares of all admitted-minus-consumed
 packages) + (all batch pads); removing the still-present excluded rows, all pads, and all
@@ -543,9 +670,12 @@ valid polynomial. Malformed transport is an availability lever against one warde
 integrity lever against the election.
 
 ### 10.3 The zero-blinding ceremony
-Published raw, θ sum-shares determine the aggregate polynomial $F$; any single warden —
-participant or not — could evaluate it at its own index, compare with the sum of its decoded
-per-package shares, and fingerprint the revoked set. The ceremony prevents that:
+In plain terms: before publishing their partial sums, the participating wardens jointly add
+noise that cancels out exactly at the finish line (x = 0), so the published sums reveal the
+result and nothing else. Why it's needed: published raw, θ sum-shares determine the aggregate
+polynomial $F$; any single warden — participant or not — could evaluate it at its own index,
+compare with the sum of its decoded per-package shares, and fingerprint the revoked set. The
+ceremony prevents that:
 
 1. A `tallySession` is recorded on-chain: session id = `H(processID ‖ root ‖ X ‖ roster)`,
    with the participant roster and dealer set fixed (dealers = the participants).
@@ -593,8 +723,8 @@ revoked set $R$; that is the documented θ-gated metadata leakage (§12.2).
     verified by the batch program). No OR-downgrade exists in this mode.
   - `hybrid-legacy`: like `hybrid`, but leaves with `pk_PQ = 0` are admitted with identity
     resting on ECDSA alone; the STARK's auth clause (§6.5) switches to a **self-chosen
-    package key**: the voter generates `sk_pkg` (CSPRNG; kept with the package opening), the
-    first package binds `H(sk_pkg)` inside `pkgCommit`, and every later package in the chain
+    package key**: the voter generates `sk_pkg` (CSPRNG; kept with the package opening). The
+    first package binds `H(sk_pkg)` inside `pkgCommit`. Every later package in the chain
     proves knowledge of the *same* `sk_pkg` (predecessor opening) and derives its nullifier
     as `NULL = Poseidon2(nullCtx, sk_pkg, prevPkgDigest)`. The batch program dispatches per
     leaf: `pk_PQ ≠ 0` ⇒ both authenticators against the census key; `pk_PQ = 0` ⇒ mandatory
