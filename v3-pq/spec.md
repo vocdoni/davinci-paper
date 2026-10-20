@@ -39,7 +39,7 @@ inherited non-PQ dependencies (§12.5).
 | Revotes | Slot overwrite + ciphertext subtraction | One-live-chain packages + revocation nullifiers (§5.3) |
 | Voter authentication | ECDSA (secp256k1) | Hash-preimage proof in-STARK; `hybrid` verifies **both**; `hybrid-legacy` admits unenrolled voters on ECDSA (§11) |
 | CSP credentials | ECDSA | SLH-DSA (SPHINCS+) [FIPS 205] |
-| Batch proof | ZisK, verifies Groth16 (BN254 precompiles) | ZisK [ZISK], verifies ballot STARKs (Poseidon2 precompile) |
+| Batch proof | ZisK, verifies Groth16 (BN254 precompiles) | ZisK [ZISK], verifies ballot STARKs (Blake3 precompile) |
 | Tally bound | maxValue·maxVoters ≤ 10^12 (BSGS limit) | ≤ 2^61 (field headroom; no search) |
 
 ![What changes from v2 to v3-PQ](figures/architecture-delta.svg)
@@ -123,9 +123,19 @@ What this buys you:
   profile for DA-sensitive deployments. One *encapsulation* yields `(ct, K)` with a 32-byte
   shared secret `K`; arbitrary payloads are carried KEM-DEM style (encapsulate, derive a
   wrapping key from `K`, then DEM-encrypt — §2.1).
-- **Poseidon2** — Poseidon2 over Goldilocks, width 16, ZisK-precompile-compatible constants
-  [POS2]. Used for all in-circuit hashing (commitments, PRFs, binding hashes). A Poseidon2
-  digest is 4 field elements, serialized as 4×8 B LE (32 bytes).
+- **Poseidon2** — Poseidon2 over Goldilocks with ZisK-precompile-compatible constants
+  [POS2]. Used for all **in-circuit** hashing (commitments, PRF masks, voteID, binding
+  hashes, census paths) — a width-8 instance inside the ballot AIR — and, via the width-16
+  ZisK precompile, wherever guests recompute those values. A Poseidon2 digest is 4 field
+  elements, serialized as 4×8 B LE (32 bytes).
+- **Blake3** — standard Blake3 [B3]. Used for the ballot proof's **Merkle trees and
+  Fiat–Shamir challenger** (32-byte digests, byte-oriented transcript). Chosen because it is
+  ~100× faster than Poseidon2 in software — measured on the prototype circuit: proving
+  3.24 s → 0.69 s, proofs 544 → 324 KB — while the batch guest verifies it through ZisK's
+  standard-conformant `blake3f` precompile at near-identical invocation counts (one rate-8
+  Poseidon2 permutation = one 64-byte Blake3 block; ≈ +14% per-invocation cost — a
+  deliberate trade of single-digit sequencer cost for ~5× voter proving speed). Blake3 is
+  never used inside an AIR.
 - **SHA-256** — unchanged: the state SMT, package digests, and everything contracts check.
 - **256-bit values in circuits** (DEM keys, SHA-256 digests crossing into Goldilocks
   arithmetic): encoded as **eight 32-bit limbs**, each range-checked < 2^32. Never as four
@@ -176,7 +186,7 @@ so wardens can recompute every `maskCtx` from public data with no circularity.
 | Max votes per batch | profile-dependent (§8.6) | in-guest verification cost + the 32-blob batch cap inherited from v2's batch program (see §8.6) |
 | Max refreshed slots per batch | 2048, rule as v2 | unchanged |
 | Nullifier tree | SHA-256 SMT, depth 256 | full-width nullifiers (no truncation into the 64-bit key space) |
-| Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS | ≈102-bit conjectured FRI soundness (§12.4) |
+| Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS, **Blake3 Merkle/challenger** | ≈102-bit conjectured FRI soundness (§12.4); profile pinned in full by `ballotVKHash` |
 
 ### 2.4 Terminology for software engineers
 
@@ -452,9 +462,15 @@ excludable* (complaints — §9.2). A STARK-friendly verifiable encryption remov
 trade-off is the main tracked upgrade (§15).
 
 **Indicative numbers** (estimates until the v3 circuit is benchmarked; the prototype [DST]
-measured 3.2 s native proving and ~12 ms verification for a *larger* trace): trace ≤ 2048 ×
-~200 columns, ~10–20 s desktop-browser proving (mobile will be slower — to be benchmarked;
-the ~400 KB proof uploads once to one sequencer and is never stored on-chain).
+with the Blake3 profile measured **0.69 s native proving, 2.1 ms verification and 324 KB
+proofs** for a *larger* trace — its earlier Poseidon2 profile measured 3.2 s / 12 ms /
+544 KB): trace ≤ 2048 × ~200 columns, a few seconds of desktop-browser proving (mobile
+slower — to be benchmarked; the ~325 KB proof uploads once to one sequencer and is never
+stored on-chain). Blake3-profile adoption conditions (from review): fix the vendored
+challenger's wasm32 query-sampler bug; pin the exact transcript (observe/sample schedule,
+domain-separated initialization, MMCS layout and shape checks) into `ballotVKHash`;
+implement full Blake3 chunk/tree semantics over the `blake3f` precompile with boundary-length
+test vectors; measure real browser and whole-batch guest costs before deployment guarantees.
 
 ---
 
@@ -495,9 +511,11 @@ counters, census root, blobs digest) as v2. The constraint groups change as foll
 
 ### 8.1 Ballot proof verification
 Verifies the n ballot STARKs **in-guest**. FRI verification is hash-dominated and ZisK
-exposes a Poseidon2-Goldilocks precompile; the measured count on the prototype verifier is
-**7,515 permutations per proof**, giving a *modeled* in-guest cost of roughly 1M steps per
-ballot (to be benchmarked). The ballot verifier configuration (AIR identity, FRI profile,
+exposes a standard-conformant Blake3 compression precompile (`blake3f`); the measured count
+on the prototype verifier is **7,601 compressions per proof** (vs 7,515 permutations for the
+Poseidon2 profile — same Merkle structure), giving a *modeled* in-guest cost of roughly 1M
+steps per ballot (to be benchmarked). The guest implements Blake3's chunk/tree layout over
+the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier configuration (AIR identity, FRI profile,
 Poseidon2 constants) is pinned via `ballotVKHash` at config leaf `0x7`, as in v2.
 
 ### 8.2 Census, authentication, binding
@@ -781,7 +799,13 @@ are Track-2 research (§15). Deployments for coercion-sensitive elections should
 ### 12.4 Proof-system notes
 The ballot STARK profile targets ~102-bit *conjectured* FRI soundness (ethSTARK heuristic
 [ETHS]) — an explicit engineering dial (queries × log-blowup + grinding), to be raised for
-high-stakes deployments, and **not** claimed as 128-bit PQ security. The v2-era prototype's
+high-stakes deployments, and **not** claimed as 128-bit PQ security. The Blake3
+Merkle/challenger layer uses **full** Blake3 (7 rounds is the standard, not a reduction) with
+256-bit digests: ~128-bit classical collision resistance — adequate for the classical target
+above — while generic *quantum* collision bounds on any 256-bit hash are ~2^85 query bounds
+(BHT model, with heavy resource assumptions); the profile is therefore justified against the
+classical conjectured target, not claimed as ≥102-bit end-to-end quantum security (the same
+caveat applies to a Poseidon2 profile). The v2-era prototype's
 three known defects (weight-bound bypass at `maxValueSum=0`; wraparound-prone comparators;
 weak hiding-PCS blinding RNG with a constant fallback seed) are normatively fixed in v3
 (§6.1; 256-bit CSPRNG blinding seed, fail-closed).
@@ -799,11 +823,11 @@ proofs) — tracked as the final migration phase.
 
 | Metric | v2 | v3-PQ (estimates unless marked measured) |
 |---|---|---|
-| Browser proving | seconds (Groth16, 35.5 MiB key download) | ~10–20 s desktop (STARK; no key download; prototype measured 3.2 s native on a larger trace) |
-| Ballot upload to sequencer | ~2 KB | ~20 KB package + ~400 KB proof (proof not stored on-chain) |
+| Browser proving | seconds (Groth16, 35.5 MiB key download) | a few seconds desktop (STARK, Blake3 profile; no key download; prototype measured 0.69 s native on a larger trace) |
+| Ballot upload to sequencer | ~2 KB | ~20 KB package + ~325 KB proof (proof not stored on-chain) |
 | DA per ballot | ~2 KB | 1.7–20.5 KB depending on ν and KEM (§8.6 table) |
 | DA per refresh | ~1–2 KB | 40 B (framed) |
-| Batch proving | 2.3–4.0×10^8 steps | + ~1M steps × votes for STARK verification (7,515 Poseidon2 permutations/proof **measured**) |
+| Batch proving | 2.3–4.0×10^8 steps | + ~1M steps × votes for STARK verification (7,601 Blake3 compressions/proof **measured**) |
 | Tally | θ partial decryptions of one accumulator + BSGS | archive-linear warden jobs (§10.1) + one ceremony + on-chain Lagrange |
 | Registry tally cap | 10^12 | 2^61 |
 
@@ -853,6 +877,7 @@ proofs) — tracked as the final migration phase.
 - [P3] Polygon Zero, *Plonky3*. https://github.com/Plonky3/Plonky3
 - [ZISK] Polygon, *ZisK zkVM*. https://github.com/0xPolygonHermez/zisk
 - [POS2] L. Grassi et al., *Poseidon2: A Faster Version of the Poseidon Hash Function*, ePrint 2023/323.
+- [B3] J. O'Connor, J.-P. Aumasson, S. Neves, Z. Wilcox-O'Hearn, *BLAKE3: one function, fast everywhere*. https://blake3.io
 - [ETHS] StarkWare, *ethSTARK Documentation*, ePrint 2021/582.
 - [EIP4844] V. Buterin et al., *EIP-4844: Shard Blob Transactions*, 2022.
 - [IR89] R. Impagliazzo, S. Rudich, *Limits on the Provable Consequences of One-Way Permutations*, STOC 1989.
