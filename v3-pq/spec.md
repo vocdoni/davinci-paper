@@ -208,7 +208,7 @@ from uniform ≈ $2^{-96}$, negligible. Never `LE64(8 bytes) mod p`: its distanc
 | Max votes per batch | profile-dependent (§8.6) | in-guest verification cost + the 32-blob batch cap inherited from v2's batch program (see §8.6) |
 | Max refreshed slots per batch | 2048, rule as v2 | unchanged |
 | Nullifier tree | Blake3 SMT, depth 256 | full-width nullifiers (no truncation into the 64-bit key space) |
-| Ballot STARK profile | Goldilocks, blowup 8, 34 FRI queries, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈102-bit conjectured FRI soundness (§12.4); profile pinned in full by `ballotVKHash` |
+| Ballot STARK profile | Goldilocks, **blowup 32, 18 FRI queries + 16-bit query grinding**, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈106-bit conjectured FRI soundness (§12.4, same heuristic dial as before); chosen verifier-side: −35% in-guest steps and −39% proof size vs blowup-8/34-queries, for ~2.7× prover cost — measured (§8.1). Fallback if browser benchmarks disappoint: blowup 16 / 26 queries. Profile pinned in full by `ballotVKHash`; grinding makes the wasm32 challenger fix (§6) strictly mandatory |
 | Commitments | **salted unkeyed Blake3**, domain-separated | hiding from an independent 256-bit CSPRNG salt (or the secret inputs); binding from collision resistance. Keyed-Blake3 is reserved for MACs/PRFs — a MAC is not automatically a hiding/binding commitment |
 
 ### 2.4 Terminology for software engineers
@@ -361,7 +361,7 @@ identity: it is the value stored at the vote-ID leaf, the input to revocation nu
 what complaints reference. **`sharesDigest = Blake3(h_1 ‖ … ‖ h_ν)`** — despite the name it
 binds the shares *through* the per-warden commitments $h_i$ (each AIR-bound to the exact
 $(s_i, K_i)$ used in masking, fixed order and count), which is equivalent binding at an
-eighth of the in-circuit hashing cost. The ballot STARK (~325 KB) accompanies the package to
+eighth of the in-circuit hashing cost. The ballot STARK (~195 KB at the pinned profile) accompanies the package to
 the sequencer but is **not** published in blobs.
 
 ### 5.2 Construction (browser, pseudocode)
@@ -513,7 +513,7 @@ trade-off is the main tracked upgrade (§15).
 proves in **0.69 s native** (vs 3.2 s for the old Poseidon2 profile) with **~324 KB proofs**;
 a standalone Blake3 compression AIR costs ≈3.4 ms/compression at its wide layout. The
 full-Blake3 ballot (re-laid in-AIR section) is a **projection, not a measurement**:
-**~0.7 s native at ν=5 to ~1.4 s at ν=16**, ~325 KB proofs — to be re-benchmarked once the
+**~2–4 s native (ν-dependent; the blowup-32 profile costs ~2.7× the old blowup-8 prover time, bought back for the batch guest — §8.1)**, ~195 KB proofs — to be re-benchmarked once the
 re-laid AIR exists (equal cell counts do not guarantee equal proving cost; the degree and
 quotient profile must be recomputed). Browser proving is expected at a few × native (mobile
 slower — to be benchmarked; the proof uploads once to one sequencer and is never stored
@@ -578,13 +578,24 @@ counters, census root, blobs digest) as v2. The constraint groups change as foll
 
 ![Batch program v3 dataflow](figures/batch-flow.svg)
 
-### 8.1 Ballot proof verification
-Verifies the n ballot STARKs **in-guest**. FRI verification is hash-dominated and ZisK
-exposes a standard-conformant Blake3 compression precompile (`blake3f`); the measured count
-on the prototype verifier is **7,601 compressions per proof** (vs 7,515 permutations for the
-Poseidon2 profile — same Merkle structure), giving a *modeled* in-guest cost of roughly 1M
-steps per ballot (to be benchmarked). The guest implements Blake3's chunk/tree layout over
-the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier
+### 8.1 Ballot proof verification — measured cost, honest sizing
+Verifies the n ballot STARKs **in-guest**. This cost has now been **measured on the real
+emulator** (a ZisK guest running the Plonky3 verifier on an actual ballot proof), and it is
+the dominant cost of the v3 batch program — far above the earlier modeled figure, because
+hashing turns out to be a minor component: at the pinned profile (§2.3) one verification
+costs **≈14.5M guest steps** (22.1M at the former blowup-8/34-query profile), of which
+hashing via the `blake3f` precompile is only ~1.5M (4,681 compressions); the rest is FRI
+field arithmetic, Merkle path bookkeeping, the symbolic constraint rebuild (1.49M,
+**amortized once per batch** since all proofs share one AIR), and proof deserialization.
+Two further optimizations are **normative implementation requirements**: Goldilocks
+inversions use ZisK `fcall` hints (hint + multiply check, replacing ~1.4k-step software
+inversions — the mechanism ZisK already uses for secp256k1/BN254 inverses), and opened rows
+are hashed as words, not per-byte streams. With the amortization and inverse hints, a
+256-ballot batch is ≈3.0G steps (~180 main segments); **practical batch sizes are 32–128
+ballots** (≈0.4–1.5G steps) until the remaining optimizations land, and per-ballot proving
+cost is ≈25× v2's — the explicit price of post-quantum ballots, paid in parallelizable
+sequencer GPU time, not voter experience. The guest implements Blake3's chunk/tree layout
+over the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier
 configuration (AIR identity, FRI profile, transcript and hash profile) is pinned via
 `ballotVKHash` at config leaf `0x7`, as in v2, and the guest constructs each proof's expected
 public vector per the §6 statement contract.
@@ -930,10 +941,10 @@ proofs) — tracked as the final migration phase.
 | Metric | v2 | v3-PQ (estimates unless marked measured) |
 |---|---|---|
 | Browser proving | seconds (Groth16, 35.5 MiB key download) | projected 0.7–1.4 s native (ν-dependent, re-laid full-Blake3 AIR — to be benchmarked; no key download; the Blake3-trees prototype measured 0.69 s native) |
-| Ballot upload to sequencer | ~2 KB | ~20 KB package + ~325 KB proof (proof not stored on-chain) |
+| Ballot upload to sequencer | ~2 KB | ~20 KB package + ~195 KB proof (proof not stored on-chain) |
 | DA per ballot | ~2 KB | 1.7–20.5 KB depending on ν and KEM (§8.6 table) |
 | DA per refresh | ~1–2 KB | 40 B (framed) |
-| Batch proving | 2.3–4.0×10^8 steps | + ~1M steps × votes for STARK verification (7,601 Blake3 compressions/proof **measured**); state-tree hashing −30%/byte vs v2's SHA-256 (Blake3 precompile 97 vs 137 units/B); commitment recomputations +13% vs a Poseidon2 precompile |
+| Batch proving | 2.3–4.0×10^8 steps | **+ ≈14.5M steps × votes for in-guest STARK verification (measured, §8.1; ≈12M effective with batch amortization + inverse hints)** — the dominant v3 cost; practical batches 32–128 ballots; state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
 | Tally | θ partial decryptions of one accumulator + BSGS | archive-linear warden jobs (§10.1) + one ceremony + on-chain Lagrange |
 | Registry tally cap | 10^12 | 2^61 |
 
