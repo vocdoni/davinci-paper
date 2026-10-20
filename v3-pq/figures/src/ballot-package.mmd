@@ -1,0 +1,20 @@
+flowchart LR
+  classDef priv fill:#f8cecc,stroke:#b85450;
+  classDef pub fill:#d5e8d4,stroke:#82b366;
+  classDef op fill:#dae8fc,stroke:#6c8ebf;
+  B["ballot fields b1..b16<br/>(private)"]:::priv --> SH["Shamir split per field:<br/>random poly, deg θ-1, f(0)=b"]:::op
+  SH --> S["shares s[i][f]<br/>one row per warden (private)"]:::priv
+  PK["warden ML-KEM pks<br/>(public, per epoch)"]:::pub --> KEM["ML-KEM encaps, one per warden<br/>(fresh randomness each)"]:::op
+  KEM --> CT["ciphertexts ct_1..ct_v (public)"]:::pub
+  KEM --> K["pad keys K_1..K_v (private)"]:::priv
+  K --> PRF["pads = PRF(K_i, ctx, f)"]:::op
+  S --> ADD["e[i][f] = s[i][f] + pad (mod p)"]:::op
+  PRF --> ADD
+  ADD --> E["masked shares E (public)"]:::pub
+  S --> HH["h_i = Poseidon2(s_i row, K_i, ctx)"]:::op
+  K --> HH
+  HH --> HC["pad commitments h_1..h_v (public)"]:::pub
+  E --> PKG["package:<br/>voteID, E, cts, h, pkgCommit"]:::pub
+  CT --> PKG
+  HC --> PKG
+  PKG --> STARK["ballot STARK proves:<br/>ballot valid per ballotMode ·<br/>shares lie on one polynomial ·<br/>masks match h ·<br/>voteID + auth (H(sk) in census)"]:::op

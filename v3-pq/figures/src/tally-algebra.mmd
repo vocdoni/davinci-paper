@@ -1,0 +1,12 @@
+flowchart TD
+  classDef pub fill:#d5e8d4,stroke:#82b366;
+  classDef op fill:#dae8fc,stroke:#6c8ebf;
+  A["public accumulator A[i][f] =<br/>sum of masked shares of all admitted,<br/>not-yet-consumed packages + batch pads<br/>(excluded set X handled at tally)"]:::pub
+  A --> W1["warden 1: decapsulate its K's,<br/>check h commitments, subtract pads<br/>publish blinded S_1 + ZisK proof"]:::op
+  A --> W2["warden 2: S_2 + proof"]:::op
+  A --> W3["... any θ of the ν wardens"]:::op
+  W1 --> P["θ points of ONE polynomial F + blinding G,<br/>G(0)=0 so the result is unchanged;<br/>F = sum of active voters polynomials"]:::pub
+  W2 --> P
+  W3 --> P
+  P --> L["Lagrange interpolation at x = 0"]:::op
+  L --> T["F(0) = sum of active ballots = THE TALLY<br/>exact field arithmetic: no decryption,<br/>no noise, no discrete-log search"]:::pub

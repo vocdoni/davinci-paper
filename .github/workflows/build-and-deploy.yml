@@ -219,6 +219,12 @@ jobs:
           </html>
           EOF
 
+      - name: Add v3-pq spec
+        run: |
+          mkdir -p docs/v3-pq/figures
+          cp v3-pq/index.html v3-pq/spec.md docs/v3-pq/
+          cp v3-pq/figures/*.svg docs/v3-pq/figures/
+
       - name: Upload paper.md artifact
         uses: actions/upload-artifact@v4
         with:

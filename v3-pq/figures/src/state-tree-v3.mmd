@@ -1,0 +1,13 @@
+flowchart TD
+  classDef root fill:#fff2cc,stroke:#d6b656;
+  classDef cfg fill:#dae8fc,stroke:#6c8ebf;
+  classDef ns fill:#d5e8d4,stroke:#82b366;
+  classDef nul fill:#ffe6cc,stroke:#d79b00;
+  R["stateRoot — SHA-256 SMT, depth 64 (as v2)"]:::root
+  R --> C["config namespace 0x0..0xF"]:::cfg
+  R --> SL["ballot slot namespace<br/>opaque chained leaves:<br/>vote/overwrite: H(pkgDigest, s_batch)<br/>refresh: H(previous leaf, s_batch)"]:::ns
+  R --> V["voteID namespace<br/>voteID maps to pkgDigest<br/>(v2 stored 0 — v3 authenticates<br/>the full admitted package)"]:::ns
+  C --> C3["0x3: H(wardenSet)<br/>ν, θ, epoch, ML-KEM pk hashes<br/>(replaces the election key)"]:::cfg
+  C --> C4["0x4: H(A)<br/>accumulator digest<br/>(full A published per batch)"]:::cfg
+  C --> C5["0x5: nullifier tree root"]:::cfg
+  C5 --> N["nullifier SMT — SHA-256, depth 256<br/>key = PRF(sk_voter, pkgDigest)<br/>insert-once = one-live-chain"]:::nul

@@ -1,0 +1,10 @@
+flowchart LR
+  classDef ph fill:#dae8fc,stroke:#6c8ebf;
+  classDef ev fill:#fff2cc,stroke:#d6b656;
+  classDef fin fill:#d5e8d4,stroke:#82b366;
+  V["VOTING<br/>casting + batch settlement<br/>(unchanged from v2)"]:::ph --> G["GRACE WINDOW<br/>pending batches settle<br/>(unchanged from v2)"]:::ph
+  G --> F1(["accumulator frozen<br/>as A_cast"]):::ev
+  F1 --> CW["COMPLAINT WINDOW (new)<br/>wardens scan the blob archive,<br/>file proven complaints against<br/>malformed packages"]:::ph
+  CW --> F2(["exclusion set X<br/>frozen on-chain"]):::ev
+  F2 --> TC["TALLY CEREMONY (new)<br/>θ wardens: reconstruct batch-pad keys<br/>+ revoked set R, run zero-blinding,<br/>publish proven sum-shares S_i"]:::ph
+  TC --> RES["RESULTS<br/>anyone interpolates θ sums,<br/>registry verifies proofs + records"]:::fin

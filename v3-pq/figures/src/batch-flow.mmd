@@ -1,0 +1,15 @@
+flowchart LR
+  classDef in fill:#f8cecc,stroke:#b85450;
+  classDef op fill:#dae8fc,stroke:#6c8ebf;
+  classDef out fill:#d5e8d4,stroke:#82b366;
+  I1["n packages<br/>+ ballot STARKs"]:::in --> V["verify n ballot STARKs in-guest<br/>(Poseidon2 precompile,<br/>~1M steps each)"]:::op
+  I2["census proofs"]:::in --> CE["eligibility + binding checks<br/>(hybrid: + ECDSA over pkgDigest)"]:::op
+  I3["state witnesses"]:::in --> ST["state transitions:<br/>insert voteID→pkgDigest ·<br/>insert nullifiers (one-live-chain) ·<br/>slot writes + refresh re-chaining"]:::op
+  I4["secret batch seed"]:::in --> ACC["accumulator update:<br/>A' = A + ΣE_new − ΣE_revoked + B<br/>(B = fresh uniform batch pad)"]:::op
+  I4 --> WP["warden payload:<br/>AEAD(B, revoked list) — key<br/>θ-shared via ν in-guest encaps"]:::op
+  V --> BL["blob layout v3<br/>(packages, leaves, nullifiers,<br/>A', payload)"]:::op
+  ST --> BL
+  ACC --> BL
+  WP --> BL
+  CE --> OUT["public outputs:<br/>ok, failMask, roots,<br/>counters, censusRoot, blobsDigest"]:::out
+  BL --> OUT
