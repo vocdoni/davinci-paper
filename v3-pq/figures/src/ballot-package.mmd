@@ -7,7 +7,7 @@ flowchart LR
   PK["warden ML-KEM pks<br/>(public, per epoch)"]:::pub --> KEM["ML-KEM encaps, one per warden<br/>(fresh randomness each)"]:::op
   KEM --> CT["ciphertexts ct_1..ct_v (public)"]:::pub
   KEM --> K["pad keys K_1..K_v (private)"]:::priv
-  K --> PRF["pads = PRF(K_i, ctx, f)"]:::op
+  K --> PRF["pads: keyed XOF stream per warden,<br/>16-byte slice per field (mod p)"]:::op
   S --> ADD["e[i][f] = s[i][f] + pad (mod p)"]:::op
   PRF --> ADD
   ADD --> E["masked shares E (public)"]:::pub
