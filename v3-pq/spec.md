@@ -667,10 +667,15 @@ Two further optimizations are **normative implementation requirements**: Goldilo
 inversions use ZisK `fcall` hints (hint + multiply check, replacing ~1.4k-step software
 inversions — the mechanism ZisK already uses for secp256k1/BN254 inverses), and opened rows
 are hashed as words, not per-byte streams. **GPU-measured** (RTX 5090,
-cargo-zisk 1.3.0-alpha, this exact profile): proving the verification of 1 / 8 / 32 proofs
-takes 11.5 / 20.1 / 56.9 s — a ≈10 s fixed pipeline plus **≈1.2–1.5 s marginal per
-verification**, i.e. ≈0.6 verifications/s sustained per GPU, so a 256-ballot batch's
-verification layer proves in ≈6–7 minutes and a full v3 batch lands ≈3–4× v2's batch time.
+cargo-zisk 1.3.0-alpha, this exact profile, after a reviewed no-precompile optimization
+pass — per-batch setup hoisting, the existing `uint256_inv_mod` fcall as the Goldilocks
+inverse hint, word-level hashing, and a differentially-tested fork of the FRI verifier
+factoring query-independent sums): per-proof cost fell from 14.45M to **2.62M steps**
+(−82%), and proving the verification of 1 / 8 / 32 proofs takes **10.4 / 12.5 / 19.8 s** —
+a ≈10 s fixed pipeline plus **≈0.30 s marginal per verification**, i.e. ≈1.6
+verifications/s at K=32 and a projected ≈2.7/s at K=128 per GPU. A 256-ballot batch's
+verification layer proves in ≈1.5–2 minutes; the fixed pipeline cost, not per-ballot work,
+now dominates.
 With the amortization and inverse hints above (and a proposed upstream Goldilocks-ext²
 precompile), ~1 verification/s/GPU is the modeled target. Practical batch sizes today:
 32–128 ballots for v2-like latency, 256 where ~8-minute batches are acceptable; throughput
@@ -1145,7 +1150,7 @@ proofs; and a privacy-gated change, §12.4) — tracked as the final migration p
 | Ballot upload to sequencer | ~2 KB | ~20 KB package + ~195 KB proof (proof not stored on-chain) |
 | DA per ballot | ~2 KB | 1.7–20.5 KB depending on ν and KEM (§8.6 table) |
 | DA per refresh | ~1–2 KB | 40 B (framed) |
-| Batch proving | 2.3–4.0×10^8 steps | **+ ≈1.2–1.5 s GPU per ballot for in-guest STARK verification (measured on RTX 5090: 32 verifications proven in 56.9 s; ≈14.5M steps each, §8.1)** — the dominant v3 cost; 256-ballot batches ≈ 8 min total; state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
+| Batch proving | 2.3–4.0×10^8 steps | **+ ≈0.30 s GPU per ballot for in-guest STARK verification (measured on RTX 5090 after the optimization pass: 32 verifications proven in 19.8 s; 2.62M steps each, §8.1)** — 256-ballot batches ≈ 2–3 min total; state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
 | Tally | θ partial decryptions of one accumulator + BSGS | archive-linear warden jobs (§10.1) + one ceremony + on-chain Lagrange |
 | Registry tally cap | 10^12 | 2^61 |
 
