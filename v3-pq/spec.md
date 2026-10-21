@@ -120,8 +120,17 @@ What this buys you:
 - $\mathbb{F}$ — the **Goldilocks field**, $p = 2^{64} - 2^{32} + 1$ (the Plonky3 [P3] and ZisK
   native field). All shares, masks and tally arithmetic live here. Canonical encoding of an
   element: 8 bytes little-endian, value < $p$.
-- $\nu$ — number of **key wardens**; $\theta$ — tally threshold ($1 \le \theta \le \nu \le 16$;
-  the cap matches v2 committee/council sizes, and data availability cost is linear in ν).
+- $\nu$ — number of **key wardens**; $\theta$ — tally threshold. **v3.0 supports
+  $1 \le \theta \le \nu \le 8$**, enforced at creation and in the pinned profile (DA and
+  in-circuit cost are linear in ν — ν=8 halves both vs 16; the protocol structures support
+  up to 16, which returns as a future profile once DA/verification optimizations land;
+  committee size is unrelated to the 16 *ballot fields*, which stay). Size rosters with the
+  availability margin in mind: tolerating $f$ unavailable or faulty wardens through the
+  complaint window and tally ceremony needs $f < \theta \le \nu - f$ — an 8-of-8 election
+  tolerates none — and ceremony replacements come from the pinned committee, with blinding
+  still requiring ≥ 1 honest *accepted dealer*. The complaint-capacity bound (§9.2) depends
+  on admitted casts, not ν: fewer wardens means less aggregate proving/archival redundancy,
+  so deadlines and hardware budgets must be revalidated per roster size.
 - `nf` — active ballot fields, 1..16, as in v2. A ballot is a vector $b_1..b_{16}$; fields
   beyond `nf` are **inactive and MUST be 0** (enforced by the ballot proof; their shares are
   shares of 0).
@@ -752,19 +761,48 @@ masked shares + 32 B commitment + one ciphertext) ⇒ **20,040 B** at ν=16/ML-K
 
 | Profile (256 votes + 256 refreshes) | batch bytes | blobs (126,976 B each) | vs v2 (~5 blobs) |
 |---|---|---|---|
-| ν=16, ML-KEM-768 | ≈ 5.2 MB | **≈ 41 — exceeds the 32-blob batch cap** ⇒ max ~195 votes/batch, or use ML-KEM-512 | ~8× |
-| ν=16, ML-KEM-512 | ≈ 3.9 MB | ≈ 31 | ~6× |
+| **ν=8, ML-KEM-768 (v3.0 max)** | ≈ 2.6 MB | **≈ 21** | ~4× |
 | ν=5, ML-KEM-768 | ≈ 1.7 MB | ≈ 14 | ~2.7× |
 | ν=1 (sequencer mode) | ≈ 0.35 MB | ≈ 3 | ~0.7× — *cheaper than v2* |
+| ν=16, ML-KEM-768 (future profile) | ≈ 5.2 MB | ≈ 41 — exceeds the 32-blob cap ⇒ ~195 votes/batch or ML-KEM-512 (≈31) | ~8× |
 
-**The two settlement modes have different caps — publish both.** The 32-blob figure above is
-the batch program's cap, reachable only in **L1-blob mode** (blobs posted across multiple
-Ethereum transactions, as v2's OP-Stack path). **Native blob mode** settles in a single
-blob-carrying transaction, which EIP-7594 caps at **6 blobs** (761,856 payload bytes):
-packages alone then allow at most ≈120 casts at ν=5/ML-KEM-768 and ≈38 casts at
-ν=16/ML-KEM-768 per batch — lower after refreshes, nullifiers, $A'$ and the warden payload.
-Recommendation: ν ≥ 5 profiles should settle in L1-blob mode; native mode suits sequencer
-mode and small councils.
+**The two settlement modes reach the same 32-blob cap — by different mechanisms.**
+**L1-blob mode** posts blobs across multiple Ethereum transactions and proves their chain
+inclusion on the rollup, as v2's OP-Stack path. **Native blob mode** is no longer limited
+to one blob-carrying transaction (EIP-7594's 6 blobs): a state transition may be published
+as a **sequence of blob transactions followed by the settlement call**. Each blob
+transaction calls `registerBlobs(processID, batchSeq, index)` on the registry, which reads
+its own transaction's versioned hashes via the `blobhash` opcode — the only trustworthy
+on-chain binding between a versioned hash and an actually-published blob — and records them
+— with the registration **block number** — keyed by `(processID, msg.sender, batchSeq,
+index)` (never a caller-supplied identity). Rules, all reverting on violation (reviewed;
+conditions incorporated):
+- **Freshness.** A registration set snapshots the current state root; a root change
+  invalidates it immediately (a lost race kills the set, not merely the next
+  registration). Settlement must land within a **maximum registration age** safely inside
+  the DA-retention window — stored hashes prove *historical publication*, not *present
+  availability* — and wardens/observers collect pre-published blobs from registration
+  time, not settlement time.
+- **Exact manifest.** Indices are batch-global (0..nBlobs−1, ≤ 32), slots immutable and
+  non-overlapping once written, `blobhash` values nonzero; the settlement transaction's
+  own blobs fill the remaining indices in ascending order (one deterministic merge rule);
+  every position the proof's blob count requires must be present in the exact proof-bound
+  order — gaps, overlaps, reordering and partial settlement revert. `batchSeq` is per
+  `(processID, sender)`, monotonic and non-wrapping; consumed sequence numbers are never
+  reusable. Verification, root update and consumption are atomic.
+- **Storage lifecycle.** One bounded active manifest per (sender, process); slots are
+  reused or explicitly deleted; expired records are permissionlessly cleanable in bounded
+  batches; registrants pay registration gas (≈640k gas of fresh SSTOREs for a full
+  32-slot manifest), cleanup is deposit/bounty-funded, and no settlement or lifecycle
+  path ever iterates over all registrants.
+Per-sender keying prevents another sender from occupying this sender's registration slots
+— it is not a general anti-griefing claim. For every manifest position the registry
+preserves the full binding chain: stored versioned hash → commitment via the
+point-evaluation precompile → `z_b = keccak(processID ‖ stateRoot_old ‖ commitment)` with
+`stateRoot_old` required to equal the current root → the proof-bound ordered blob digest.
+Cross-transaction publication therefore adds **no new KZG assumption**. The first 6 blobs
+may still ride the settlement transaction itself; native mode supports every v3.0
+profile, and small batches settle exactly as in v2 with zero extra transactions.
 
 DA is v3's main cost regression and is linear in ν: size committees to the election's
 stakes. Classic McEliece transport (96–128 B ciphertexts ⇒ 4.2–4.7 KB/package at ν=16 by the
