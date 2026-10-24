@@ -2,12 +2,11 @@ flowchart TD
   classDef root fill:#fff2cc,stroke:#d6b656;
   classDef cfg fill:#dae8fc,stroke:#6c8ebf;
   classDef ns fill:#d5e8d4,stroke:#82b366;
-  classDef nul fill:#ffe6cc,stroke:#d79b00;
   R["stateRoot — Blake3 SMT, depth 64 (structure as v2)"]:::root
   R --> C["config namespace 0x0..0xF"]:::cfg
-  R --> SL["ballot slot namespace<br/>opaque chained leaves:<br/>vote/overwrite: H(pkgDigest, s_batch)<br/>refresh: H(previous leaf, s_batch)"]:::ns
-  R --> V["voteID namespace<br/>voteID maps to pkgDigest<br/>(v2 stored 0 — v3 authenticates<br/>the full admitted package)"]:::ns
-  C --> C3["0x3: H(wardenSet)<br/>ν, θ, epoch, ML-KEM pk hashes<br/>(replaces the election key)"]:::cfg
-  C --> C4["0x4: H(A)<br/>accumulator digest<br/>(full A published per batch)"]:::cfg
-  C --> C5["0x5: nullifier tree root"]:::cfg
-  C5 --> N["nullifier SMT — Blake3, depth 256<br/>key = PRF(sk_voter, pkgDigest)<br/>insert-once = one-live-chain"]:::nul
+  R --> SL["ballot slot namespace<br/>leaf = H(slot, T_s) over the slot's<br/>PUBLIC blinded vector T_s<br/>(bytes in blobs; refresh and overwrite<br/>publish identical records)"]:::ns
+  R --> V["voteID namespace<br/>voteID maps to pkgDigest<br/>(immutable inclusion receipts)"]:::ns
+  C --> C3["0x3: H(wardenSet)<br/>ν, θ, epoch, ML-KEM + SLH-DSA pk hashes<br/>(replaces the election key)"]:::cfg
+  C --> C4["0x4: H(A)<br/>A = sum of current slot vectors<br/>(full A published per batch)"]:::cfg
+  C --> C8["0x8: viewsRoot<br/>per-warden column views (8.7)"]:::cfg
+  C --> C5["0x5: reserved<br/>(nullifier tree in drafts up to v1.3 — removed)"]:::cfg

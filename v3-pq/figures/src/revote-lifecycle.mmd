@@ -1,21 +1,21 @@
 flowchart LR
   classDef pkg fill:#d5e8d4,stroke:#82b366;
-  classDef dead fill:#f8cecc,stroke:#b85450;
+  classDef slot fill:#fff2cc,stroke:#d6b656;
   classDef chk fill:#dae8fc,stroke:#6c8ebf;
-  classDef st fill:#fff2cc,stroke:#d6b656;
-  P0["P0 — first package<br/>prevPkgDigest = 0"]:::pkg -->|"revote consumes P0"| P1["P1 — live package<br/>references pkgDigest(P0)"]:::pkg
-  P1 -->|"revote consumes P1"| P2["P2 — live package"]:::pkg
-  P0 -.->|"after consumption"| D0["P0 consumed (dead):<br/>its E removed from A"]:::dead
-  subgraph STARK["checked in the voter's ballot STARK"]
-    S1["knows opening of prev package<br/>(same slot, same sk)"]:::chk
-    S2["NULL = PRF(sk, prevPkgDigest)"]:::chk
+  classDef pub fill:#f5f5f5,stroke:#999999;
+  P0["first package P0<br/>(fresh randomness)"]:::pkg -->|"first write"| T1["slot vector T = E(P0) + Z + M"]:::slot
+  T1 -->|"refresh (any sequencer)"| T2["T' = T + Z' + M'"]:::slot
+  T2 -->|"revote: fresh package P1<br/>(no reference to P0 needed)"| T3["T'' = E(P1) + Z'' + M''"]:::slot
+  O["public record per touched slot:<br/>slot index + new vector —<br/>IDENTICAL for refresh and overwrite"]:::pub
+  T2 --- O
+  T3 --- O
+  subgraph STARK["checked in the voter's ballot STARK (same statement, first vote or revote)"]
+    S1["valid ballot, shares, masks,<br/>commitments, voteID, identity"]:::chk
   end
   subgraph BATCH["checked by the batch program"]
-    B1["prev admitted:<br/>voteID → pkgDigest inclusion<br/>proof under current root"]:::chk
-    B2["NULL not in nullifier tree<br/>→ insert (once ever)"]:::chk
-    B3["empty slot → first package only;<br/>occupied slot → must consume<br/>exactly one predecessor"]:::chk
+    B1["census join: this voter owns this slot"]:::chk
+    B2["at most 1 real ballot per slot per batch"]:::chk
+    B3["accumulator delta = sum of<br/>published vector changes"]:::chk
   end
-  P1 --- STARK
-  P1 --- BATCH
-  N["nullifier tree (depth-256 SMT)<br/>public, unlinkable keys"]:::st
-  B2 --> N
+  P1x["last settled write wins — as v2"]:::pub
+  T3 --- P1x
