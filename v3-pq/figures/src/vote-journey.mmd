@@ -1,0 +1,10 @@
+flowchart LR
+  classDef you fill:#d5e8d4,stroke:#82b366;
+  classDef mid fill:#dae8fc,stroke:#6c8ebf;
+  classDef chain fill:#fff2cc,stroke:#d6b656;
+  classDef end_ fill:#ffe6cc,stroke:#d79b00;
+  Y["YOU (browser)<br/>split ballot into ν pieces,<br/>mask each, lock mask keys<br/>into warden lockboxes,<br/>prove it all correct"]:::you
+  Y -->|"package + proof<br/>(private channel)"| S["A SEQUENCER<br/>checks the proof, bundles<br/>many packages into a batch,<br/>adds its own blinding,<br/>proves the whole batch"]:::mid
+  S -->|"batch proof +<br/>published data"| E["ETHEREUM<br/>contract verifies the proof,<br/>blobs store your package,<br/>your slot's blinded vector,<br/>and the running total"]:::chain
+  E -->|"after the election"| W["ANY θ WARDENS<br/>open their lockboxes,<br/>strip masks + blinding<br/>from their column,<br/>publish proven partial sums"]:::mid
+  W -->|"θ partial sums"| R["THE CONTRACT<br/>draws the one curve through<br/>the θ points, reads it at zero:<br/>that number IS the result"]:::end_

@@ -58,71 +58,176 @@ inherited non-PQ dependencies (§12.5).
 
 ## Protocol intuition — read this first
 
-*A plain-English walkthrough of a v3 election, phase by phase, mapped onto the v2 flow you
-already know. Every term used loosely here gets a precise definition from §2 onward; the
-jargon cheat-sheet is §2.4.*
+*This walkthrough is self-contained: you need no prior DAVINCI knowledge. Every term used
+loosely here gets a precise definition from §2 onward; the jargon cheat-sheet is §2.4.
+Readers who know v2 will recognize the shape — the deltas are marked "(v2: …)".*
 
-**Setup.** The organizer creates the election exactly as in v2 — census, ballot rules,
-duration. One thing changed: instead of waiting for a key ceremony, the organizer points at a
-committee of ν key wardens (say 5, or 16), each of which has already published a post-quantum
-"lockbox" public key: anyone can lock a small secret so that only that warden can open it.
-There is **no election encryption key** — nothing is generated jointly, and v2's whole DKG
-phase is simply gone.
+### The cast
 
-**Casting.** The voter's browser takes each ballot value and splits it into ν puzzle pieces,
-one per warden, using the Shamir trick: any θ pieces (the *threshold* — e.g. 3 of 5) fit
-together to reconstruct the value, while θ−1 or fewer are pure noise that says nothing at
-all. The browser then hides each piece under a one-time mask (a random-looking number added
-to it), locks each mask key into the matching warden's lockbox, and attaches a STARK proof —
-generated right there in the browser — that the whole construction is consistent: the pieces
-encode one valid ballot that follows the election rules, the masks match their commitments,
-and the voter is who they claim to be. The published vote (a *package*) is just masked
-pieces + locked boxes + commitments. Everything visible is noise; nothing about the choice
-can be read from it, now or ever, by anything short of θ wardens cooperating.
+| Who | What they do | What you have to trust them with |
+|---|---|---|
+| **You, the voter** | vote from a browser; revote whenever you like | your own device |
+| **The organizer** | creates the election: the **census** (the list of eligible voters and their voting weights), the ballot rules, the schedule — and picks which registered wardens form the committee | getting the voter list right, and choosing a committee worth trusting (the privacy guarantee below traces to that choice) |
+| **ν key wardens** (say 5) | a committee; each publishes a post-quantum "lockbox" public key up front — anyone can lock a small secret so that only that warden can open it. After the election, any **θ** of them (say 3) jointly produce the result | privacy only: fewer than θ of them must stay honest. They cannot change the result — nobody can. (If fewer than θ show up at the end, the result cannot be produced — the standard committee trade-off) |
+| **Sequencers** | anyone who wants to run one (permissionless). They collect votes, bundle them into **batches**, and *settle* each batch — publish it to Ethereum with a cryptographic proof that every rule was followed | nothing for correctness (the proof is checked by the contract). The one you submit to learns when you revote, and could ignore you — in which case you just switch to another; no sequencer can block the election |
+| **The smart contract** | the referee's referee on Ethereum: verifies every proof, stores the public state, and at the end computes the result itself | it's Ethereum — the usual assumptions |
+| **Observers** | anyone. All published data is enough to replay and re-check the whole election | — |
 
-**Voting period.** Sequencers collect packages and settle batches with a zkVM proof, as in
-v2. Each voter's slot holds a public **blinded vector** — the voter's masked pieces, buried
-under extra blinding that the sealing sequencer adds. Every batch touches a set of slots and
-publishes each one's new vector, and **an overwrite (a revote) and a routine refresh publish
-exactly the same kind of record** — fresh-looking numbers either way, so an outside observer
-cannot tell who revoted. This is v2's silent revoting, achieved by blinding instead of
-re-encryption: in v2 the sequencer re-encrypted stored ciphertexts; here it re-blinds stored
-share vectors. The public **running total** is simply the sum of all current slot vectors —
-public yet unreadable, updated by each slot's published delta. There are no nullifiers and
-no "spend" objects: replacing your ballot is just writing your slot again, exactly as in v2.
+Each eligible voter owns one fixed **slot** — a position in the public state that holds their
+current (hidden) vote. Revoting just writes your slot again; the last write before closing
+counts. Revoting is a feature, not an edge case: it is what lets a pressured or coerced voter
+quietly change their vote later. (v2 had the same census, slots, sequencers and contract.)
 
-**End of election.** After the grace window come two short new phases: first the
-**complaint deadline** — any warden that finds a broken package (a lockbox that doesn't open
-to what was promised) can prove that on-chain and have the package excluded, **at any time
-from the moment the package settles** (so a voter with a buggy client finds out early and
-simply revotes); the deadline is the last moment to do it — then the exclusion list freezes.
+### The trick, with tiny numbers
 
-![Election timeline: the two new phases before results](figures/timeline.svg)
+Everything rests on one 1979-vintage idea — Shamir secret sharing — plus the observation
+that *shares add up*. Suppose θ=2, ν=3, and all arithmetic is modulo some large prime.
 
-**Results.** Any θ wardens now each do one job: open all their lockboxes, strip the masks —
-their own per-ballot masks and the sequencers' blinding layers, whose keys every batch proof
-escrowed to the committee — off their column of the frozen running total, and publish the
-resulting **partial sum** — with a proof that they did exactly that and nothing else. The punchline: those θ
-partial sums are θ points on a single polynomial, and that polynomial's value at zero *is*
-the exact election result. The smart contract draws the unique curve through the θ points and
-reads it at zero — ordinary integer math, done on-chain. No shared-key decryption ever
-happens — there is no shared key to decrypt with (each warden only ever opens its own
-lockboxes).
+- **Alice votes 1.** Her browser picks a random line through her vote:
+  $f_A(x) = 1 + 4x$. Her three *shares* are $f_A(1)=5$, $f_A(2)=9$, $f_A(3)=13$ — one per
+  warden. Any two shares pin down the line and reveal $f_A(0)=1$. One share alone says
+  *nothing*: for every possible vote $v$ there is a line through $(0, v)$ and $(1, 5)$, so
+  the share 5 is perfectly consistent with Alice voting 0, 1, or anything else.
+- **Bob votes 0.** His line: $f_B(x) = 0 + 2x$. Shares: 2, 4, 6.
+- Shares are never shown in the clear. Alice hides each one under a **mask** — a random
+  number only warden $i$ will be able to recompute, because its key is locked in that
+  warden's lockbox. Say her masks are 20, 50, 70: she publishes 25, 59, 83. Bob's masks are
+  10, 30, 40: he publishes 12, 34, 46. To everyone else these six numbers are pure static.
+- The public **running total** per warden is just the sum of published numbers:
+  warden 1: 37, warden 2: 93, warden 3: 129.
+- **After the election**, warden 1 opens its lockboxes, recomputes its two masks
+  (20 and 10), and subtracts: $37 - 30 = 7$. Warden 2: $93 - 80 = 13$. Those are points of
+  the *sum* line $F(x) = f_A(x) + f_B(x) = 1 + 6x$: indeed $F(1)=7$, $F(2)=13$. The
+  contract draws the line through $(1,7)$ and $(2,13)$ and reads it at zero: $F(0) = 1$.
+  **One yes-vote — and no group of fewer than θ wardens can ever tell whose.** (Warden 1
+  did learn one point of each voter's line along the way — which, as above, is consistent
+  with any vote.)
+
+Two footnotes to keep the example honest. Real elections use a huge prime modulus, so
+"random-looking" means genuinely indistinguishable from noise — the small numbers here are
+for readability. And a real ballot is a short *vector* of numbers (one per option — "rate 5
+candidates" is five values; voting weights scale them under the election's rules); everything
+shown here just happens once per position, and the result is a vector of per-option totals.
+
+No warden ever learns a ballot (one share is noise). No decryption key for "the votes"
+exists anywhere, so there is nothing to steal, leak, or break — short of θ wardens
+colluding, which is the same committee-trust every threshold scheme has. That's the whole
+protocol; the rest is making every step *provable* so nobody has to be trusted for
+correctness.
+
+![The life of one vote](figures/vote-journey.svg)
+
+### The same story, phase by phase
+
+**Setup.** The organizer registers the election on the contract: census, ballot rules,
+schedule, and which ν registered wardens form the committee. That's it — because wardens'
+lockbox keys already exist, there is **no key-generation ceremony and no election
+encryption key**. (v2 ran a distributed key generation — DKG — to create a shared key
+before every election; that whole phase is gone.)
+
+**Casting.** Your browser splits each ballot value into ν shares, masks them, locks the
+mask keys into the wardens' lockboxes, and — right there in the browser — generates a
+zero-knowledge proof (a STARK: a proof made only of hashes, no trusted setup) that the
+whole construction is honest: the shares encode one valid ballot that follows the election
+rules, the masks match their commitments, and you hold the secret key behind your voter
+identity — a hash-based key, itself post-quantum (elections may *additionally* accept
+classical wallet signatures during migration, §11) — while the batch step below checks that
+identity against the census and your slot.
+The *package* you send — masked shares, locked boxes, commitments — goes to a
+sequencer of your choice over a private channel, proof attached. If you don't trust your
+own browser, you can demand it open any candidate package for inspection on a second
+device, then discard it and cast a fresh one (§5.2) — a cheating client gets caught.
+
+**Voting period.** Sequencers verify incoming proofs, bundle packages into batches, and
+settle each batch: the contract accepts it only with a proof that *every* rule was followed
+(this proof is produced by a zkVM — a virtual machine whose entire execution is provable).
+The bulky data — packages and slot vectors — rides along in Ethereum *blobs*, cheap bulk
+storage attached to the transaction; the contract itself keeps only tiny commitments and
+the verified state.
+
+Your slot then holds a public **blinded vector**: your masked shares with an extra layer of
+blinding added by the sequencer. Why the extra layer? Consider revoting without it: your
+slot's numbers would change from your old package's numbers to your new package's — and
+since packages are public, anyone could match the change and see you revoted. So the
+sequencer re-blinds — and, crucially, each batch *also* re-blinds a sample of slots whose
+owners did nothing, **sized by protocol rule so that revotes don't stand alone** (a single
+overwrite travels with sixteen look-alike refreshes — or as many as there are other occupied
+slots; in a nearly-empty election there is little crowd to hide in, as in v2). The result:
+**a revote
+and a routine "refresh" publish byte-identical
+kinds of records.** Fresh-looking numbers either way; an observer sees *that* slots changed,
+never *which* of the changes were revotes — the hiding is among the batch's touched slots,
+which is exactly why the sample rule exists. (v2 achieved the same by re-encrypting stored
+ciphertexts; v3 re-blinds stored
+vectors — no encryption needed.) A revote's batch simply subtracts the slot's old vector and
+adds the new one — the published delta — so the old ballot leaves the total the moment the
+new one enters. The blinding isn't lost: every batch leaves the committee a
+sealed note — its key split θ-of-ν across the wardens, the same Shamir trick again —
+recording which updates were real and how to remove
+the blinding at tally time. The running total is the sum of all current slot vectors:
+public, continuously updated, and unreadable.
+
+**End of election.** Casting closes; a short *grace window* lets in-flight batches land;
+the running total freezes. Then one new deadline (new vs v2): the **complaint deadline**.
+Why it exists: the browser's proof checks everything it can see, but it deliberately cannot
+look *inside* the lockboxes (proving post-quantum encryption in-proof is the one expensive
+step this design avoids). So if some package's lockbox doesn't open to what was promised —
+a buggy or malicious client —
+the affected warden proves that on-chain and the package is excluded from the count. A
+complaint is itself a proof, so a warden cannot abuse it to exclude an honest vote.
+Wardens can file complaints *from the moment a package lands*, so an honest voter with a
+broken client finds out while voting is still open and simply revotes. The deadline is the
+last moment to complain; then the exclusion list freezes. (If all ν wardens attest early
+that they're done checking, results can start immediately.)
+
+![Election timeline: the phases before results](figures/timeline.svg)
+
+**Results.** Any θ wardens each do one job: open their lockboxes, strip their masks and the
+sequencers' blinding off *their own column* of the frozen total, and publish the resulting
+**partial sum** — with a proof that they did exactly that and nothing else. The θ partial
+sums are θ points on a single polynomial, and its value at zero *is* the election result.
+The contract draws the curve and reads it off — ordinary modular integer arithmetic (the
+same "mod a large prime" as the example), on-chain, exact.
+(v2 ended with a threshold *decryption* plus a brute-force search to extract the number;
+v3's ending is the schoolbook interpolation you saw above.)
 
 ![How the tally emerges from θ partial sums](figures/tally-algebra.svg)
 
-What this buys you:
-- **There is no *shared* election decryption key.** (Threshold-shared *batch-payload* keys do exist and are reconstructed at tally — §8.5/§10.4 — but no key ever decrypts the ballot aggregate.) Not distributed as an election key, that is —
-  it does not exist, and neither does the key-generation ceremony that managed it in v2
-  (wardens keep ordinary per-warden lockbox keys, and tally time still has its own
-  coordinated ceremony — §10).
-- **Harvest-now-decrypt-later is dead below θ wardens.** The published pieces are
-  information-theoretic noise; the only cryptography protecting them is the lockboxes
-  (ML-KEM) and hashes — both post-quantum.
-- **Every step is proof-checked** — browser proof, batch proof, warden proofs — so voters,
-  sequencers and wardens are checked, not trusted, for correctness.
-- **The tally is exact integer arithmetic.** No decryption failures, no noise budgets, no
-  brute-force search at the end.
+### Who sees what — plainly
+
+- **The public / an observer**: all packages, all blinded vectors, the running total, which
+  slots changed and when, turnout, the complaint list, the result. Never a ballot, and
+  never whether a change was a revote or a refresh.
+- **Your sequencer**: that *you* (your slot) revoted in the batches it sealed — the same
+  thing the vote-collecting server inevitably sees in v2. Never your ballot or shares.
+- **Fewer than θ wardens, even colluding, even with quantum computers, even in 30 years
+  from archived data**: each holds shares that are individually pure noise — nothing. (To be
+  exact: below θ *raw shares* the protection is pure math; the *archived masked data* is
+  additionally guarded by one computational assumption — the ML-KEM lockboxes, a
+  post-quantum lattice scheme. That is the single lock a future cryptanalyst would have to
+  break.)
+- **θ or more colluding wardens**: can reconstruct individual ballots (every threshold
+  voting system has exactly this boundary) and, at tally time, jointly learn which slot
+  updates were revotes. Choose the committee accordingly.
+
+### What this buys you
+
+- **Nothing to harvest.** The quantum "harvest now, decrypt later" attack dies below θ
+  wardens: published shares are information-theoretic noise, and the only cryptography
+  guarding the mask keys is lockboxes (ML-KEM) and hashes — both post-quantum. (v2's
+  published ElGamal ciphertexts fall to a future quantum computer retroactively.)
+- **No shared decryption key exists** — not held by anyone, not generated, not reconstructable.
+  Each warden has only its own ordinary keypair. The tally still takes one coordinated
+  round among θ wardens (opening the batches' sealed notes together), but no step of it
+  ever produces a key that decrypts ballots.
+- **Checked, not trusted.** Voter, sequencer and warden each move only with a proof: the
+  contract rejects anything else. Integrity needs no honest operator anywhere. (One honest
+  asterisk: ballot *secrecy* is what's quantum-proof today; the *integrity* plumbing still
+  includes some classical Ethereum-era pieces — the proof wrapper, blob commitments, and
+  optional legacy wallet signatures — with a tracked migration path, §12.5. Breaking those
+  could forge state while they last; it can never retroactively read ballots.)
+- **Exact results.** The tally is integer arithmetic — no decryption failures, no noise
+  budgets, no brute-force search at the end.
 
 ---
 

@@ -1,46 +1,46 @@
 <mxfile host="Electron">
-  <diagram id="CivAd8G_7ypzeduTa5ZY" name="pageWithNumber">
+  <diagram id="eEVXJVgcyKH336i1-ZZH" name="pageWithNumber">
     <mxGraphModel grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <UserObject label="VOTING&#xa;casting + batch settlement&#xa;(unchanged from v2)" mermaidId="n:V" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="VOTING&#xa;casting + batch settlement&#xa;(unchanged from v2)" id="2">
+        <UserObject label="VOTING&#xa;casting + batch settlement&#xa;(wardens can file complaints&#xa;from day one — voters just revote)" mermaidId="n:V" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="VOTING&#xa;casting + batch settlement&#xa;(wardens can file complaints&#xa;from day one — voters just revote)" id="2">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="93" width="279" x="8" y="18" as="geometry" />
+            <mxGeometry height="112" width="305" x="8" y="8" as="geometry" />
           </mxCell>
         </UserObject>
         <UserObject label="GRACE WINDOW&#xa;pending batches settle&#xa;(unchanged from v2)" mermaidId="n:G" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="GRACE WINDOW&#xa;pending batches settle&#xa;(unchanged from v2)" id="3">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="93" width="244" x="337" y="18" as="geometry" />
+            <mxGeometry height="93" width="220" x="363" y="18" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="accumulator frozen&#xa;as A_cast" mermaidId="n:F1" mermaidBaseStyle="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="accumulator frozen&#xa;as A_cast" id="4">
+        <UserObject label="running total frozen&#xa;as A_cast" mermaidId="n:F1" mermaidBaseStyle="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="running total frozen&#xa;as A_cast" id="4">
           <mxCell parent="1" style="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="63" width="192" x="631" y="33" as="geometry" />
+            <mxGeometry height="63" width="174" x="633" y="33" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="COMPLAINT WINDOW (new)&#xa;wardens scan the blob archive,&#xa;file proven complaints against&#xa;malformed packages" mermaidId="n:CW" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="COMPLAINT WINDOW (new)&#xa;wardens scan the blob archive,&#xa;file proven complaints against&#xa;malformed packages" id="5">
+        <UserObject label="COMPLAINT DEADLINE (new)&#xa;last chance for wardens to prove&#xa;a broken package on-chain&#xa;(all-warden waiver can close early)" mermaidId="n:CW" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="COMPLAINT DEADLINE (new)&#xa;last chance for wardens to prove&#xa;a broken package on-chain&#xa;(all-warden waiver can close early)" id="5">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="112" width="310" x="873" y="8" as="geometry" />
+            <mxGeometry height="112" width="306" x="857" y="8" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="exclusion set X&#xa;frozen on-chain" mermaidId="n:F2" mermaidBaseStyle="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="exclusion set X&#xa;frozen on-chain" id="6">
+        <UserObject label="exclusion list X&#xa;frozen on-chain" mermaidId="n:F2" mermaidBaseStyle="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="exclusion list X&#xa;frozen on-chain" id="6">
           <mxCell parent="1" style="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="63" width="161" x="1233" y="33" as="geometry" />
+            <mxGeometry height="63" width="147" x="1213" y="33" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="TALLY CEREMONY (new)&#xa;θ wardens: reconstruct batch-pad keys&#xa;+ revoked set R, run zero-blinding,&#xa;publish proven sum-shares S_i" mermaidId="n:TC" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="TALLY CEREMONY (new)&#xa;θ wardens: reconstruct batch-pad keys&#xa;+ revoked set R, run zero-blinding,&#xa;publish proven sum-shares S_i" id="7">
+        <UserObject label="TALLY CEREMONY (new)&#xa;any θ wardens: open lockboxes,&#xa;recover the blinding keys the batches&#xa;escrowed, publish proven partial sums" mermaidId="n:TC" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="TALLY CEREMONY (new)&#xa;any θ wardens: open lockboxes,&#xa;recover the blinding keys the batches&#xa;escrowed, publish proven partial sums" id="7">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="112" width="372" x="1444" y="8" as="geometry" />
+            <mxGeometry height="112" width="332" x="1410" y="8" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="RESULTS&#xa;anyone interpolates θ sums,&#xa;registry verifies proofs + records" mermaidId="n:RES" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="RESULTS&#xa;anyone interpolates θ sums,&#xa;registry verifies proofs + records" id="8">
+        <UserObject label="RESULTS&#xa;contract draws the curve through&#xa;θ sums, reads it at zero" mermaidId="n:RES" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="RESULTS&#xa;contract draws the curve through&#xa;θ sums, reads it at zero" id="8">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
-            <mxGeometry height="93" width="323" x="1866" y="18" as="geometry" />
+            <mxGeometry height="93" width="293" x="1792" y="18" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="" mermaidId="e:V-&gt;G#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.49;entryX=0;entryY=0.49;" mermaidBaseValue="" id="9">
-          <mxCell edge="1" parent="1" source="2" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.49;entryX=0;entryY=0.49;" target="3">
+        <UserObject label="" mermaidId="e:V-&gt;G#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.5;entryX=0;entryY=0.49;" mermaidBaseValue="" id="9">
+          <mxCell edge="1" parent="1" source="2" style="curved=1;startArrow=none;endArrow=block;endSize=7;strokeColor=light-dark(#333333,#cccccc);exitX=1;exitY=0.5;entryX=0;entryY=0.49;" target="3">
             <mxGeometry relative="1" as="geometry">
               <Array as="points" />
             </mxGeometry>

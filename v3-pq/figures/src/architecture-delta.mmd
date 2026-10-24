@@ -6,6 +6,6 @@ flowchart LR
   a2["Groth16 ballot proof<br/>(BN254, trusted setup)"]:::v2 -->|becomes| b2["Plonky3 STARK<br/>(browser WASM, transparent)"]:::v3
   a3["DKG / council key ceremony<br/>(shared BabyJubjub key)"]:::v2 -->|becomes| b3["Warden ML-KEM keys<br/>(no shared key, no ceremony)"]:::v3
   a4["Threshold decryption<br/>+ BSGS search"]:::v2 -->|becomes| b4["θ warden sums + Lagrange<br/>(exact, no decryption)"]:::v3
-  a5["Re-encryption of stored ballots<br/>(silent revoting)"]:::v2 -->|becomes| b5["Hash-chained opaque slot leaves<br/>+ padded accumulator"]:::v3
+  a5["Re-encryption of stored ballots<br/>(silent revoting)"]:::v2 -->|becomes| b5["Re-blinding of public slot vectors<br/>(overwrites and refreshes<br/>look identical)"]:::v3
   a6["ECDSA voter signatures"]:::v2 -->|becomes| b6["Hash-preimage proof inside the STARK<br/>(CSP credentials: SLH-DSA)"]:::v3
-  k1["Unchanged: ZisK batch program, SHA-256 state SMT,<br/>blob DA, process registry, permissionless sequencers"]:::keep
+  k1["Unchanged: ZisK batch program, blob DA,<br/>process registry, permissionless sequencers<br/>(state tree re-hashed with Blake3)"]:::keep
