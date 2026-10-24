@@ -88,6 +88,52 @@
       display: block;
       margin: 1.2rem auto;
       border-radius: 6px;
+      cursor: zoom-in;
+    }
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      background: rgba(15, 23, 42, 0.92);
+      overflow: auto;
+      text-align: center;
+      cursor: zoom-out;
+    }
+    #lightbox.open { display: block; }
+    #lightbox img {
+      display: block;
+      margin: auto;
+      position: absolute;
+      inset: 0;
+      max-width: 94vw;
+      max-height: 94vh;
+      background: #fff;
+      border-radius: 8px;
+      padding: 14px;
+      box-sizing: border-box;
+      cursor: zoom-in;
+    }
+    #lightbox.zoomed { cursor: zoom-out; }
+    #lightbox.zoomed img {
+      position: static;
+      margin: 3vh auto;
+      max-width: none;
+      max-height: none;
+      width: 170vw;
+      cursor: zoom-out;
+    }
+    #lightbox .lb-hint {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #e2e8f0;
+      font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: rgba(15, 23, 42, 0.75);
+      border-radius: 999px;
+      padding: 6px 14px;
+      pointer-events: none;
     }
     #status {
       margin-left: auto;
@@ -117,6 +163,10 @@
     <span id="status">Loading…</span>
   </div>
   <article id="content" class="markdown-body"></article>
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <img id="lightbox-img" src="" alt="">
+    <div class="lb-hint">click image to zoom · click outside or press Esc to close</div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/lib/marked.umd.min.js" integrity="sha384-zCewoQXXb5Xf+2nvCjab0EbMl7FWVpJMsKyrc8M8DqxjFra4DY4XHwheVdHXa34k" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js" integrity="sha384-XQqX/4yiUGu+oyr87jvWzRuqBUK/adrY0DunhL+tID9m/9dwSpV8h9Fk/Sg6ifVQ" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
@@ -149,6 +199,33 @@
           });
         }
         status.textContent = 'DAVINCI v3-PQ · draft';
+
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeLightbox = () => {
+          lightbox.classList.remove('open', 'zoomed');
+          lightboxImg.src = '';
+          document.body.style.overflow = '';
+        };
+        content.addEventListener('click', (e) => {
+          const img = e.target.closest('img');
+          if (!img) return;
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt || '';
+          lightbox.classList.add('open');
+          document.body.style.overflow = 'hidden';
+        });
+        lightbox.addEventListener('click', (e) => {
+          if (e.target === lightboxImg) {
+            lightbox.classList.toggle('zoomed');
+            if (!lightbox.classList.contains('zoomed')) lightbox.scrollTo(0, 0);
+          } else {
+            closeLightbox();
+          }
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && lightbox.classList.contains('open')) closeLightbox();
+        });
       } catch (err) {
         status.textContent = 'Failed to load spec';
         content.innerHTML = '<p>Unable to render <code>spec.md</code>: ' + err.message + '</p>';
