@@ -372,7 +372,8 @@ from uniform ≈ $2^{-96}$ *per element* (pseudorandom/nearly uniform: not exact
 | Accepted-batch bound | `M ≤ admitted casts` | every accepted transition must admit ≥ 1 package (registry-enforced on the batch statement's counters); there is **no zero-ballot transition** (an election with zero accepted transitions finalizes by the §9.1 short-circuit); refresh-only batches are not accepted. Bounds the per-warden batch-envelope work (§8.5, §10.1) |
 | Adaptive deadlines | `d_complaint = t_freeze + d_0 + α·C + β·M + γ·U` | complaint/ceremony/contribution deadlines are **workload-derived**, computed once at casting freeze from the authenticated terminal counts (C = admitted casts, M = batches, U = total slot touches; `U ≤ C + 2048·M`); coefficients and margins come from an **immutable, versioned deadline profile** in the registry, referenced at creation (optionally scaled by a bounded multiplier never below the profile's calibrated safety floor, overflow-checked; registry updates never alter an existing election's deadlines), budgeting worst-case malformed transport + proving + publication + inclusion + archive catch-up + reorgs, never only honest decapsulation. Profiles are calibrated once at Phase 0 (gate 6), never per election. The ceremony's share-bundle and contribution deadlines scale by the same counts (§10.4). Subsequent complaints never extend a computed deadline; completion can shorten one: every post-freeze stage closes early when all expected participants have published (§9.2, §10.4) |
 | High-stakes FRI profile (named) | blowup 32, **27 queries + 20-bit grinding** ≈ 155 conjectured bits | the pinned "raise the dial" option of §12.4 (~1.5× in-guest verification cost vs the default profile); selecting it is a profile choice, not an ad-hoc edit |
-| Ballot STARK profile | Goldilocks, **blowup 32, 18 FRI queries + 16-bit query grinding**, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈106-bit conjectured FRI soundness (§12.4, same heuristic dial as before); chosen verifier-side: −35% in-guest steps and −39% proof size vs blowup-8/34-queries, for ~2.7× prover cost, measured (§8.1). Fallback if browser benchmarks disappoint: blowup 16 / 26 queries. Profile pinned in full by `ballotVKHash`; grinding makes the wasm32 challenger fix (§6) strictly mandatory |
+| Ballot STARK profile | Goldilocks, **blowup 32, 18 FRI queries + 16-bit query grinding**, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈106-bit conjectured FRI soundness (§12.4, same heuristic dial as before); chosen verifier-side: −35% in-guest steps and −39% proof size vs blowup-8/34-queries, for ~2.7× prover cost, measured (§8.1). Fallback if browser benchmarks disappoint: blowup 16 / 26 queries, grinding unchanged at
+16 bits (measured in Annex A.4: ≈35% faster, half the memory, 34% larger proofs). Profile pinned in full by `ballotVKHash`; the wasm32 challenger fix (§6) is a prerequisite for **any** browser proving with this transcript, with or without grinding (measured: unpatched wasm32 proving panics at every profile, Annex A.4) |
 | Commitments | **salted unkeyed Blake3**, domain-separated | hiding from an independent 256-bit CSPRNG salt (or the secret inputs); binding from collision resistance. Keyed-Blake3 is reserved for MACs/PRFs: a MAC is not automatically a hiding/binding commitment |
 
 ### 2.4 Terminology for software engineers
@@ -802,7 +803,9 @@ full-Blake3 ballot (re-laid in-AIR section) is a **projection, not a measurement
 re-laid AIR exists (equal cell counts do not guarantee equal proving cost; the degree and
 quotient profile must be recomputed). Browser proving is expected at a few × native (mobile
 slower, to be benchmarked; the proof uploads once to one sequencer and is never stored
-on-chain). Benchmark provenance: all prototype figures in this document come from internal
+on-chain). Annex A.4 measures the proof-system side at the pinned profile on the prototype
+circuit: 1.7 s native single-thread, 4.5-5.2 s in WASM at 478 MiB peak, WASM ≈2.6-3.0×
+native, with the measured blowup-8 → 32 multiplier (2.45×) below the assumed ~2.7×. Benchmark provenance: all prototype figures in this document come from internal
 prototype commits; exact commits, hardware, compiler flags and proof settings will be
 published with the reference implementation. Standing adoption gates (from review): fix the
 vendored challenger's wasm32 query-sampler bug; production hiding CSPRNG; implement full
@@ -900,7 +903,10 @@ verifications/s at K=32 and a projected ≈2.7/s at K=128 per GPU. A 256-ballot 
 verification layer proves in ≈1.5-2 minutes; the fixed pipeline cost, not per-ballot work,
 now dominates.
 With the amortization and inverse hints above (and a proposed upstream Goldilocks-ext²
-precompile), ~1 verification/s/GPU is the modeled target. Practical batch sizes today:
+precompile), ~1 verification/s/GPU is the modeled target. A **combined guest** running this
+verification plus the complete §8.2-§8.7 state machinery in one program has since been
+measured end to end (Annex A.1): ≈0.37 s per ballot at GPU saturation, 1.4-2.5 votes/s/GPU,
+with a 256-ballot batch proving in 104 s. Practical batch sizes today:
 32-128 ballots for v2-like latency, 256 where ~8-minute batches are acceptable; throughput
 scales across provers as in v2. The price of post-quantum ballots is paid in parallelizable
 sequencer GPU time, not voter experience. The guest implements Blake3's chunk/tree layout
@@ -1716,7 +1722,7 @@ sequencer votes/s/GPU, warden GPU minutes, on-chain gas, and in-guest ML-KEM cos
 | Ballot upload to sequencer | ~2 KB | ~20 KB package + ~195 KB proof (proof not stored on-chain) |
 | DA per ballot | ~2 KB | ≈1.3-20 KB depending on ν (§8.6 table; ML-KEM-768 only) |
 | DA per slot touch (refresh OR overwrite) | ~1-2 KB | `8 + 8·ν·nf` B (1,032 B at ν=8/nf=16; 648 B at ν=5/nf=16), the price of publicly-replayable uniform updates |
-| Batch proving | 2.3-4.0×10^8 steps | **+ ≈0.30 s GPU per ballot for in-guest STARK verification (measured on RTX 5090 after the optimization pass: 32 verifications proven in 19.8 s; 2.62M steps each, §8.1)**; 256-ballot batches ≈ 2-3 min total; state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
+| Batch proving | 2.3-4.0×10^8 steps | **≈0.37 s GPU per ballot measured end to end in a combined guest (verification + full state kernel; 256-ballot batch proves in 104 s; Annex A.1)**; verification alone 2.62M steps, 0.333 s at saturation (§8.1); state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
 | Tally | θ partial decryptions of one accumulator + BSGS | history-linear warden jobs over column views, O(C+U+Mν) authentication + per-final-base secret work (§8.7/§10.1: ~9-12M compressions per 1M casts; unvalidated projection) + one ceremony + on-chain Lagrange |
 | Ceremony DA | — (DKG runs pre-election) | 2 signed publications per participant (join + share bundle; dealer bundles and contributions are proof-authenticated, §10.3-10.4; ~79/126 KB of SLH-DSA signatures at m=5/8) + share bundles ≈ m·96·M + m(m−1)·1152 B, ≈1.9/3.1 MB at m=5/8 for 1M casts in 256-cast batches (drafts ≤1.4: 7.5/21.1 MB) |
 | Registry tally cap | 10^12 | 2^61 |
@@ -1978,14 +1984,17 @@ proving, on 2026 commodity hardware. Nothing in this annex is a simulation of a 
 quoted proving time is a generated, verified ZisK proof. A reader of this annex alone should
 come away knowing what each actor pays, on what hardware, at what election sizes.*
 
-**Method.** Four PoCs (Rust ZisK guests plus Solidity under Foundry), each atomic: in-guest
-ML-KEM-768 (encapsulation and decapsulation with the full §2 FO rule); the batch guest's
-per-package state kernel (digests, census verification, depth-64 SMT writes, §8.4
-slot-update derivation, §8.7 column views, §8.5 payload); the §10.1 warden tally kernel
-(view authentication, $h_i$ openings, direct share sum); and the on-chain contracts
-(Lagrange finalization, signals, settlement bookkeeping, the point-evaluation precompile).
+**Method.** Seven PoCs (Rust ZisK guests, a WASM prover build, Solidity under Foundry),
+each atomic: in-guest ML-KEM-768 (encapsulation and decapsulation with the full §2 FO
+rule); the batch guest's per-package state kernel (digests, census verification, depth-64
+SMT writes, §8.4 slot-update derivation, §8.7 column views, §8.5 payload); a **combined
+batch guest** running proof verification and the state kernel in one program; the §10.1
+warden tally kernel (view authentication, $h_i$ openings, direct share sum); the voter's
+ballot prover at the pinned profile, native and in WASM; the on-chain contracts (Lagrange
+finalization, signals, settlement bookkeeping, the point-evaluation precompile); and the
+wrapper proof's on-chain verification with a real wrapped ZisK proof.
 Hardware: one NVIDIA RTX 5090 (32 GB), cargo-zisk 1.3.0-alpha (GPU), ziskemu for exact step
-counts, Foundry for gas. Parameters: ν=8, nf=16, θ=5 unless stated (the heaviest v3.0
+counts, Node/V8 for WASM, Foundry for gas. Parameters: ν=8, nf=16, θ=5 unless stated (the heaviest v3.0
 profile). Guest outputs are checked byte-for-byte against independent native recomputation,
 and every kernel ships negative tests (a corrupted witness share aborts the tally guest; 14
 tampered batch inputs are rejected; a tampered ciphertext is rejected by the FO check at
@@ -2000,29 +2009,36 @@ Measured per-package proving cost of the complete batch guest workload:
 
 | Component | ZisK steps / package | GPU s / package |
 |---|---|---|
-| Ballot-proof verification (§8.1, measured earlier) | 2.62M | 0.304 |
-| State kernel (everything else per package: digests, census, SMT, slot updates, views) | 0.161M | 0.034 |
+| Ballot-proof verification (§8.1; at GPU saturation, K ≥ 64) | 2.62M | 0.333 |
+| State kernel (everything else per package: digests, census, SMT, slot updates, views) | 0.161M | 0.036 |
 | ML-KEM payload (§8.5: ν encapsulations **per batch**, 3.7M steps ≈ 0.4 s) | ≈0.014M amortized at K=256 | ≈0.002 |
-| **Total** | **≈2.80M** | **≈0.34** |
+| **Total (measured in ONE combined guest, not added)** | **2.71M** | **≈0.37** |
 
 ![Where one vote's batch proving goes](figures/annex-vote-cost.svg)
 
 Proof verification is 94% of the per-vote cost; the entire state machinery of §8.2-§8.7
 adds 6%. The state kernel's predicted Blake3 precompile count (1,084 compressions per
 package) matched the measured count exactly, so the §8 obligations are fully priced, none
-skipped. One batch of 256 synthetic packages' state work proved in 11.9 s and the 102,400
-packages of tally input in 44 s; per-batch fixed cost is ≈11 s (proving pipeline).
+skipped. The components were then integrated: a **combined guest** runs the verification
+and the state kernel in one program, and composition is additive (+0.4% over the parts,
+fully accounted for by the output-binding digest). A full 256-ballot combined batch (695M
+steps, 42 proof segments) proves in **104 s at 46 GB host RAM**, or 111 s at 26 GB with the
+prover's low-memory flag; 26 of 26 combined proofs verified, and 18 tampered inputs
+(including corrupted ballot proofs) are rejected.
 
 ![Sequencer throughput vs batch size](figures/annex-throughput.svg)
 
-One consumer GPU sustains **≈1.5-2.6 votes/second** depending on batch size, which is
-**≈170k-225k votes per day per GPU**. A 100k-voter election (≈120k casts with revotes)
-costs ≈12-13 GPU-hours of sequencer proving in total, parallelizable across sequencers
+One consumer GPU sustains **1.4-2.5 votes/second, measured end to end in the combined
+guest** (K = 32 → 256, asymptote ≈2.7, ML-KEM payload included), which is **≈120k-210k
+votes per day per GPU**. A 100k-voter election (≈120k casts with revotes)
+costs ≈13-14 GPU-hours of sequencer proving in total, parallelizable across sequencers
 exactly as in v2; at 2026 rental prices that is a few tens of dollars, or roughly
 **$0.0001-0.0002 of proving per vote**. Fifty concurrent small elections are a 1-2
-sustained-GPU workload. One measurement caveat that generalizes: GPU seconds per step vary
-≈1.8× between FRI-heavy and hash-heavy workloads, so capacity planning must carry
-seconds-per-package per workload, never a single steps-per-second constant (Phase-0 gate 8).
+sustained-GPU workload. Two measurement caveats that generalize: GPU seconds per step vary
+≈1.8× between FRI-heavy and hash-heavy workloads, and small-batch measurements understate
+saturated per-proof cost (0.304 s at K ≤ 32 became 0.333 s at K ≥ 64), so capacity planning
+must carry measured seconds-per-package per workload at saturation, never a single
+steps-per-second constant (Phase-0 gate 8).
 
 ### A.2 Wardens: a light role, measured
 
@@ -2055,12 +2071,15 @@ vector):
 | `scanComplete` signal (middle / freeze-triggering, ν=5) | 75k / 97k |
 | Settlement bookkeeping ($z_b$ keccaks, `archiveAcc` fold, root, checkpoint; execution only) | 57k |
 | Point-evaluation precompile, per blob (measured live) | 50,461 |
-| Per-batch settlement, all in (bookkeeping + 6 point-evals + wrapper verification *assumed* at ≈275k + calldata + base) | ≈669k + 786k blob gas |
+| Wrapper proof verification: a **real wrapped ZisK proof** (final stage: PLONK over BN254, 768-B proof, one public input, batch-size-independent; tamper-rejecting) | **268,540 measured** |
+| Per-batch settlement, all in (bookkeeping + 6 point-evals + measured wrapper verification + calldata + base) | ≈665k + 786k blob gas |
 | Per-election fixed (creation *estimated* ≈300k + ν signals + finalize, ν=θ=5) | ≈991k |
 
 Interpolating the final result on-chain, the step that replaces v2's threshold decryption,
 costs about as much as one DEX trade. There is no expensive cryptography in any contract:
-no pairing beyond the inherited wrapper, no SLH-DSA (§4), no Blake3.
+no pairing beyond the inherited wrapper, no SLH-DSA (§4), no Blake3. As an independent
+cross-check, v2's production settlement with the same wrapper (`submitTransition`) is
+benchmarked at 498-667k gas for 1-4 blobs, consistent with the figures above.
 
 ![Ethereum cost per election](figures/annex-eth-cost.svg)
 
@@ -2072,7 +2091,37 @@ blob fees. The ν-sizing table of gate 8 matters here: DA is linear in ν, and t
 are for ν=8-grade packages settled at ν=5-sized batching; sequencer mode prices at roughly
 v2 cost.
 
-### A.4 ML-KEM-768 inside the zkVM
+### A.4 The voter: proving a ballot in the browser
+
+The pinned proof profile (§2.3: blowup 32, 18 FRI queries, 16-bit grinding, hiding PCS,
+Blake3 transcript) was measured on the existing ballot-circuit prototype, natively and
+compiled to WASM under Node's V8 (Chrome's engine), with the known wasm32 challenger defect
+patched (a one-line u64 comparison; unpatched, wasm32 proving panics at **every** profile,
+so the fix is a prerequisite for any browser proving, §6). Every WASM proof verifies under
+the native verifier and is rejected after a one-byte flip or under the wrong profile.
+
+| Profile | Native, 1 thread | WASM, warm (cold first proof) | Proof size | Peak WASM memory |
+|---|---|---|---|---|
+| blowup 8 / 34 queries (baseline) | 0.70 s | 2.3 s (2.5 s) | 324 KB | 122 MiB |
+| fallback: blowup 16 / 26 queries | 1.05 s | 3.0 s (3.4 s) | 264 KB | 240 MiB |
+| **pinned: blowup 32 / 18 queries** | **1.71 s** | **4.5 s (5.2 s)** | **196 KB** | **478 MiB** |
+
+![Voter proving time and memory per profile](figures/annex-voter.svg)
+
+Against the Phase-0 gate (p50 ≤ 10 s and ≤ 1.5 GB on a 2023 mid-range phone): **time
+passes with ≈2× headroom on desktop hardware** (a phone more than ≈2× slower than this
+desktop, or a final circuit more than ≈2× heavier, consumes it), and **memory passes at
+under a third of the budget**; memory does not depend on CPU speed, so that verdict carries
+to phones for this circuit, with room for one doubling of the final circuit's rows but not
+two. Proof size came in 39% below the blowup-8 baseline, exactly as §2.3 states, and the
+measured blowup-8 → 32 cost multiplier (2.45× single-threaded, 2.0× in WASM) is below the
+~2.7× the cost model assumes. The essential caveat: this is the prototype circuit
+(2,048 × 379 trace), not the final §6 ballot AIR with the re-laid in-AIR Blake3 section;
+these numbers are floors and scaling factors, and gate 1's phone benchmark remains the
+decisive test. The fallback profile buys ≈35% of the time and half the memory for 34%
+larger proofs: a real safety valve if the final circuit runs heavy.
+
+### A.5 ML-KEM-768 inside the zkVM
 
 The one post-quantum primitive the protocol runs inside guests was measured end to end
 (RustCrypto `ml-kem`, 24 verified proofs):
@@ -2088,22 +2137,30 @@ re-encrypted ciphertext is compared over all 1,088 bytes with no early exit, ver
 source and by a tamper test that completes in the identical step count on the rejection
 path.
 
-### A.5 What this annex establishes, and what remains
+### A.6 What this annex establishes, and what remains
 
-Established by measurement: the batch guest's full obligation set is priced and linear;
-sequencer throughput supports fleet operation on single-digit GPUs; the warden role is
-minutes of commodity GPU even at a million casts, validating the §10.1 projection; the
-entire on-chain footprint is cheap, standard Solidity; the in-guest KEM, the one exotic
-ingredient, costs half a million steps per operation. Three encoding-level optimizations
-were identified for Phase-0 gate 3 (a pre-digested payload-envelope layout, a
-constant-prefix $hCtx$ alignment, and 8-byte-aligned guest input layouts), each worth
-5-35% of its kernel's hashing cost; none is load-bearing for feasibility.
+Established by measurement: the batch guest's full obligation set is priced, linear, and
+**integrated** (one combined guest verifying proofs and executing the state machinery,
+proven at 256 ballots per proof on one consumer GPU); sequencer throughput supports fleet
+operation on single-digit GPUs; the warden role is minutes of commodity GPU even at a
+million casts, validating the §10.1 projection; the voter's proof fits the latency and
+memory gates on desktop with headroom at the pinned profile, with a measured fallback that
+halves memory; the entire on-chain footprint is cheap, standard Solidity, with the wrapper
+verification now **measured** against a real wrapped proof (268.5k gas) and corroborated by
+v2's production settlement benchmarks; and the in-guest KEM, the one exotic ingredient,
+costs half a million steps per operation. Three encoding-level optimizations were
+identified for Phase-0 gate 3 (a pre-digested payload-envelope layout, a constant-prefix
+$hCtx$ alignment, and 8-byte-aligned guest input layouts), each worth 5-35% of its kernel's
+hashing cost; none is load-bearing for feasibility.
 
-Honestly open, and owned by the §15 Phase-0 gates: the **combined** end-to-end batch guest
-(the totals above add measured components; the 3-of-5 prototype is the integration test,
-and a 256-ballot combined proof will need chunking or more than 59 GB of host RAM); browser
-ballot proving at the pinned profile (§6's 2-4 s projection and gate 1's 1.5 GB memory
-criterion stand); the BN254 wrapper's verification gas (assumed 250-300k, inherited from
-v2); and the §2.5 chunk-linking overhead on the million-cast tally. Nothing measured so far
-contradicts a single cost claim in this specification, and two of its projections (§8.1
-economics, §10.1 tally work) came in at or better than stated.
+Honestly open, and owned by the §15 Phase-0 gates: the **final ballot AIR** (the re-laid
+in-AIR Blake3 section of §6 does not exist yet; A.4's figures are floors and scaling
+factors, and gate 1's instrumented counts plus a real 2023-phone benchmark remain the
+decisive voter-side test); real browser engines beyond V8 and WASM threading; the §2.5
+chunk-linking overhead on the million-cast tally (chunks are measured individually); the
+dealer-proof guest (a composition of measured primitives, expected trivial); and
+election-creation gas (estimated, not built). Nothing measured in this annex contradicts a
+cost claim in this specification; two projections (§8.1 economics, §10.1 tally work) came
+in at or better than stated, and the one number that moved against us is small (saturated
+verification costs 0.333 s per proof, not 0.304 s, a 2-6% throughput haircut captured in
+A.1's table).
