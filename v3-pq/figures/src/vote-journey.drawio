@@ -1,5 +1,5 @@
 <mxfile host="Electron">
-  <diagram id="lJnUZOkedmzYlhfG8Rlc" name="pageWithNumber">
+  <diagram id="VyGoQBp5vA4Sdv12RkqX" name="pageWithNumber">
     <mxGraphModel grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
@@ -19,7 +19,7 @@
             <mxGeometry height="131" width="244" x="850" y="8" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="ANY θ WARDENS&#xa;open their lockboxes,&#xa;strip masks + blinding&#xa;from their column,&#xa;publish proven partial sums" mermaidId="n:W" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ANY θ WARDENS&#xa;open their lockboxes,&#xa;strip masks + blinding&#xa;from their column,&#xa;publish proven partial sums" id="5">
+        <UserObject label="ANY θ WARDENS&#xa;open their lockboxes,&#xa;recover + sum their column&#xa;of counted shares,&#xa;publish proven partial sums" mermaidId="n:W" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="ANY θ WARDENS&#xa;open their lockboxes,&#xa;recover + sum their column&#xa;of counted shares,&#xa;publish proven partial sums" id="5">
           <mxCell parent="1" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=light-dark(#333333,#cccccc);fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" vertex="1">
             <mxGeometry height="131" width="255" x="1262" y="8" as="geometry" />
           </mxCell>

@@ -2,7 +2,7 @@ flowchart TD
   classDef pub fill:#d5e8d4,stroke:#82b366;
   classDef op fill:#dae8fc,stroke:#6c8ebf;
   A["public running total A[warden][field] =<br/>sum of all current slot vectors<br/>(each = a ballot's masked pieces<br/>+ sequencer blinding layers)"]:::pub
-  A --> W1["warden 1: opens its lockboxes,<br/>checks commitments, strips its masks<br/>and the escrowed blinding —<br/>publishes partial sum S_1 + proof"]:::op
+  A --> W1["warden 1: opens its lockboxes,<br/>recovers its column of every<br/>counted ballot's shares,<br/>publishes their sum S_1 + proof"]:::op
   A --> W2["warden 2: S_2 + proof"]:::op
   A --> W3["... any θ of the ν wardens"]:::op
   W1 --> P["θ points of ONE polynomial<br/>(sum of all counted ballots' polynomials,<br/>plus joint blinding that is 0 at x=0)"]:::pub
