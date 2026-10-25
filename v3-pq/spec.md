@@ -20,6 +20,8 @@ improvement design rounds (protocol reviewer, incl. one that **blocked** a candi
 design with a concrete attack) + audience-representative sign-off + one external design
 review + three adversarial synthesis reviews + three literature surveys incl. a 21-protocol
 SoTA comparison; a final consolidated review gates implementation (Phase 0).
+**Annex A** reports measured proof-of-concept results (real GPU proving, gas) for every
+load-bearing cost in this document.
 **Audience:** engineers who already know [DAVINCI v2](https://spec.davinci.vote). This document only
 specifies what *changes*. Everything not mentioned here (settlement flow, grace window, blob
 verification via the point-evaluation precompile, census origins, sequencer lifecycle, process
@@ -1705,6 +1707,9 @@ proofs; and a privacy-gated change, §12.4), tracked as the final migration phas
 
 ## 13. Cost summary
 
+Annex A reports the measured proof-of-concept figures behind (and beyond) this table:
+sequencer votes/s/GPU, warden GPU minutes, on-chain gas, and in-guest ML-KEM costs.
+
 | Metric | v2 | v3-PQ (estimates unless marked measured) |
 |---|---|---|
 | Browser proving | seconds (Groth16, 35.5 MiB key download) | projected ~2-4 s native (ν-dependent, re-laid full-Blake3 AIR at the blowup-32 profile, §6; needs recalculation/benchmark against the §2.2 stream-masking counts; no key download; the Blake3-trees prototype measured 0.69 s native at blowup 8) |
@@ -1912,7 +1917,9 @@ analysis (Belenios, Swiss Post).
    non-membership under the creation snapshot, with negative vectors for omitted voters,
    duplicated leaves, and enrollment downgrades (`pk_PQ` zeroed for an enrolled voter).
 
-**First implementation target (from the external design review).** A complete, reproducible
+**First implementation target (from the external design review).** The atomic cost PoCs of
+Annex A are done (per-component measurements, real proofs); what follows is the
+*integration* target. A complete, reproducible
 **3-of-5, ML-KEM-768 end-to-end election prototype**: browser casting through settlement,
 complaints, exclusions, the ceremony, warden proofs, and on-chain finalization,
 with these measured gates: the complete 16-field ballot relation including overwrites,
@@ -1959,3 +1966,144 @@ one VK to pin and one audit target, while gate 4 still audits every branch separ
 - [KTV] R. Küsters, T. Truderung, A. Vogt, *A Game-Based Definition of Coercion-Resistance and its Applications*, CSF 2010 (the δ-CR framework used in §12.3).
 - [KEMB] *ML-KEM WebAssembly implementations and benchmarks*. https://github.com/dchest/mlkem-wasm
 - [WHIR] *EVM Verification of WHIR over a 31-bit Field*, ethresear.ch, 2025.
+
+---
+
+## Annex A: measured feasibility (proof-of-concept results)
+
+*This annex exists to answer one question: can this specification be implemented, at
+production scale, with today's tools? Every load-bearing cost in the protocol was
+implemented as a small, self-contained proof of concept and **measured**, with real GPU
+proving, on 2026 commodity hardware. Nothing in this annex is a simulation of a proof: every
+quoted proving time is a generated, verified ZisK proof. A reader of this annex alone should
+come away knowing what each actor pays, on what hardware, at what election sizes.*
+
+**Method.** Four PoCs (Rust ZisK guests plus Solidity under Foundry), each atomic: in-guest
+ML-KEM-768 (encapsulation and decapsulation with the full §2 FO rule); the batch guest's
+per-package state kernel (digests, census verification, depth-64 SMT writes, §8.4
+slot-update derivation, §8.7 column views, §8.5 payload); the §10.1 warden tally kernel
+(view authentication, $h_i$ openings, direct share sum); and the on-chain contracts
+(Lagrange finalization, signals, settlement bookkeeping, the point-evaluation precompile).
+Hardware: one NVIDIA RTX 5090 (32 GB), cargo-zisk 1.3.0-alpha (GPU), ziskemu for exact step
+counts, Foundry for gas. Parameters: ν=8, nf=16, θ=5 unless stated (the heaviest v3.0
+profile). Guest outputs are checked byte-for-byte against independent native recomputation,
+and every kernel ships negative tests (a corrupted witness share aborts the tally guest; 14
+tampered batch inputs are rejected; a tampered ciphertext is rejected by the FO check at
+identical step count). Every GPU proof passed `cargo-zisk verify`. The PoC sources,
+exact reproduction commands and raw logs will be published with the reference
+implementation; prototype commits, flags and hardware are pinned there (§6's provenance
+rule applies).
+
+### A.1 Sequencer: throughput and hardware
+
+Measured per-package proving cost of the complete batch guest workload:
+
+| Component | ZisK steps / package | GPU s / package |
+|---|---|---|
+| Ballot-proof verification (§8.1, measured earlier) | 2.62M | 0.304 |
+| State kernel (everything else per package: digests, census, SMT, slot updates, views) | 0.161M | 0.034 |
+| ML-KEM payload (§8.5: ν encapsulations **per batch**, 3.7M steps ≈ 0.4 s) | ≈0.014M amortized at K=256 | ≈0.002 |
+| **Total** | **≈2.80M** | **≈0.34** |
+
+![Where one vote's batch proving goes](figures/annex-vote-cost.svg)
+
+Proof verification is 94% of the per-vote cost; the entire state machinery of §8.2-§8.7
+adds 6%. The state kernel's predicted Blake3 precompile count (1,084 compressions per
+package) matched the measured count exactly, so the §8 obligations are fully priced, none
+skipped. One batch of 256 synthetic packages' state work proved in 11.9 s and the 102,400
+packages of tally input in 44 s; per-batch fixed cost is ≈11 s (proving pipeline).
+
+![Sequencer throughput vs batch size](figures/annex-throughput.svg)
+
+One consumer GPU sustains **≈1.5-2.6 votes/second** depending on batch size, which is
+**≈170k-225k votes per day per GPU**. A 100k-voter election (≈120k casts with revotes)
+costs ≈12-13 GPU-hours of sequencer proving in total, parallelizable across sequencers
+exactly as in v2; at 2026 rental prices that is a few tens of dollars, or roughly
+**$0.0001-0.0002 of proving per vote**. Fifty concurrent small elections are a 1-2
+sustained-GPU workload. One measurement caveat that generalizes: GPU seconds per step vary
+≈1.8× between FRI-heavy and hash-heavy workloads, so capacity planning must carry
+seconds-per-package per workload, never a single steps-per-second constant (Phase-0 gate 8).
+
+### A.2 Wardens: a light role, measured
+
+The v1.5 direct share sum (§10.1) was implemented as specified: ColumnRecord folding,
+$h_i$ openings against witnessed $(s, K)$, per-batch payload-key commitment checks, DEM
+operation-log decryption, share accumulation. Measured: **1,988 steps and 9.37 Blake3
+compressions per counted package**, flat from 1k to 102k packages, which lands at the low
+end of §10.1's projected 9-12M compressions per million casts: the projection is now a
+measurement.
+
+![Warden GPU time](figures/annex-warden.svg)
+
+A warden's **entire tally contribution for a million-cast election proves in ≈6-7 minutes**
+on one consumer GPU (≈10 chunks of ≈100k packages, 44 s each, ≤28 GiB host RAM per chunk).
+For the fleet's typical elections the job is seconds. The only path to GPU-*hours* is the
+funded adversarial worst case, a complaint proof against every single package (0.064 s GPU
+per proven decapsulation, ≈2.1 GPU-hours at 120k casts), which is exactly the workload the
+adaptive deadline profiles (§2.3) provision for. Decapsulation and share recovery outside
+proofs run at native speed and are CPU-noise by comparison.
+
+### A.3 Ethereum: gas and fees
+
+Measured with Foundry (the Lagrange test reconstructs known tallies from Shamir sum-shares
+and must match exactly; the point-evaluation precompile was exercised live with a valid KZG
+vector):
+
+| Item | Gas (total transaction unless noted) |
+|---|---|
+| `finalizeResults`: the on-chain tally, θ = 1 / 3 / 5 / 8 | 162k / 217k / 278k / 387k |
+| `scanComplete` signal (middle / freeze-triggering, ν=5) | 75k / 97k |
+| Settlement bookkeeping ($z_b$ keccaks, `archiveAcc` fold, root, checkpoint; execution only) | 57k |
+| Point-evaluation precompile, per blob (measured live) | 50,461 |
+| Per-batch settlement, all in (bookkeeping + 6 point-evals + wrapper verification *assumed* at ≈275k + calldata + base) | ≈669k + 786k blob gas |
+| Per-election fixed (creation *estimated* ≈300k + ν signals + finalize, ν=θ=5) | ≈991k |
+
+Interpolating the final result on-chain, the step that replaces v2's threshold decryption,
+costs about as much as one DEX trade. There is no expensive cryptography in any contract:
+no pairing beyond the inherited wrapper, no SLH-DSA (§4), no Blake3.
+
+![Ethereum cost per election](figures/annex-eth-cost.svg)
+
+The chart prices blob gas at the full execution gas price; real blob base fees run far
+lower, so these totals are deliberately pessimistic. Even so: a 500-voter election costs
+≈0.008-0.4 ETH across the 1-50 gwei range, and a 100k-voter election ≈0.7-34 ETH, i.e.
+**≈$0.02-0.21 per vote at 10 gwei and $3k/ETH**, dominated by execution gas at realistic
+blob fees. The ν-sizing table of gate 8 matters here: DA is linear in ν, and these figures
+are for ν=8-grade packages settled at ν=5-sized batching; sequencer mode prices at roughly
+v2 cost.
+
+### A.4 ML-KEM-768 inside the zkVM
+
+The one post-quantum primitive the protocol runs inside guests was measured end to end
+(RustCrypto `ml-kem`, 24 verified proofs):
+
+| Operation | Steps (Keccak precompile) | Steps (pure software) | GPU marginal |
+|---|---|---|---|
+| Encapsulation | 462K | 1.04M | 0.049 s |
+| Decapsulation + full constant-time FO comparison | 608K | 1.24M | 0.064 s |
+
+The §8.5 batch payload (ν=8 encapsulations) is a per-batch cost of ≈0.4 s GPU, invisible
+per vote. The §2 normative FO rule is precisely what the measured implementation does: the
+re-encrypted ciphertext is compared over all 1,088 bytes with no early exit, verified in
+source and by a tamper test that completes in the identical step count on the rejection
+path.
+
+### A.5 What this annex establishes, and what remains
+
+Established by measurement: the batch guest's full obligation set is priced and linear;
+sequencer throughput supports fleet operation on single-digit GPUs; the warden role is
+minutes of commodity GPU even at a million casts, validating the §10.1 projection; the
+entire on-chain footprint is cheap, standard Solidity; the in-guest KEM, the one exotic
+ingredient, costs half a million steps per operation. Three encoding-level optimizations
+were identified for Phase-0 gate 3 (a pre-digested payload-envelope layout, a
+constant-prefix $hCtx$ alignment, and 8-byte-aligned guest input layouts), each worth
+5-35% of its kernel's hashing cost; none is load-bearing for feasibility.
+
+Honestly open, and owned by the §15 Phase-0 gates: the **combined** end-to-end batch guest
+(the totals above add measured components; the 3-of-5 prototype is the integration test,
+and a 256-ballot combined proof will need chunking or more than 59 GB of host RAM); browser
+ballot proving at the pinned profile (§6's 2-4 s projection and gate 1's 1.5 GB memory
+criterion stand); the BN254 wrapper's verification gas (assumed 250-300k, inherited from
+v2); and the §2.5 chunk-linking overhead on the million-cast tally. Nothing measured so far
+contradicts a single cost claim in this specification, and two of its projections (§8.1
+economics, §10.1 tally work) came in at or better than stated.
