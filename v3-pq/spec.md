@@ -1,27 +1,38 @@
 # DAVINCI v3-PQ — Post-Quantum Protocol Specification
 
-**Status:** draft v1.5 · 2026-10-25 · **simplification and operability round** on the v1.4
-blinded-slot mainline. The warden contribution is now a **direct share sum** (§10.1; the
-layered unwind equation is removed, with equal tallies and a smaller proof); every
-post-freeze stage closes **early on completion**, not only the complaint window (§9.2,
-§10.4); on-chain protocol messages are authorized by registered warden **accounts**, and
-SLH-DSA is never verified on-chain (§4); ceremony share bundles use per-sender **bundle
-keys**, O(m·M) instead of O(m²·M) bytes (§10.4); the multi-transaction native-blob
-registration subsystem and the initialization-only transition are **removed** (§8.6, §9.1);
-new: a v2→v3 census conversion proof (§8.2), named deadline profiles (§2.3), a ν=θ=1 fast
-path (§10.4), and one consolidated chunked-proving contract (§2.5). Carries forward from
-v1.4: blinded-slot revoting (ordinary slot overwrites over public masked slot vectors, no
-nullifiers, no predecessor consumption, no chain counters, no batch pad), nf-sized packages,
-adaptive workload-based deadlines, the Benaloh cast-as-intended audit; from v1.3: unified
-Blake3 profile, per-warden column views (§8.7), ceremony v2 (§10.3-10.4), early complaints
-with voter recovery (§9.2), ML-KEM-768-only transport.
-v2 remains the deployed protocol. Reviewed: three adversarial soundness rounds + five
-improvement design rounds (protocol reviewer, incl. one that **blocked** a candidate quota
-design with a concrete attack) + audience-representative sign-off + one external design
-review + three adversarial synthesis reviews + three literature surveys incl. a 21-protocol
-SoTA comparison; a final consolidated review gates implementation (Phase 0).
-**Annex A** reports measured proof-of-concept results (real GPU proving, gas) for every
-load-bearing cost in this document.
+**Status:** draft v1.6 · 2026-11-10 · **audit round**: closes the gaps found by an
+independent audit of v1.5 and removes what v1.5 left without a consumer. Revoting is now
+**hidden writes** (§5.3, §8.4): a batch publishes its packages and its first-write slots,
+and nothing else about slots; which slot each package wrote travels only in a θ-gated
+encrypted write log. The blinded slot vectors, their blinding layers, the accumulator and
+the refresh sample of drafts ≤1.5 are **removed**, and with them the sampling rule, the
+coverage-history rule and the trust in a sequencer's decoy randomness. Census trees are
+**v2's, unchanged** (§8.2, §11): post-quantum voter keys live in a separate key map, and
+both census-conversion proofs of v1.5 are removed. Gaps closed: θ and the context
+parameters are public inputs of the ballot proof (§6); the tally roster is fixed by a
+**roster proof** and the session id is derived after it (§10.4); restart deadlines and
+timeouts are contract-decidable (§10.4); the CSP issuer key is pinned (§11); batch payload
+randomness is bound to the batch content (§8.5). Carries forward from v1.5: the direct
+share-sum tally (§10.1), early stage completion, account-authorized on-chain messages with
+SLH-DSA never verified on-chain, bundle-key share bundles, the ν=θ=1 fast path, named
+deadline profiles, the chunked-proving contract (§2.5); from earlier drafts: slot-overwrite
+revoting with no nullifiers and no revote budget, nf-sized packages, the Benaloh
+cast-as-intended audit, the unified Blake3 profile, per-warden column views (§8.7), early
+complaints with voter recovery (§9.2), ML-KEM-768-only transport.
+v2 remains the deployed protocol. **Review status, stated plainly:** every review round
+so far except one was run by AI reviewer agents under a single coordinator (a
+protocol-architect model for adversarial design review, a second model as independent
+verifier and auditor), not by third parties. Those rounds: three adversarial soundness
+rounds and five improvement design rounds on earlier drafts (one of which blocked a
+candidate quota design with a concrete attack); an audit of the integrated v1.5 text; for
+this revision, two adversarial design rounds on the change set, then one security read and
+one transcription-and-numbers audit of the integrated v1.6 text; three literature surveys
+including a 21-protocol comparison; and a reader-persona pass on the intuition section.
+The one exception is an external design review of an early draft (v1.1). No human
+cryptographer has reviewed v1.6; a consolidated external review and the Phase-0 gates
+(§15) stand between this document and implementation.
+**Annex A** reports measured proof-of-concept results (real GPU proving, gas) for the main
+cost drivers, and lists what is still extrapolated or unmeasured.
 **Audience:** engineers who already know [DAVINCI v2](https://spec.davinci.vote). This document only
 specifies what *changes*. Everything not mentioned here (settlement flow, grace window, blob
 verification via the point-evaluation precompile, census origins, sequencer lifecycle, process
@@ -40,8 +51,8 @@ v3-PQ removes the quantum-vulnerable primitives from the ballot *confidentiality
 shared-key homomorphic encryption, no pairings, no DKG, no Groth16. Ballot secrecy rests on
 polynomial secret sharing, hashes, STARKs, and one NIST-standardized KEM (a post-quantum
 "public-key lockbox"; §2.4 defines all such terms plainly). The KEM is never
-proven inside the voter's circuit (the batch guest performs encapsulations, and rare complaint
-proofs perform decapsulations; see §8.5, §9.2). During the hybrid period voter authentication
+proven inside the voter's circuit (the batch guest performs a few encapsulations per batch,
+and rare complaint proofs perform decapsulations; see §8.5, §9.2). During the hybrid period voter authentication
 still *also* uses ECDSA (§11), and the settlement wrapper and KZG blob commitments remain
 inherited non-PQ dependencies (§12.5).
 
@@ -53,13 +64,14 @@ inherited non-PQ dependencies (§12.5).
 | Ballot proof | Groth16 over BN254 (circom, trusted setup) | Plonky3 STARK over Goldilocks, browser WASM (§6) |
 | Election key | DKG / council ceremony (BabyJubjub) | **None.** Wardens register ML-KEM keys (§4) |
 | Tally | Threshold decryption + BSGS search | Lagrange interpolation of θ proven warden sums (§10) |
-| Running tally | Homomorphic ciphertext accumulator | Sum of public blinded slot vectors over Goldilocks (§8.4) |
-| Silent revoting | Re-encryption of stored ciphertexts | Uniform blinded slot-vector updates: refreshes and overwrites publish identical records (§7, §8.4) |
-| Revotes | Slot overwrite + ciphertext subtraction | Slot overwrite + slot-vector delta, with **no nullifiers, no predecessor consumption, no revote budget** (§5.3) |
-| Voter authentication | ECDSA (secp256k1) | Hash-preimage proof in-STARK; `hybrid` verifies **both**; `hybrid-legacy` admits unenrolled voters on ECDSA (§11) |
+| Running tally | Homomorphic ciphertext accumulator | **None.** Nothing is accumulated in public; wardens sum their recovered shares at the end (§10.1) |
+| Silent revoting | Re-encryption of stored ciphertexts, with a refresh sample as cover | **Hidden writes**: an overwrite publishes nothing about its slot; no refreshes, no cover sample (§5.3, §8.4) |
+| Revotes | Slot overwrite + ciphertext subtraction | Slot overwrite recorded in an encrypted write log, with **no nullifiers, no predecessor consumption, no revote budget** (§5.3) |
+| Census | Merkle tree of (address, weight); CSP credentials | **Unchanged tree**; post-quantum voter keys in a separate key map (§11) |
+| Voter authentication | ECDSA (secp256k1) | Hash-preimage proof in-STARK against a key from the PQ key map; `hybrid` verifies **both**; `hybrid-legacy` admits voters proven unenrolled on ECDSA (§11) |
 | CSP credentials | ECDSA | SLH-DSA (SPHINCS+) [FIPS 205] |
 | Batch proof | ZisK, verifies Groth16 (BN254 precompiles) | ZisK [ZISK], verifies ballot STARKs (Blake3 precompile) |
-| Protocol hash | Poseidon (circuits) + SHA-256 (state) + Keccak (Ethereum) | **Blake3 everywhere the protocol chooses** (§2); keccak/SHAKE/SHA-2 survive only as fixed islands |
+| Protocol hash | Poseidon (circuits) + SHA-256 (state) + Keccak (Ethereum, census) | **Blake3 everywhere the protocol chooses** (§2); keccak/SHAKE/SHA-2 survive only as fixed islands |
 | Tally bound | maxValue·maxVoters ≤ 10^12 (BSGS limit) | ≤ 2^61 (field headroom; no search) |
 
 ![What changes from v2 to v3-PQ](figures/architecture-delta.svg)
@@ -78,13 +90,13 @@ Readers who know v2 will recognize the shape; the deltas are marked "(v2: …)".
 |---|---|---|
 | **You, the voter** | vote from a browser; revote whenever you like | your own device |
 | **The organizer** | creates the election: the **census** (the list of eligible voters and their voting weights), the ballot rules, the schedule, and which registered wardens form the committee | getting the voter list right, and choosing a committee worth trusting (the privacy guarantee below traces to that choice) |
-| **ν key wardens** (say 5) | a committee; each publishes a post-quantum "lockbox" public key up front, meaning anyone can lock a small secret so that only that warden can open it. After the election, any **θ** of them (say 3) jointly produce the result | privacy only: fewer than θ of them must stay honest. They cannot change the result; nobody can. (If fewer than θ show up at the end, the result cannot be produced, the standard committee trade-off) |
+| **ν key wardens** (say 5) | a committee; each publishes a post-quantum "lockbox" public key up front, meaning anyone can lock a small secret so that only that warden can open it. After the election, any **θ** of them (say 3) jointly produce the result | privacy only: it holds as long as fewer than θ of them collude. They cannot change the result; nobody can. (If fewer than θ show up at the end, the result cannot be produced, the standard committee trade-off) |
 | **Sequencers** | anyone who wants to run one (permissionless). They collect votes, bundle them into **batches**, and *settle* each batch: publish it to Ethereum with a cryptographic proof that every rule was followed | nothing for correctness (the proof is checked by the contract). The one you submit to learns when you revote, and could ignore you, in which case you just switch to another; no sequencer can block the election |
 | **The smart contract** | the referee's referee on Ethereum: verifies every proof, stores the public state, and at the end computes the result itself | it's Ethereum, with the usual assumptions |
 | **Observers** | anyone. All published data is enough to replay and re-check the whole election | — |
 
-Each eligible voter owns one fixed **slot**, a position in the public state that holds their
-current (hidden) vote. Revoting just writes your slot again; the last write before closing
+Each eligible voter owns one fixed **slot**, a position in the public state that records
+that they have voted. Revoting just writes your slot again; the last write before closing
 counts. Revoting is deliberate: it is what lets a pressured or coerced voter
 quietly change their vote later. (v2 had the same census, slots, sequencers and contract.)
 
@@ -103,10 +115,9 @@ that *shares add up*. Suppose θ=2, ν=3, and all arithmetic is modulo some larg
   number only warden $i$ will be able to recompute, because its key is locked in that
   warden's lockbox. Say her masks are 20, 50, 70: she publishes 25, 59, 83. Bob's masks are
   10, 30, 40: he publishes 12, 34, 46. To everyone else these six numbers are pure static.
-- The public **running total** per warden is just the sum of published numbers:
-  warden 1: 37, warden 2: 93, warden 3: 129.
-- **After the election**, warden 1 opens its lockboxes, recomputes its two masks
-  (20 and 10), and subtracts: $37 - 30 = 7$. Warden 2: $93 - 80 = 13$. Those are points of
+- **After the election**, warden 1 opens its lockboxes and recomputes its masks (20 for
+  Alice, 10 for Bob), which gives it back its two shares: $25 - 20 = 5$ and $12 - 10 = 2$.
+  It adds them: $5 + 2 = 7$. Warden 2 does the same: $9 + 4 = 13$. Those are points of
   the *sum* line $F(x) = f_A(x) + f_B(x) = 1 + 6x$: indeed $F(1)=7$, $F(2)=13$. The
   contract draws the line through $(1,7)$ and $(2,13)$ and reads it at zero: $F(0) = 1$.
   **One yes-vote, and no group of fewer than θ wardens can ever tell whose.** (Warden 1
@@ -151,34 +162,25 @@ device, then discard it and cast a fresh one (§5.2); a cheating client gets cau
 **Voting period.** Sequencers verify incoming proofs, bundle packages into batches, and
 settle each batch: the contract accepts it only with a proof that *every* rule was followed
 (this proof is produced by a zkVM, a virtual machine whose entire execution is provable).
-The bulky data, packages and slot vectors, rides along in Ethereum *blobs*, cheap bulk
+The bulky data, the packages themselves, rides along in Ethereum *blobs*, cheap bulk
 storage attached to the transaction; the contract itself keeps only tiny commitments and
 the verified state.
 
-Your slot then holds a public **blinded vector**: your masked shares with an extra layer of
-blinding added by the sequencer. Why the extra layer? Consider revoting without it: your
-slot's numbers would change from your old package's numbers to your new package's, and
-since packages are public, anyone could match the change and see you revoted. So the
-sequencer re-blinds, and each batch *also* re-blinds a sample of slots whose
-owners did nothing, **sized by protocol rule so that revotes don't stand alone** (a single
-overwrite travels with sixteen look-alike refreshes, or as many as there are other occupied
-slots; in a nearly-empty election there is little crowd to hide in, as in v2). The result:
-**a revote and a routine "refresh" publish byte-identical
-kinds of records.** Fresh-looking numbers either way; an observer sees *that* slots changed,
-never *which* of the changes were revotes. The hiding is among the batch's touched slots,
-which is exactly why the sample rule exists. (v2 achieved the same by re-encrypting stored
-ciphertexts; v3 re-blinds stored vectors, with no encryption needed.)
-A revote's batch simply subtracts the slot's old vector and
-adds the new one, the published delta, so the old ballot leaves the total the moment the
-new one enters. Nothing is lost under the blinding: every batch leaves the committee a
+What does a batch reveal about *who* voted? Only this: the first time your slot is
+written, the batch lists it, so turnout is public (as in v2). After that, **a revote
+publishes nothing about your slot at all**. The new package appears in the batch like any
+other, but which slot it belongs to is not written anywhere public. So an observer sees
+*that* some number of revotes happened in a batch, not *whose*: a revote hides among
+every voter who has already voted. (v2 hid a revote among a random sample of other slots
+that it re-encrypted as cover. v3 needs no cover, because a revote leaves no public mark
+to cover.)
+The link between packages and slots is not lost: every batch leaves the committee a
 sealed note (its key split θ-of-ν across the wardens, the same Shamir trick again)
-recording which updates were real, so at tally time the committee knows which vote is each
-slot's current one and reads it straight from the lockboxes, never needing to peel the
-blinding off. The running total is the sum of all current slot vectors:
-public, continuously updated, and unreadable.
+recording which slot each package wrote. At tally time the committee opens the notes,
+finds each slot's last package, and reads its shares straight from the lockboxes.
 
 **End of election.** Casting closes; a short *grace window* lets in-flight batches land;
-the running total freezes. Then one new deadline (new vs v2): the **complaint deadline**.
+the state freezes. Then one new deadline (new vs v2): the **complaint deadline**.
 Why it exists: the browser's proof checks everything it can see, but it deliberately cannot
 look *inside* the lockboxes (proving post-quantum encryption in-proof is the one expensive
 step this design avoids). So if some package's lockbox doesn't open to what was promised,
@@ -206,30 +208,35 @@ v3's ending is the schoolbook interpolation you saw above.)
 
 ### Who sees what
 
-- **The public / an observer**: all packages, all blinded vectors, the running total, which
-  slots changed and when, turnout, the complaint list, the result. Never a ballot, and
-  never whether a change was a revote or a refresh.
+- **The public / an observer**: all packages, which slots have voted at least once and
+  when (turnout), how many revotes each batch contained, the complaint list, the result.
+  Never a ballot, and (outside the degenerate cases of §12.1, such as a batch holding a
+  single vote) not which package belongs to which slot or which voters revoted.
 - **Your sequencer**: that *you* (your slot) revoted in the batches it sealed, the same
   thing the vote-collecting server inevitably sees in v2. Never your ballot or shares.
 - **Fewer than θ wardens, even colluding, even with quantum computers, even in 30 years
-  from archived data**: each holds shares that are individually pure noise. Nothing. (To be
+  from archived data**: about ballots, nothing: each holds shares that are individually
+  pure noise. (To be
   exact: below θ *raw shares* the protection is pure math; the *archived masked data* is
   additionally guarded by one computational assumption, the ML-KEM lockboxes, a
   post-quantum lattice scheme. That is the single lock a future cryptanalyst would have to
-  break.)
+  break.) About *who revoted*, one caveat: the tally itself has the participating wardens
+  open the sealed notes together, so after it every one of them knows which slot each
+  package wrote (§12.2).
 - **θ or more colluding wardens**: can reconstruct individual ballots (every threshold
-  voting system has exactly this boundary) and, at tally time, jointly learn which slot
-  updates were revotes. Choose the committee accordingly.
+  voting system has exactly this boundary) and can read the sealed notes at any time.
+  Choose the committee accordingly.
 
 ### What this buys you
 
 - **Nothing to harvest.** The quantum "harvest now, decrypt later" attack dies below θ
-  wardens: published shares are information-theoretic noise, and the only cryptography
-  guarding the mask keys is lockboxes (ML-KEM) and hashes, both post-quantum. (v2's
+  wardens: what is published is masked shares, and the only cryptography guarding the
+  masks is lockboxes (ML-KEM) and hashes, both post-quantum; even with the masks removed,
+  fewer than θ shares are information-theoretic noise. (v2's
   published ElGamal ciphertexts fall to a future quantum computer retroactively.)
 - **No shared decryption key exists**: not held by anyone, not generated, not reconstructable.
   Each warden has only its own ordinary keypair. The tally still takes one coordinated
-  round among θ wardens (opening the batches' sealed notes together), but no step of it
+  ceremony among θ wardens (opening the batches' sealed notes together), but no step of it
   ever produces a key that decrypts ballots.
 - **Checked, not trusted.** Voter, sequencer and warden each move only with a proof: the
   contract rejects anything else. Integrity needs no honest operator anywhere. (One caveat:
@@ -263,14 +270,13 @@ v3's ending is the schoolbook interpolation you saw above.)
   shares, masks and commitment entries only for fields `1..nf`** (v1.3 fixed everything at
   16-wide; nf-sizing saves `(16−nf)·ν·8` B per package, ~960 B at ν=8/nf=1). Any 16-wide
   logical representation is the zero extension: inactive fields have no per-package
-  polynomials, share encodings, mask consumption or commitment entries. The accumulator,
-  blinding vectors and tally equations STAY 16-wide via zero extension ($\widehat E_{i,f}=0$,
-  $\widehat{\mathrm{mask}}_{i,f}=0$ for $f>nf$; inactive results interpolate to 0). All
+  polynomials, share encodings, mask consumption or commitment entries. Sum-shares and
+  results stay 16-wide via zero extension (inactive fields are identically 0). All
   component lengths are derived from authenticated election parameters, never from supplied
   bytes; trailing inactive-field bytes are rejected.
 - **KEM** — **ML-KEM-768 [FIPS 203] (ct 1088 B), the only allowed profile** (v1.2's
   ML-KEM-512 option is withdrawn: BSI recommends only the 768/1024 sets, and 512 saved just
-  ~2.5 KB per ballot at ν=8; the DA-reduction path is multi-recipient Kyber, §15.5). Browser
+  ~2.5 KB per ballot at ν=8; the DA-reduction path is multi-recipient Kyber, §15 item 5). Browser
   implementations must be pinned and vetted [KEMB]. One *encapsulation* yields `(ct, K)` with
   a 32-byte shared secret `K`; arbitrary payloads are carried KEM-DEM style (encapsulate,
   derive a wrapping key from `K`, then DEM-encrypt, §2.1). **Normative decapsulation rule
@@ -280,7 +286,7 @@ v3's ending is the schoolbook interpolation you saw above.)
 - **Blake3** — standard Blake3 [B3] is **the protocol hash, everywhere the protocol gets to
   choose**: the ballot STARK's Merkle trees and Fiat–Shamir challenger; all in-circuit
   hashing (PRF masks, commitments, voteID, via a re-laid Blake3 AIR section,
-  §6); the census tree; the state SMT; `pkgDigest`/`ctsDigest`; and
+  §6); the state SMT; `pkgDigest`/`ctsDigest`; the column views; and
   every DEM/PRF/key-derivation role through Blake3's standard *keyed*, *derive_key* and
   *XOF* modes (§2.1). Digests are 32 bytes. Rationale: fastest software hash in the browser
   (~1.4 GB/s in WASM; measured on the prototype: proving 3.24 s → 0.69 s, proofs
@@ -289,11 +295,16 @@ v3's ending is the schoolbook interpolation you saw above.)
   implementation to audit on each platform (AIR, guest, browser, warden).
 - **Hash islands the protocol cannot choose**: **keccak256** for values
   Solidity contracts must compute (blob evaluation points $z_b$, the v2 processID prefix,
-  the origin-3 running registration commitment of §8.2) and for hybrid-mode Ethereum
-  addresses; **SHAKE** inside ML-KEM and **SHA-2** inside SLH-DSA (FIPS-fixed internals of
-  black-box primitives); **Poseidon2** inside ZisK's own prover (an inherited proof-system
-  dependency; framing in §12.4; [POS2]). Poseidon2 and SHA-256 hold **no
-  application-level role** in v3-PQ.
+  `archiveAcc`, the session id, and the **census trees and the PQ key map**, which on-chain
+  censuses and the key registry maintain in contracts, §8.2/§11) and for hybrid-mode
+  Ethereum addresses; **SHA-256** for v2's address→slot rule, under which v2's on-chain
+  census contracts enforce slot uniqueness (§8.2); **SHAKE** inside ML-KEM and **SHA-2**
+  inside SLH-DSA (FIPS-fixed internals of black-box primitives); **Poseidon2** inside
+  ZisK's own prover (an inherited proof-system dependency; framing in §12.4; [POS2]).
+  Poseidon and Poseidon2 hold **no application-level role** in v3-PQ. (Drafts ≤1.5 planned
+  a Blake3 census format reached through conversion proofs from a Poseidon tree; the
+  v2 batch program's source in fact verifies a Keccak tree, so the census stays as it is
+  and the conversions are removed.)
 - **256-bit values in circuits** (DEM keys, Blake3 digests crossing into Goldilocks
   arithmetic): encoded as **eight 32-bit limbs**, each range-checked < 2^32. Never as four
   64-bit limbs (not injective: $p^4 < 2^{256}$), and never reduced mod $p$.
@@ -338,12 +349,14 @@ tags map to Blake3 `derive_key` context strings; the tuple itself is serialized 
 |---|---|
 | `pkgCtx` — the package context tuple | `(protocolVersion, chainID, registry, processID, wardenEpoch, voteID)`, the common prefix below |
 | `streamCtx(i)` — mask stream for masked shares | `("v3/mask", pkgCtx, recipient i)`: **one keyed XOF stream per (package, warden)**, no field index. `stream_i = Blake3.keyed(K_i, streamCtx(i)).xof()`, 256 bytes of output; field $f$ uses bytes $[16(f{-}1), 16f)$ via the LE128-mod-$p$ rule below. This is a **normative masking definition**: browser, ballot AIR, batch guest and warden implementations must match it bit-exactly (test vectors required) |
-| `hCtx(i)` — share/pad commitment | `("v3/hcommit", pkgCtx, recipient i)` |
+| `hCtx(i)` — share commitment | `("v3/hcommit", pkgCtx, recipient i)` |
 | `commitCtx` — package commitment | `("v3/pkgcommit", pkgCtx)`, the `ctx` argument of `pkgCommit` (§5.1) |
-| `slotUpdCtx` — slot-update blinding | `("v3/slotupd/zero", …)` and `("v3/slotupd/mask", …)`: the per-touched-slot zero-sharing coefficients and unstructured masks of §8.4, derived in-guest; contexts bind the election tuple, batch number, slot, and (for masks) the recipient index and field. Mask subkeys derive from the authenticated batch key $k_b$ under the mask domain (§8.5), never from recipient seeds, and zero-sharing randomness is domain-separated from both. Byte-exact derivation (subkey structure and per-coefficient/per-field XOF offsets) is pinned by Phase-0 gate 3; the LE128-mod-$p$ extraction rule below applies. (Batch-seed → $k_b$/encapsulation-randomness derivations are guest-internal, pinned by the program key, and need no published context.) |
-| `viewCtx` — per-warden column views | `("v3/view/rows", …)`, `("v3/view/payload", …)`, `("v3/view/acc", …)`, `("v3/view/root", …)`: the four §8.7 commitments; each context binds `(protocolVersion, chainID, registry, processID, wardenEpoch, wardenSetHash)` plus the batch number and (where applicable) the recipient index |
-| `cerCtx` — ceremony envelopes | `("v3/ceremony/<phase>", pkgCtx-style election tuple, session, attempt, sender, roster hash, dealer-set hash where applicable)`: the signed-envelope context of §10.4; every ceremony signature, DEM context, bundle-key body and per-recipient wrap context (§10.4 step 3), and proof-carried envelope binding (§10.3, §10.4) derives from it |
-| `slotCtx` — slot derivation | `("davinci-slot-v3", address)`: the Blake3 replacement of v2's SHA-256 `"davinci-slot-v1"` address→slot rule (§8.2). Slot-vector **leaves** use the single tag `"davinci-slotvec-v3"` for every touched slot, real write or refresh alike (§7); there is **no** refresh-specific domain tag, because a branch-distinguishing tag would publicly mark refreshes, contradicting §8.4. (Drafts ≤1.3's `"davinci-refresh-v3"` is removed.) |
+| `sealCtx` — batch sealing | `("v3/seal", protocolVersion, chainID, registry, processID, wardenEpoch, wardenSetHash, batch number, oldRoot, the package count, the admitted pkgDigests in voteID order)`: bound into every batch DEM AAD and into the derivation of **all** batch payload randomness (§8.5), so equal derivation inputs give a byte-identical payload and no key or nonce ever covers two different plaintexts |
+| `viewCtx` — per-warden column views | `("v3/view/rows", …)`, `("v3/view/firstwrites", …)`, `("v3/view/payload", …)`, `("v3/view/acc", …)`, `("v3/view/root", …)`: the five §8.7 commitments (encoding version 2: no update records); each context binds `(protocolVersion, chainID, registry, processID, wardenEpoch, wardenSetHash)` plus the batch number and (where applicable) the recipient index |
+| `ectx`, `snap` — election context and frozen snapshot | `ectx = (protocolVersion, chainID, registry, processID, wardenEpoch, wardenSetHash)`. `snap = (R_cast, xDigest, batchCount, viewsRoot)`, frozen at the exclusion freeze, where `xDigest` is the registry's running **keccak256** fold of the exclusion set (`xDigest' = keccak256(xDigest ‖ pkgDigest)` on each new exclusion; the registry rejects a duplicate), contract-computed like every value the registry must derive |
+| `joinCtx` — ceremony join | `("v3/join", ectx, snap, attempt, senderIndex, ephemeralPK)`: what a join envelope's SLH-DSA signature covers (§10.4). It contains the ephemeral key and deliberately no session id and no roster |
+| `cerCtx` — ceremony messages after the roster freeze | `("v3/ceremony/<phase>", ectx, snap, sessionId, attempt, sender, dealer-set hash where applicable)`: every dealer bundle, share bundle, bundle-key wrap and contribution binds it (§10.3, §10.4). `sessionId = keccak256("v3/session", ectx, snap, attempt, Π)` is computed by the registry when the proven roster `Π` freezes |
+| `slotCtx` — slot derivation | For Merkle census origins 1-3: **v2's rule, byte for byte**, `SHA-256("davinci-slot-v1" ‖ address)` reduced as v2 does, because v2 requires on-chain census contracts to reject a registration whose slot is already taken under exactly this rule (§8.2; gate 9 confirms the deployed ones do); a different rule would void that uniqueness check. CSP: `slot = 16 + idx`, as v2. Slot leaves hold a constant marker (§7) |
 
 The package's mask nonce is its **voteID**: public, unique per package, authenticated, and
 independent of the masked values (it derives from the secret `k`, §5.2, before any masking),
@@ -367,13 +380,11 @@ from uniform ≈ $2^{-96}$ *per element* (pseudorandom/nearly uniform: not exact
 | **Integer-cost profile (enforced)** | `nf · maxValue^costExponent < 2^61`, checked by the registry at creation **and** recomputed overflow-safe in the ballot proof | the cost sum must not wrap mod $p$ (e.g. `costExponent=192` would give $2^{192} \equiv 1$); v2 only *advised* this profile, v3 enforces it |
 | Warden evaluation points | $x_i = i$, $i \in 1..\nu$ | Shamir positions, pairwise distinct, nonzero |
 | Max votes per batch | profile-dependent (§8.6) | in-guest verification cost + the 32-blob batch cap inherited from v2's batch program (see §8.6) |
-| Max refreshed slots per batch | 2048, rule as v2 | unchanged |
-| Per-voter casting | **no lifetime bound** (as v2) | the structural rate limit is ≤ 1 real ballot per slot per batch (§8.4); first writes are bounded by `maxVoters`. Review ruled out both a flat lifetime cap (capturable) and a two-pool cap (an attacker exhausting the overwrite pool would permanently block every later escape vote, which is worse than congestion). Deliberate cast inflation is priced by admission and provisioned by the adaptive deadlines below |
-| Accepted-batch bound | `M ≤ admitted casts` | every accepted transition must admit ≥ 1 package (registry-enforced on the batch statement's counters); there is **no zero-ballot transition** (an election with zero accepted transitions finalizes by the §9.1 short-circuit); refresh-only batches are not accepted. Bounds the per-warden batch-envelope work (§8.5, §10.1) |
-| Adaptive deadlines | `d_complaint = t_freeze + d_0 + α·C + β·M + γ·U` | complaint/ceremony/contribution deadlines are **workload-derived**, computed once at casting freeze from the authenticated terminal counts (C = admitted casts, M = batches, U = total slot touches; `U ≤ C + 2048·M`); coefficients and margins come from an **immutable, versioned deadline profile** in the registry, referenced at creation (optionally scaled by a bounded multiplier never below the profile's calibrated safety floor, overflow-checked; registry updates never alter an existing election's deadlines), budgeting worst-case malformed transport + proving + publication + inclusion + archive catch-up + reorgs, never only honest decapsulation. Profiles are calibrated once at Phase 0 (gate 6), never per election. The ceremony's share-bundle and contribution deadlines scale by the same counts (§10.4). Subsequent complaints never extend a computed deadline; completion can shorten one: every post-freeze stage closes early when all expected participants have published (§9.2, §10.4) |
+| Per-voter casting | **no lifetime bound** (as v2) | the structural rate limit is ≤ 1 ballot per slot per batch (§8.4); first writes are bounded by `maxVoters`. Review ruled out both a flat lifetime cap (capturable) and a two-pool cap (an attacker exhausting the overwrite pool would permanently block every later escape vote, which is worse than congestion). Deliberate cast inflation is priced by admission and provisioned by the adaptive deadlines below |
+| Accepted-batch bound | `M ≤ admitted casts` | every accepted transition must admit ≥ 1 package (registry-enforced on the batch statement's counters); there is **no zero-ballot transition** (an election with zero accepted transitions finalizes by the §9.1 short-circuit). Bounds the per-warden batch-envelope work (§8.5, §10.1) |
+| Adaptive deadlines | `d_complaint = t_freeze + d_0 + α·C + β·M` | complaint and ceremony stage **durations** are workload-derived, computed once at casting freeze from the authenticated terminal counts (C = admitted casts, M = batches; the per-touch term of drafts ≤1.5 is gone with the refresh sample, and write-log work is part of α); coefficients and margins come from an **immutable, versioned deadline profile** in the registry, referenced at creation (optionally scaled by a bounded multiplier never below the profile's calibrated safety floor, overflow-checked; registry updates never alter an existing election's deadlines), budgeting worst-case malformed transport + proving + publication + inclusion + archive catch-up + reorgs, never only honest decapsulation. Profiles are calibrated once at Phase 0 (gate 6), never per election. The ceremony's stage durations scale by the same counts; each tally attempt turns them into absolute deadlines from its own start (§10.4). Subsequent complaints never extend a computed deadline; a stage can close early, when all expected participants have published (§9.2, §10.4), which never moves anyone's deadline earlier |
 | High-stakes FRI profile (named) | blowup 32, **27 queries + 20-bit grinding** ≈ 155 conjectured bits | the pinned "raise the dial" option of §12.4 (~1.5× in-guest verification cost vs the default profile); selecting it is a profile choice, not an ad-hoc edit |
-| Ballot STARK profile | Goldilocks, **blowup 32, 18 FRI queries + 16-bit query grinding**, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈106-bit conjectured FRI soundness (§12.4, same heuristic dial as before); chosen verifier-side: −35% in-guest steps and −39% proof size vs blowup-8/34-queries, for ~2.7× prover cost, measured (§8.1). Fallback if browser benchmarks disappoint: blowup 16 / 26 queries, grinding unchanged at
-16 bits (measured in Annex A.4: ≈35% faster, half the memory, 34% larger proofs). Profile pinned in full by `ballotVKHash`; the wasm32 challenger fix (§6) is a prerequisite for **any** browser proving with this transcript, with or without grinding (measured: unpatched wasm32 proving panics at every profile, Annex A.4) |
+| Ballot STARK profile | Goldilocks, **blowup 32, 18 FRI queries + 16-bit query grinding**, hiding PCS, **Blake3 everywhere** (Merkle/challenger AND the in-AIR hashing section) | ≈106-bit conjectured FRI soundness (§12.4, same heuristic dial as before); chosen verifier-side: −35% in-guest steps and −39% proof size vs blowup-8/34-queries, for ≈2.45× prover cost (measured single-threaded on the prototype circuit, 2.0× in WASM; Annex A.4). Fallback if browser benchmarks disappoint: blowup 16 / 26 queries, grinding unchanged at 16 bits (measured in Annex A.4: ≈35% faster, half the memory, 34% larger proofs). Profile pinned in full by `ballotVKHash`; the wasm32 challenger fix (§6) is a prerequisite for **any** browser proving with this transcript, with or without grinding (measured: unpatched wasm32 proving panics at every profile, Annex A.4) |
 | Commitments | **salted unkeyed Blake3**, domain-separated | hiding from an independent 256-bit CSPRNG salt (or the secret inputs); binding from collision resistance. Keyed-Blake3 is reserved for MACs/PRFs: a MAC is not automatically a hiding/binding commitment |
 
 ### 2.4 Terminology for software engineers
@@ -416,8 +427,9 @@ of the document assumes them.
   Semaphore pattern). **v3 deliberately has none**: drafts ≤1.3 used them for revote
   tracking, and adversarial review showed any such voter-derivable public tag is a coercion
   test (§5.3, §12.3). Defined here because the term appears in those discussions.
-- **Accumulator** (as used here) — just a running sum vector of field elements maintained by
-  the batch program. *Not* an RSA or Merkle accumulator.
+- **Write log** — the per-batch encrypted record of which slot each package wrote. Its key
+  is split θ-of-ν among the wardens, so before the tally nobody below θ can read it; the
+  tally's share exchange lets every participating warden read it (§8.5, §12.2).
 - **Blake3** — a modern general-purpose hash: ARX design (add–rotate–xor, the ChaCha/BLAKE/
   BLAKE2 lineage; BLAKE was a SHA-3 finalist), extremely fast in software, with standard
   built-in modes for keyed hashing (MAC), key derivation (`derive_key`) and arbitrary-length
@@ -439,14 +451,25 @@ Complaint proofs (§9.2) and warden contributions (§10.1) MAY be proven in segm
 normative contract covers every such path:
 
 - **Authenticated continuation.** Each segment's statement binds the predecessor's complete
-  continuation state: the progress ordinal, every running accumulator (`viewAcc`, partial
-  sums, counters) and the typed, versioned state schema of its path. Carrying a hash alone
+  continuation state: the progress ordinal, every running value (`viewAcc`, partial
+  sums, counters, and for the tally the slot → latest-package map) and the typed, versioned
+  state schema of its path. Carrying a hash alone
   does not certify earlier computation; the linkage is authenticated execution (the segment
   proves it resumed from exactly that state under the same pinned program and statement
   context), never merely a chained digest.
 - **Hiding.** Continuation states are witness material: they MUST NOT contain a plaintext
-  operation-log digest (§8.7) or any secret-derived value in the clear, and every chunked
+  write-log digest (§8.7) or any secret-derived value in the clear; any commitment to
+  low-entropy state such as the slot map MUST be salted; and every chunked
   path is in scope of the §12.4 hiding verification (Phase-0 gate 4).
+- **Shape.** Everything an outsider can see of a chunked proof (the number of segments,
+  their sizes, progress counters, execution-length metadata) MUST be a function of the
+  declared public workload alone, never of secret state. For the tally this matters: the
+  secret opening work depends on which packages are final bases and which of those are
+  excluded, so a prover that emitted one segment per fixed amount of *executed* work could
+  reveal, at a segment boundary, whether an excluded package was still its slot's final
+  base. Implementations pad to a public bound, or keep intermediate segments private
+  behind one fixed-shape final proof. Salted commitments and a hiding proof system do not
+  cover this on their own.
 - **Completeness.** Only the final segment's statement asserts the whole claim; partial
   segments assert nothing externally. Open chunks are rejected after their path's closing
   event (e.g. the exclusion freeze, §9.2).
@@ -470,13 +493,12 @@ whole trick:
    $e_i = s_i + \mathrm{mask}_i$, where the masks are sliced from one keyed Blake3 XOF
    stream per warden (§2.2) and the stream key $K_i$ travels to warden $i$ inside an ML-KEM
    ciphertext. To everyone except warden $i$, $e_i$ is a uniformly random field element.
-3. Polynomials add: the per-field sum of every active voter's polynomial is itself a
-   degree-$(\theta-1)$ polynomial whose value at 0 is the **tally**. So the protocol only
-   ever needs to add public field elements. Each occupied slot holds a public **blinded slot
-   vector** $T_s \in \mathbb{F}^{\nu \times 16}$ (the voter's masked shares plus
-   sequencer-added blinding layers, §8.4), and the public **accumulator** is simply
-   $A = \sum_s T_s$, updated by each batch's published slot deltas. A revote overwrites the
-   slot's vector; a refresh re-blinds it; both publish the same kind of record.
+3. Polynomials add: the per-field sum of every counted voter's polynomial is itself a
+   degree-$(\theta-1)$ polynomial whose value at 0 is the **tally**. Nothing has to be
+   accumulated in public while voting runs. The batch program only records, in an
+   encrypted **write log** readable by θ wardens together (§8.5), which slot each package
+   wrote, so that at the end everyone agrees on each slot's last package. A revote is one
+   more package and one more log entry; nothing public says which slot it replaced (§8.4).
 4. At the end, each participating warden decapsulates its KEM ciphertexts, recovers its
    share of every counted ballot, and publishes its **sum-share** $S_i$: the sum of those
    shares plus a jointly-created blinding share that vanishes at $x=0$ (§10.3), with a ZisK
@@ -487,8 +509,7 @@ whole trick:
 ![How the tally emerges without a shared decryption key](figures/tally-algebra.svg)
 
 (*This section is the intuition; the full computation also handles the exclusion set and a
-tally-time blinding term, §9-§10. The slot-blinding layers of §8.4 hide updates while
-casting runs and never enter the tally.*)
+tally-time blinding term, §9-§10.*)
 
 The ballot STARK (§6) makes steps 1-2 trustworthy, the batch proof (§8) step 3, the warden
 proofs (§10) step 4. **The zkVM proof chain replaces the homomorphic algebra**, which is the
@@ -521,7 +542,8 @@ PRF/hash, and the zero-knowledge of the STARKs, all post-quantum (full leakage m
   registered settlement account, pinned per election by the creation-time snapshot below
   (registry account rotation never moves an existing election's rights). Proof-carrying
   messages (complaints §9.2, dealer bundles §10.3, contributions §10.1) are authenticated by
-  their proofs' registered-key-seed clauses and may be submitted by anyone. The classical
+  their proofs' registered-key-seed clauses and may be submitted by anyone; the roster
+  proof (§10.4) has no author to authenticate, being a public computation anyone can run. The classical
   dependency this creates is bounded: forging an account signature can only move **closure
   timing and liveness**, never ballots or confidentiality (§12.5); every
   confidentiality-relevant payload keeps post-quantum authentication (§10.4). An election
@@ -594,7 +616,9 @@ at the vote-ID leaf and what complaints reference.
 **`sharesDigest = Blake3(h_1 ‖ … ‖ h_ν)`**. Despite the name it
 binds the shares *through* the per-warden commitments $h_i$ (each AIR-bound to the exact
 $(s_i, K_i)$ used in masking, fixed order and count), which is equivalent binding at a
-fraction of the in-circuit hashing cost. The ballot STARK (~195 KB at the pinned profile) accompanies the package to
+fraction of the in-circuit hashing cost. $pk_{\text{voter}}$ in `pkgCommit` is the
+authenticated identity binding of §6 (`address` and `pk_PQ`), never an independent
+witness-only key. The ballot STARK (~195 KB at the pinned profile) accompanies the package to
 the sequencer but is **not** published in blobs.
 
 ### 5.2 Construction (browser, pseudocode)
@@ -629,7 +653,7 @@ context) would publish the difference of two sharings, which interpolates to the
 difference. Distinct voteIDs give distinct stream contexts for admitted packages, but
 clients must keep freshness across retries and rejected submissions too.
 
-**Client state: losing it costs nothing.** All package randomness (`k`, the polynomials,
+**Client state: losing it never blocks voting.** All package randomness (`k`, the polynomials,
 the KEM randomness, the salt) is **independent CSPRNG randomness, always**. Because a
 revote is just a fresh package for the same slot (§5.3), **no predecessor opening is ever
 needed again**: a voter who loses every bit of client state simply casts a new package from
@@ -638,7 +662,13 @@ deterministic "recovery mode" (deriving randomness from `sk`) to restore revotin
 device loss; with its only justification gone, it is **removed**, which also closes two
 coercion channels it created (an `sk` holder could enumerate the voter's voteIDs and
 reconstruct their historical ballots). This matches v2 exactly: v2's `voteID` also uses
-fresh, underivable randomness per ballot.
+fresh, underivable randomness per ballot. One thing is worth keeping, though: the client
+MUST retain the `voteID` of every package it has ever released to a sequencer and report
+a vote as "finally counted" only if it is the **latest admitted** of them. A sequencer
+that holds an older authorized package can still settle it later and roll the slot back
+(last settled write wins, §5.3); the voteID leaf of that package then appears in the
+state, which is how the voter sees it and casts again. A client that lost this list
+cannot notice such a rollback.
 
 **Cast-as-intended (Benaloh audit, a normative client flow).** Before submitting, the client
 MUST offer an *audit-or-cast* choice: the voter may demand the candidate package's **full
@@ -647,33 +677,40 @@ that the package encodes the intended ballot. That package is then **permanently
 discarded** (its secrets are exposed; the §5.2 freshness rule already forces completely new
 randomness per attempt) and the client builds a fresh one, which the voter either audits
 again or casts *unaudited*. Any number of audit rounds is allowed; an audited package MUST
-never be submitted. This is the standard Benaloh challenge: the client cannot predict which
+never be submitted (and since its secrets left the device, its voteID belongs on the
+watch list above). This is the standard Benaloh challenge: the client cannot predict which
 candidates will be audited, so a cheating client is caught with probability growing in the
 number of audits. v2 left cast-as-intended entirely to applications; v3 makes the client
 obligation normative.
 
-### 5.3 Revoting: slot overwrites, exactly as v2
+### 5.3 Revoting: slot overwrites, hidden
 
-v2 overwrote the voter's slot and subtracted the stored ciphertext homomorphically. v3 does
-the direct analog over Shamir shares: **a revote is an ordinary fresh package for the same
-slot**, and the batch program replaces the slot's public blinded vector, adjusting the
-accumulator by the published delta (§8.4). The voter's proof authorizes writing *their own
-slot* (identity + census binding, §6/§8.2), nothing more.
+v2 overwrote the voter's slot and subtracted the stored ciphertext homomorphically. v3
+keeps the rule and drops the bookkeeping: **a revote is an ordinary fresh package for the
+same slot**. The batch program checks that the package belongs to that slot and records
+the pair in the batch's encrypted write log (§8.4, §8.5). Nothing else happens: no stored
+value is replaced, nothing is subtracted, and nothing public names the slot. The voter's
+proof authorizes writing *their own slot* (identity + census binding, §6/§8.2), nothing
+more.
 
 ![Revote lifecycle: slot overwrites](figures/revote-lifecycle.svg)
 
 - **No nullifiers, no predecessor consumption, no chain counter, no revote budget.** Drafts
   ≤1.3 enforced a "one-live-chain" rule through published revocation nullifiers; adversarial
-  review established that ANY public, voter-derivable (or finite, demandable) spend object
+  review established that any public, voter-derivable (or finite, demandable) spend object
   re-creates a coercion test: a coercer holding the token, or demanding the remaining
   posting rights, detects replacement. The slot-overwrite model has **no
   predecessor-status spend object at all**. The only public effects of a revote are a new
-  voteID receipt and a slot-vector update that is byte-indistinguishable from a routine
-  refresh.
-- Invariants enforced by the batch program: an empty slot admits exactly one **first write**
-  per election lifetime of the slot (first writes are counted: $F \le \texttt{maxVoters}$);
-  an occupied slot admits **at most one real ballot per batch** (the structural rate limit);
-  refreshes never create occupancy; exclusions never reset occupancy (§9.2).
+  voteID receipt and one more overwrite in the batch's public count.
+- **No refreshes.** v2 re-encrypted a random sample of other slots in every batch so that
+  an overwritten slot would not stand out, and drafts ≤1.5 imitated that with re-blinded
+  slot vectors. Both needed the cover only because an overwrite left a public mark on its
+  slot. Here it leaves none, so there is nothing to cover: the sample, its sizing rule and
+  the trust in the sequencer's sampling randomness are gone, and a revote hides among
+  every slot that has already voted, not among a sample (§12.1).
+- Invariants enforced by the batch program: a slot's **first write** inserts its marker
+  and is counted (`votersCount ≤ maxVoters`); a slot admits **at most one ballot per
+  batch** (the structural rate limit); exclusions never reset occupancy (§9.2).
 - **No lifetime cast cap: a deliberate decision, as in v2** (which never bounded revotes).
   Review rejected both alternatives. A flat global cap is capturable by an attacker with
   enough admissions ($\min(s,b)\cdot m \ge T$), and a two-pool cap (first-votes vs
@@ -689,17 +726,29 @@ slot* (identity + census binding, §6/§8.2), nothing more.
   formula is a real liveness requirement (§9.3), and "admission is priced" is not a
   substitute (an attacking sequencer pays itself).
 
-Ordering: within a slot, the **last settled overwrite wins**, v2's exact semantics,
-including its caveat that ballots sent to different sequencers have no common order (voters
-should revote through one sequencer, as v2 advises).
+Ordering: within a slot, the **last settled write wins**, v2's exact semantics, including
+its caveat that ballots sent to different sequencers have no common order (voters should
+revote through one sequencer, as v2 advises, and clients watch their own voteIDs, §5.2).
+
+**What the voter can and cannot check.** v2 let a voter see that their slot had not been
+touched since their last vote. With hidden writes that signal is gone, by design: it is
+the same signal a coercer would use. What remains is enough for an honest voter. Nobody
+can write a slot without that voter's own authorization proof, every package the voter
+ever authorized has a voteID the voter knows, and admissions are public and ordered. So
+the voter always knows which of *their own* packages was admitted last. What they can no
+longer observe is an overwrite by a package they did not build, which takes their
+identity key (or, for CSP censuses, a CSP that issued the same index twice; or, for
+address-derived slots, a census that admitted two addresses with the same slot, which
+v2 requires census contracts to reject and which anyone can check on a public census list).
 
 ### 5.4 Submission interface (voter → sequencer)
 
 The voter submits to one sequencer, over an encrypted channel as in v2:
 `{CanonicalPackage, hybridSig?, ballotProof, censusProof?}`. A revote is byte-identical in
-shape to a first vote. The sequencer (and its prover) still **learns which of the packages
-it seals are overwrites** (it sees slot occupancy, the same boundary as v2, where the
-sealing sequencer learns which updates are overwrites). It never learns ballots, shares,
+shape to a first vote. The sequencer (and its prover) still **learns which slot each
+package it seals belongs to, hence which are overwrites** (it sees the census-derived slot
+and its occupancy, the same boundary as v2, where the sealing sequencer learns which
+updates are overwrites). It never learns ballots, shares,
 masks, or `sk`: those stay inside the STARK witness.
 
 **What never enters public data availability:** `hybridSig` (a recoverable signature would
@@ -719,11 +768,18 @@ section. No trusted setup.
 removed): the proof exposes the public statement **directly as a pinned, ordered vector of
 Goldilocks elements/limbs**, exactly these elements, in this order (the byte/limb layout is
 part of the complete proof profile fixed before `ballotVKHash` is pinned, end of this
-section): `version` · `processID` · `packedBallotMode` ·
-`voteID` · the identity binding (`address` limbs and `pk_PQ`) · `slot` · `authMode` ·
-`weight` · all `E` coordinates (ν·nf elements) · all `h_i` (ν × 8×32-bit limbs) ·
-`pkgCommit` limbs · `ctsDigest` limbs. There is no `isRevote` flag, no predecessor digest
-and no nullifier in the publics: the guest determines first-write vs overwrite from slot
+section): `version` · `chainID` · `registry` · `processID` · `wardenEpoch` · `ν` · `θ` ·
+`nf` · `packedBallotMode` · `voteID` · the identity binding (`address` limbs and `pk_PQ`) ·
+`slot` · `authMode` · `weight` · all `E` coordinates (ν·nf elements) · all `h_i`
+(ν × 8×32-bit limbs) · `pkgCommit` limbs · `ctsDigest` limbs. Everything the relation
+depends on is in this vector or fixed by the pinned verification key: in particular the
+share polynomials' degree bound comes from the **public θ**, and `pkgCtx` (§2.2) is derived
+from the public context values. (Drafts ≤1.5 listed neither θ nor the context parameters;
+with θ free, a voter could have proven a degree-2 sharing in a 2-of-3 election, whose
+three warden pairs interpolate to three different values.) The package's `version` byte
+is the `protocolVersion` of `pkgCtx`: one value. `nf` MUST equal the field count unpacked
+from `packedBallotMode`. There is no `isRevote` flag, no predecessor digest
+and no nullifier in the publics: the guest determines first write vs overwrite from slot
 occupancy alone (§5.3). The vector layout is
 length-prefixed per (ν, nf) and never truncates. `ctsDigest = Blake3(cts)` is computed *outside*
 the circuit and enters as opaque limbs, which **binds** the ciphertext bytes without proving
@@ -731,7 +787,9 @@ anything about ML-KEM.
 
 **Statement contract (normative).** The batch program **constructs the expected public
 vector itself**, from the canonical package it admits, the authenticated election
-parameters, and the authenticated census data (§8.2), and
+parameters (ν, θ and `wardenEpoch` by opening `wardenSetHash`; `chainID` and `registry`
+from the registry-checked batch statement), and the authenticated census and key-map data
+(§8.2), and
 verifies the proof against *that* vector. It never verifies a supplied vector and then
 processes different package data. Inside the AIR, every value used by ballot validation,
 share generation, masking and commitments is constrained equal to
@@ -757,9 +815,11 @@ they are **not** published in blobs beyond what the package itself already publi
 4. **voteID derivation** from `(processID, address, k)` (Blake3, §5.2), with all of these
    bound in the public vector.
 5. **Authentication** (§11): knowledge of `sk` with `H(sk) = pk_PQ`, where `pk_PQ` is a
-   public input that the **batch program** binds to the authenticated census leaf (§8.2);
-   census membership itself is *not* proven in the ballot AIR. For an unenrolled hybrid
-   voter (census `pk_PQ = 0`, hybrid-legacy), identity rests on `hybridSig` alone (§11).
+   public input that the **batch program** binds to the voter's address through the
+   election's PQ key map (§8.2); neither census membership nor the key lookup is proven in
+   the ballot AIR. For an unenrolled voter in a hybrid-legacy election (`pk_PQ = 0`, with
+   the address proven **absent** from the key map), identity rests on `hybridSig` alone
+   (§11).
    **There is no revote clause**: first votes and revotes prove the identical statement
    (drafts ≤1.3 had predecessor-opening, nullifier and counter clauses here, removed with
    §5.3's redesign, which also removes their witnesses and hashing from the AIR; the
@@ -772,9 +832,9 @@ they are **not** published in blobs beyond what the package itself already publi
 **The in-AIR Blake3 section.** All in-circuit hashing runs in a **re-laid Blake3 section**
 (~25-32 rows per compression at the circuit's width). Compression budget under the
 §2.2 stream-masking definition: per warden ≈ 1 context block + ⌈nf/4⌉ XOF output blocks for
-the masks + ~2-4 for $h_i$ (its input is 32 + 8·nf bytes plus context fields); plus ≈ 8 for
+the masks + ≈4 for $h_i$ at nf=16 (its input is 32 + 8·nf bytes plus context fields; 4.00 measured in the tally kernel, Annex A.2); plus ≈ 8 for
 `pkgCommit`, `sharesDigest` and voteID (the `NULL`/counter hashing of drafts ≤1.3 is gone).
-That is **provisionally ≈ 45 compressions at ν=5/nf=16, fewer at smaller nf**, to be fixed by
+That is **provisionally ≈ 53 compressions at ν=5/nf=16** (5 × (1 + 4 + 4) + 8), **fewer at smaller nf**, to be fixed by
 instrumented counts of the exact canonical encodings (first votes and revotes prove the
 same statement). Earlier drafts said ~45/~110 against a per-field masking rule that would
 actually have needed ≥ 80/256; the stream rule above is what makes counts this low possible.
@@ -792,20 +852,20 @@ otherwise-correct traces with wrong flags, counters, lengths or chaining values.
 What the proof deliberately does **not** show: that `ct_i` decapsulates to the committed
 $K_i$. Proving ML-KEM in-circuit would drag SHAKE through the AIR. Instead, mismatched
 transport is *harmless to integrity* (no tally proof ever runs Decaps, §10.2) and *publicly
-excludable* (complaints, §9.2). Proving the encapsulation **in-AIR** (§15.1) removes this
+excludable* (complaints, §9.2). Proving the encapsulation **in-AIR** (§15 item 1) removes this
 trade-off entirely and is the main tracked upgrade.
 
 **Indicative numbers.** Measured on the prototype [DST]: the Blake3 Merkle/challenger profile
 proves in **0.69 s native** (vs 3.2 s for the old Poseidon2 profile) with **~324 KB proofs**;
 a standalone Blake3 compression AIR costs ≈3.4 ms/compression at its wide layout. The
 full-Blake3 ballot (re-laid in-AIR section) is a **projection, not a measurement**:
-**~2-4 s native (ν-dependent; the blowup-32 profile costs ~2.7× the old blowup-8 prover time, bought back for the batch guest, §8.1)**, ~195 KB proofs, to be re-benchmarked once the
+**~2-4 s native (ν-dependent; the blowup-32 profile costs ≈2.45× the old blowup-8 prover time, bought back for the batch guest, §8.1)**, ~195 KB proofs, to be re-benchmarked once the
 re-laid AIR exists (equal cell counts do not guarantee equal proving cost; the degree and
 quotient profile must be recomputed). Browser proving is expected at a few × native (mobile
 slower, to be benchmarked; the proof uploads once to one sequencer and is never stored
 on-chain). Annex A.4 measures the proof-system side at the pinned profile on the prototype
 circuit: 1.7 s native single-thread, 4.5-5.2 s in WASM at 478 MiB peak, WASM ≈2.6-3.0×
-native, with the measured blowup-8 → 32 multiplier (2.45×) below the assumed ~2.7×. Benchmark provenance: all prototype figures in this document come from internal
+native, with a blowup-8 → 32 multiplier of 2.45× (2.0× in WASM). Benchmark provenance: all prototype figures in this document come from internal
 prototype commits; exact commits, hardware, compiler flags and proof settings will be
 published with the reference implementation. Standing adoption gates (from review): fix the
 vendored challenger's wasm32 query-sampler bug; production hiding CSPRNG; implement full
@@ -831,30 +891,29 @@ four changes:
 
 1. **Vote-ID leaves carry the package digest**: `voteID → pkgDigest` (v2 stored 0). This is
    the voter's immutable inclusion receipt, and what complaints authenticate against.
-2. **Slot leaves commit to public blinded vectors**:
-   `leaf = Blake3("davinci-slotvec-v3" ‖ slot_LE8 ‖ T_s)` where
-   $T_s \in \mathbb{F}^{\nu \times 16}$ is the slot's current **blinded vector**, whose
-   bytes are published in the batch's blobs (§8.6). The leaf is verifiable from public
-   data alone, so **any sequencer can refresh or overwrite any occupied slot without any
-   earlier sealer's secret** (permissionless sequencing preserved; a vanished sequencer
-   blocks nothing, which strictly improves on drafts ≤1.3, whose opaque chained leaves
-   required predecessor machinery). Overwrites and refreshes produce the same record type
-   (§8.4); nothing public marks the difference.
-3. **Config namespace**: `0x3` = `wardenSetHash` (§4) instead of an encryption key; `0x4` =
-   `Blake3(A)` (the accumulator value itself is published in every batch's blobs); `0x5`
-   **reserved under this version** (drafts ≤1.3 kept the revocation-nullifier SMT here,
-   removed with §5.3's redesign). **`0x8` (reserved in v2) = `viewsRoot`, the per-warden
-   column-view commitment of §8.7**, updated by every transition (`0x6` is `censusOrigin`,
-   inherited from v2 and not reusable).
+   Vote-ID leaves are never removed, so a state root never recurs.
+2. **Slot leaves hold a constant marker.** A slot's leaf is absent until its first write,
+   which inserts the fixed 32-byte value `OCCUPIED = Blake3("davinci-slot-occupied-v3")`.
+   The leaf never changes again and is **never package-derived**: nothing in the state
+   says which package a slot currently counts, so there is nothing to compare a published
+   package against. Occupancy is all a sequencer needs from the state to seal the next
+   batch, so **any sequencer can admit a write to any slot without any earlier sealer's
+   secret** (permissionless sequencing preserved; a vanished sequencer blocks nothing).
+   Drafts ≤1.5 stored a blinded vector of the slot's masked shares here; v1.5's tally
+   stopped reading it, and it is removed (§8.4).
+3. **Config namespace**: `0x3` = `wardenSetHash` (§4) instead of an encryption key; `0x4`
+   and `0x5` **reserved under this version** (drafts ≤1.5 kept the accumulator digest at
+   `0x4`, drafts ≤1.3 the revocation-nullifier SMT at `0x5`). **`0x8` (reserved in v2) =
+   `viewsRoot`, the per-warden column-view commitment of §8.7**, updated by every
+   transition (`0x6` is `censusOrigin`, inherited from v2 and not reusable).
 4. **Genesis predicate replaces on-chain genesis computation.** The EVM has no Blake3
    precompile, so the registry no longer computes the genesis root itself. Instead it stores
    the election parameters and an **initialization flag**, and the **first transition's batch
    proof constructs the genesis tree deterministically in-guest** from the registry-supplied
-   parameters: the canonical empty tree plus *exactly* the prescribed config leaves, the
-   zero accumulator ($A = 0$: no occupied slots) in its prescribed encoding, **the pinned
-   empty-view encoding of leaf `0x8` (per-warden `viewAcc[i, genesis]` over canonical
-   empty-batch `rowsDigest`/`payloadDigest` encodings, §8.7)**, no slots, no
-   packages, correct initial counters. It then proves `oldRoot` equals that construction.
+   parameters: the canonical empty tree plus *exactly* the prescribed config leaves, **the
+   pinned empty-view encoding of leaf `0x8` (per-warden `viewAcc[i, genesis]`, §8.7)**, no
+   slots, no packages, correct initial counters. It then proves `oldRoot` equals that
+   construction.
    Membership proofs under a prover-chosen root are **never** accepted as a substitute (they
    show presence, not absence of extra state). Registry rules: the genesis branch is
    selected by the stored initialization flag (never caller input); parameters come from
@@ -871,186 +930,226 @@ four changes:
 ## 8. The batch program (ZisK guest)
 
 In one line: the batch program is the referee. It re-checks every vote package, applies the
-state updates, and maintains the masked running total.
+state updates, and seals the record of which slot each package wrote.
 
 Same role, same settlement flow, same public-output pattern (`ok`/`failMask`, old/new roots,
-counters, census root, blobs digest) as v2. The constraint groups change as follows.
+counters, census root, blobs digest) as v2, plus `pqKeyRoot` (§8.2). The constraint groups change as follows.
 
 ![Batch program v3 dataflow](figures/batch-flow.svg)
 
 ### 8.1 Ballot proof verification: measured cost
-Verifies the n ballot STARKs **in-guest**. This cost has now been **measured on the real
-emulator** (a ZisK guest running the Plonky3 verifier on an actual ballot proof; internal
-prototype, with exact commits/hardware/flags to be published with the reference
-implementation, §6), and it is
-the dominant cost of the v3 batch program, far above the earlier modeled figure, because
-hashing turns out to be a minor component: at the pinned profile (§2.3) one verification
-costs **≈14.5M guest steps** (22.1M at the former blowup-8/34-query profile), of which
-hashing via the `blake3f` precompile is only ~1.5M (4,681 compressions); the rest is FRI
-field arithmetic, Merkle path bookkeeping, the symbolic constraint rebuild (1.49M,
-**amortized once per batch** since all proofs share one AIR), and proof deserialization.
-Two further optimizations are **normative implementation requirements**: Goldilocks
-inversions use ZisK `fcall` hints (hint + multiply check, replacing ~1.4k-step software
-inversions, the mechanism ZisK already uses for secp256k1/BN254 inverses), and opened rows
-are hashed as words, not per-byte streams. **GPU-measured** (RTX 5090,
-cargo-zisk 1.3.0-alpha, this exact profile, after a reviewed no-precompile optimization
-pass: per-batch setup hoisting, the existing `uint256_inv_mod` fcall as the Goldilocks
-inverse hint, word-level hashing, and a differentially-tested fork of the FRI verifier
-factoring query-independent sums): per-proof cost fell from 14.45M to **2.62M steps**
-(−82%), and proving the verification of 1 / 8 / 32 proofs takes **10.4 / 12.5 / 19.8 s**,
-i.e. a ≈10 s fixed pipeline plus **≈0.30 s marginal per verification**, ≈1.6
-verifications/s at K=32 and a projected ≈2.7/s at K=128 per GPU. A 256-ballot batch's
-verification layer proves in ≈1.5-2 minutes; the fixed pipeline cost, not per-ballot work,
-now dominates.
-With the amortization and inverse hints above (and a proposed upstream Goldilocks-ext²
-precompile), ~1 verification/s/GPU is the modeled target. A **combined guest** running this
-verification plus the complete §8.2-§8.7 state machinery in one program has since been
-measured end to end (Annex A.1): ≈0.37 s per ballot at GPU saturation, 1.4-2.5 votes/s/GPU,
-with a 256-ballot batch proving in 104 s. Practical batch sizes today:
-32-128 ballots for v2-like latency, 256 where ~8-minute batches are acceptable; throughput
-scales across provers as in v2. The price of post-quantum ballots is paid in parallelizable
-sequencer GPU time, not voter experience. The guest implements Blake3's chunk/tree layout
-over the compression syscall; Merkle parents are `BLAKE3(left ‖ right)`. The ballot verifier
-configuration (AIR identity, FRI profile, transcript and hash profile) is pinned via
-`ballotVKHash` at config leaf `0x7`, as in v2, and the guest constructs each proof's expected
-public vector per the §6 statement contract.
+The program verifies the K ballot STARKs of a batch **in-guest**, and this is the dominant
+cost of the v3 batch program. It has been measured on the real emulator and proven on a
+GPU (a ZisK guest running the Plonky3 verifier at the pinned profile of §2.3; internal
+prototype, with exact commits, hardware and flags to be published with the reference
+implementation, §6). Two caveats apply to every number here. The proofs being verified
+come from the **prototype ballot circuit** (2,048 × 379 trace, 123 public values), not the
+final §6 AIR, whose trace width and public vector differ; verification cost depends on
+both, so these figures are a measured baseline, not the final number. And the times are
+the STARK stage only; the wrap that makes a proof verifiable on-chain is priced separately
+in Annex A.1.
+
+Unoptimized, one verification costs ≈14.5M guest steps (22.1M at the former
+blowup-8/34-query profile), of which hashing through the `blake3f` precompile is only
+~1.5M (4,681 compressions); the rest is FRI field arithmetic, Merkle path bookkeeping, the
+symbolic constraint rebuild and proof deserialization. A reviewed optimization pass with
+no new precompile brought that to **2.53M steps per additional proof plus ≈2.7M once per
+batch** (2.62M averaged over a 32-proof batch): the symbolic rebuild is hoisted to once
+per batch since all proofs share one AIR; Goldilocks inversions use the existing
+`uint256_inv_mod` `fcall` hint (hint plus multiply check, the mechanism ZisK already uses
+for secp256k1 and BN254 inverses); opened rows are hashed as words, not byte streams; and
+a differentially-tested fork of the FRI verifier factors query-independent sums. The
+first two are **normative implementation requirements**.
+
+On one RTX 5090 (cargo-zisk 1.3.0-alpha), verification proves at **0.333 s per proof once
+the GPU is saturated** (K ≥ 64; small batches measured 0.30 s and understate it), on top
+of a ≈10 s fixed proving pipeline per batch. A **combined guest** running this
+verification together with the per-package state work of §8.2-§8.7 has been proven end to
+end up to K = 256: 2.71M steps per package, 104 s for a 256-ballot batch, 1.4 to 2.5
+votes per second per GPU for K = 32 to 256 (Annex A.1, which also states what that guest
+does not yet include). For comparison, v2's production benchmark on the same class of machine (one RTX 5090,
+ZisK 1.3.0 against 1.3.2 here)
+proves a 256-vote, 16-field batch in 76.7 s including its wrap, and v3's combined guest
+takes 107 s including its wrap: v3's post-quantum ballots cost roughly 1.3 to 1.4× v2's
+proving per vote at 16 fields (2.3× against v2's cheapest 2-field ballots), not the 25×
+that pre-optimization drafts of this section reported. Practical batch sizes: 32-128 ballots for v2-like
+latency, 256 for throughput; in native settlement mode the 6-blob limit binds first
+(§8.6). Throughput scales across provers as in v2. The price of post-quantum ballots is
+paid in parallelizable sequencer GPU time, not voter experience.
+
+The guest implements Blake3's chunk/tree layout over the compression syscall; Merkle
+parents are `BLAKE3(left ‖ right)`. The ballot verifier configuration (AIR identity, FRI
+profile, transcript and hash profile) is pinned via `ballotVKHash` at config leaf `0x7`,
+as in v2, and the guest constructs each proof's expected public vector per the §6
+statement contract.
 
 ### 8.2 Census, authentication, binding
-Census membership is verified **here**, as in v2 (not in the ballot AIR): the program
-authenticates the census leaf `Blake3(address ‖ weight ‖ pk_PQ)` with a Merkle path under an
-accepted root, derives the slot by the census-origin rule, and proves the **join equality**:
+Census membership is verified **here**, as in v2 (not in the ballot AIR), and **the census
+itself is v2's, byte for byte**. For Merkle origins 1-3 that is the Keccak lean-IMT the
+v2 batch program verifies (davinci-zkvm source, commit ef07474): node hash `keccak256(be32(l) ‖ be32(r))` (Solidity's
+`keccak256(abi.encode(l, r))`), leaf `address·2^88 + weight`, the `leaf < 2^248` rule,
+v2's per-batch duplicate-leaf check, and each origin's root-acceptance policy. The guest
+checks the path with the keccak precompile, as v2 does today. Existing censuses, census
+contracts and census tooling work unchanged. (The v2 paper describes this tree as
+Poseidon-hashed and drafts ≤1.5 followed it, specifying a Blake3 census format reached
+through conversion proofs. The program's source verifies Keccak, the hash contracts compute
+natively, so there is nothing to convert and both conversion proofs are removed; gate 9
+re-checks this against the deployed contracts and bytecode.)
 
-$$\text{ballot publics } (\text{identity key},\, weight,\, slot,\, authMode) \;=\; \text{authenticated census values and policy}$$
+**The slot rule is v2's too.** For origins 1-3 the slot is derived from the address by
+v2's rule (§2.2). v2 requires on-chain censuses to refuse a registration whose slot is
+already taken under that rule (gate 9 confirms the deployed contracts do); deriving slots any other way would leave collisions unchecked, and
+a member could grind an address that collides with a victim's slot and overwrite their
+ballot. Off-chain census lists MUST be checked for duplicate slots by sequencers and
+clients, which anyone can do from the public list.
 
-The census root it checks is bound in the **batch statement** and must be accepted under the
-election's origin-specific registry policy, never chosen freely by the prover. `authMode` is
-derived from the immutable election auth policy plus the creation-time enrollment snapshot
+**PQ keys come from a separate key map.** A census leaf says who may vote and with what
+weight. Which post-quantum key authenticates an address is a different fact with a
+different owner (the voter), so it lives elsewhere: each election over a Merkle census
+(origins 1-3; CSP credentials carry the key themselves, §11) pins, at creation, a
+`pqKeyRoot`, the root of a **sparse Merkle map keyed by the 160-bit address** with value
+`pk_PQ ≠ 0`, where a missing key means "not enrolled". The map is Keccak-hashed with
+distinct leaf and node tags and fixed encodings (it is maintained by a contract, the
+island rule of §2; the byte-exact structure is a gate-3 item). For every admitted package
+of such an election the guest proves the address's **value or absence** under `pqKeyRoot` (at most 160 node
+hashes, fewer with compressed empty siblings) and proves the **join equality**:
+
+$$\text{ballot publics } (address,\, pk_{PQ},\, weight,\, slot,\, authMode) \;=\; \text{census leaf, key-map lookup, slot rule and policy for the same } address$$
+
+One `address` runs through the census leaf, the key lookup and the ballot's public vector;
+the guest hashes the key-map leaf itself and never accepts a supplied leaf value.
+`authMode` is derived from the immutable election auth policy plus the lookup result
 (§11) and compared against the proof's public input, never prover-chosen. Authentication
-then follows the policy: `pq-only` relies on the in-STARK preimage proof alone; `hybrid`
-*additionally* verifies `hybridSig` (ECDSA over `pkgDigest`, secp256k1 precompile, recovered
-address = census address) for every package; `hybrid-legacy` dispatches per census leaf as
-specified in §11. The program recomputes `ctsDigest` and `pkgDigest` from the package body
-and constructs the proof's full expected public vector from that body (§6 statement
-contract), so an admitted package is byte-for-byte the one the voter's proof authorized.
+then follows the policy: `pq-only` requires a present key equal to the public `pk_PQ` and
+relies on the in-STARK preimage proof alone; `hybrid` requires the same and *additionally*
+verifies `hybridSig` (ECDSA over `pkgDigest`, secp256k1 precompile, recovered address =
+census address); `hybrid-legacy` dispatches on the lookup: a present key means both
+authenticators, **proven absence** means `pk_PQ = 0` and `hybridSig` alone. Absence is
+what makes that branch safe: without it, someone holding only an enrolled voter's wallet
+key could claim the voter was unenrolled and skip the post-quantum check. The census
+root and `pqKeyRoot` are both bound in the **batch statement** and must be the values the
+registry holds for the election, never chosen by the prover. The program recomputes
+`ctsDigest` and `pkgDigest` from the package body and constructs the proof's full expected
+public vector from that body (§6 statement contract), so an admitted package is
+byte-for-byte the one the voter's proof authorized.
 
-**On-chain censuses and the PQKeyRegistry (origin 3).** Contracts cannot hash Blake3
-cheaply, so on-chain censuses maintain an incremental **keccak256 running commitment** of
-their authorized registrations (one `keccak256(prev, entry)` per registration, Solidity-
-native). A permissionless **census-root conversion proof**, a small ZisK guest, attests
-"running commitment `c` corresponds to Blake3 lean-IMT root `r`"; the registry verifies it
-and stores the accepted `(c, r)` pair, and batches then use `r` under the origin-3 root
-policy. No unauthenticated off-chain root ever enters the system.
-
-**v2 census migration (conversion proof).** A second accepted conversion statement makes
-deployed v2 censuses usable without rebuilding them: a permissionless ZisK guest proves that
-a v2 Poseidon lean-IMT root $r_2$ corresponds to a Blake3 lean-IMT root $r_3$ over the
-**identical, complete** `(address, weight)` multiset, preserving canonical ordering, index
-semantics and uniqueness, with each leaf's `pk_PQ` joined by a proven PQKeyRegistry
-**membership or non-membership** under the election's creation snapshot (`pk_PQ = 0` exactly
-for proven non-members; anything weaker would let a converter silently downgrade enrolled
-voters to legacy authentication, or omit voters). The source root must itself be accepted
-under the election's origin policy; the registry stores the accepted $(r_2, r_3)$ pair.
-Scope: legacy Merkle censuses (CSP credentials and dynamic census policies keep their own
-enrollment paths, §11). Poseidon-BN254 thereby survives only as a **conversion-only in-guest
-dependency**, never a protocol hash (§2). Combined with `hybrid-legacy` (§11), this makes
-every existing v2 census usable from day one.
+A census leaf is not domain-separated from an inner node: about one inner node in 256
+would pass the `leaf < 2^248` rule. v2 is safe because the resulting "address" is a hash
+output nobody holds a wallet key for. v3 keeps that safety wherever a wallet key is still
+needed (`hybrid`, `hybrid-legacy`) and wherever the key map is the address-authorized
+registry (§11), since no entry can exist there for an address nobody controls. It does
+**not** hold for a `pq-only` election over an **organizer-published** key map: the
+organizer could assign a key to such a pseudo-address and vote through it. That is inside
+the organizer trust §11 declares for that configuration, not a new power (the organizer
+already controls who is in the census), but it is the reason that trust has to be stated.
 
 ### 8.3 State transitions
 In fixed order, each proven against the previous root, as v2: (1) insert
-`voteID → pkgDigest` for every admitted package; (2) apply the **uniform slot updates** of
-§8.4, real writes (first votes and overwrites) and the refresh sample $\mathcal{R}$
-(sample-size rule as v2), all publishing new slot vectors; (3) update
-`0x4` with the new accumulator digest **and `0x8` with
-the new `viewsRoot` (§8.7), atomically with the rest of the batch state** (every accepted
-transition admits at least one package, §2.3).
+`voteID → pkgDigest` for every admitted package; (2) insert the `OCCUPIED` marker for every
+first-write slot (§8.4); (3) update `0x8` with the new `viewsRoot` (§8.7), atomically with
+the rest of the batch state. Every accepted transition admits at least one package (§2.3),
+so every transition inserts at least one never-removed leaf and the root always changes.
 
-### 8.4 Uniform slot updates and the accumulator
-For every touched slot $s$ the guest publishes a new blinded vector:
+### 8.4 Hidden writes
+A batch makes exactly this public about slots: **the slots written for the first time**,
+as a list strictly increasing by slot. For every admitted package the guest:
 
-$$T_s^{\text{new}} = Q_s + Z_s + M_s, \qquad
-Q_s = \begin{cases} \widehat{E}_P & \text{real ballot } P \text{ (first write or overwrite;}\\[-2pt]
-& \text{zero-extended per §2)} \\ T_s^{\text{old}} & \text{refresh} \end{cases}$$
+1. derives the package's slot from the authenticated census data (§8.2);
+2. checks that the batch's K slots are **pairwise distinct**: at most one ballot per slot
+   per batch (an explicit check over the private slot list);
+3. if the slot's marker is absent, treats the package as a **first write**: inserts the
+   marker, increments the occupancy counter (`votersCount ≤ maxVoters`,
+   registry-enforced), and lists the slot;
+4. if the marker is present, treats it as an **overwrite**: proves the marker's presence
+   under the old root and publishes nothing about the slot;
+5. appends the slot to the batch's **write log** (§8.5), one entry per package.
 
-where, per field $f$, $Z_s$ holds evaluations of a fresh **zero-constant polynomial**
-$z_{s,f}(x) = \sum_{j=1}^{\theta-1} a_{s,f,j} x^j$ (degree ≤ θ−1, $z_{s,f}(0)=0$, so it
-never changes the interpolation at 0), and $M_s$ holds fresh **unstructured masks**, both
-derived in-guest under the §2.2 `slotUpdCtx` contexts. **A real write and a refresh publish
-the same record type**; no public flag, length or framing difference marks the branch. Why
-both terms: $M_s$ prevents public parity-check attacks on the Shamir code (an unmasked
-codeword-shaped update would vanish under the code's parity checks); $Z_s$ prevents fewer
-than θ wardens, who know their own mask components, from equality-testing a candidate base.
-Zero shares and per-coordinate deltas are **never published or individually committed**; the
-batch proof certifies the relation. Rules: at most **one real ballot per slot per batch**;
-real-write and refresh sets disjoint; refreshes only touch occupied slots; first writes
-increment the occupancy counter ($F \le \texttt{maxVoters}$).
+Admitted packages are published **strictly increasing by voteID**, checked in-guest. No
+order in a batch is chosen by the sequencer: with arrival order or slot order, a party
+holding the openings of a few packages could count how many writes fall between its own.
+A voteID is a hash of the voter's secret `k` (§5.2), so its rank says nothing about the
+slot. A package's **admission ordinal** is its batch number followed by its position in
+that order.
 
-The accumulator is the plain sum of current slot vectors:
+The public counters are as in v2: admitted packages, first writes (hence overwrites, their
+difference) and the total `votersCount`. That is all. There is no refresh, no decoy and no
+per-slot value: drafts ≤1.5 published for every touched slot a blinded vector of the
+voter's masked shares plus two blinding layers, kept a public accumulator of those
+vectors, and touched a random sample of other slots as cover. v1.5's tally stopped
+reading any of it, and without a per-slot value there is no mark for a cover to hide, so
+the vectors, the blinding layers, the accumulator and the sample are all **removed**.
 
-$$A = \sum_{\text{occupied } s} T_s, \qquad
-A' = A + \sum_{\text{touched } s} (T_s^{\text{new}} - T_s^{\text{old}})$$
-
-(an empty slot's $T_s^{\text{old}} = 0$). No historical package is ever subtracted: each
-occupied slot contributes exactly one current vector, so double counting is structurally
-impossible. Drafts ≤1.3 maintained the accumulator over per-package additions/subtractions
-with a secret batch pad $B$ hiding the subtracted rows; the uniform update makes the pad
-redundant and it is **removed**.
+What this hides, precisely. Per batch the public learns how many overwrites happened and
+nothing about which already-occupied slots received them; an overwrite's anonymity set is
+every occupied slot, where v2's was its refresh sample. Compared with drafts ≤1.5 and
+with v2's slot activity, explicit overwrite-location leakage is never greater and can be
+strictly smaller. It is a computational claim (the write log is a ciphertext, §8.5), and
+it has edges, listed in §12.1: degenerate batches, counts in small elections, and batches
+that were published but re-sealed with different contents.
 
 ### 8.5 The warden payload (KEM-DEM, proven)
-Per batch, the guest: derives a 256-bit batch key $k_b$ and the ML-KEM encapsulation
-randomness from the secret batch seed (guest-internal derivation under the pinned program, so
-it is as trustworthy as the proof itself); derives the slot-update blinding of §8.4 from
-$k_b$ under the dedicated `slotUpdCtx` domains (zero-polynomial randomness and mask subkeys
-are domain-separated from each other and from everything else; tally participants who
-reconstruct $k_b$ use it only to decrypt the operation log, since the §10.1 contribution
-equation re-derives no blinding layer);
-DEM-encrypts (§2.1) the **operation log** under $k_b$, one fixed-shape entry per touched
-slot, in the public slot-update order: `kind:u8 ‖ admissionIndex:u32` (refresh entries use a
-fixed sentinel; real entries reference the admitted package's §8.7 ordinal exactly once;
-fixed shape, no length or framing leak); Shamir-shares $k_b$
+Per batch, the guest takes a fresh secret 256-bit batch seed (drawn by the sealing
+sequencer from its CSPRNG, **fresh for every sealing**) and computes
+$\sigma = \mathrm{Blake3.keyed}(\text{seed}, \texttt{sealCtx})$ with the `sealCtx` of §2.2,
+which contains the old root and the ordered digests of the admitted packages. **All
+payload randomness derives from σ and nothing from the raw seed**: the batch key $k_b$,
+the Shamir coefficients, the ML-KEM encapsulation coins and the commitment salts, each
+under its own domain. So a sequencer that seals twice from the same seed gets either the
+identical payload (same contents) or unrelated keys (different contents); no key or nonce
+ever covers two different plaintexts. `sealCtx` is also part of every batch DEM AAD.
+
+The guest then: DEM-encrypts (§2.1) the **write log** under $k_b$, one 8-byte slot per
+admitted package in voteID order (fixed length 8·K; K is public); Shamir-shares $k_b$
 **coordinate-wise over its 32-bit limbs** θ-of-ν; and for each warden $i$: one in-guest
 ML-KEM encapsulation to $pk_i$ → wrapping secret → DEM-encrypts share $i$, and publishes a
 salted Blake3 **commitment to each recipient's share** (opening salts travel inside the
 respective DEM ciphertexts; these commitments are what lets tally participants validate
 forwarded shares in §10.4 without decapsulating each other's ciphertexts). The proof binds
-the blinding derivations to the slot updates, the log entries to the public update sequence
-and admitted ordinals, every
-ciphertext to its registered recipient key and context, and the share commitments to the
-shared $k_b$. **Unlike voter transport, a malformed
-batch payload is unprovable, not merely complainable**: it would hide an accepted
-transition's write/refresh history from the tally. All of it is published in
-the batch's blobs.
+every log entry to its package's census-derived slot, every ciphertext to its registered
+recipient key and context, and the share commitments to the shared $k_b$. **Unlike voter
+transport, a malformed batch payload is unprovable, not merely complainable**: it would
+hide which slot an accepted package wrote from the tally. All of it is published in the
+batch's blobs.
+
+The write log is the **only** record of which package is a slot's current one. That is
+deliberate (any public record would be a revote detector) and it is why the log is
+escrowed to the committee and not to the sequencer. Two alternatives were considered.
+Keeping a second, public witness of each write is what drafts ≤1.5 did with blinded
+vectors; the tally never read it. Delivering the slot to each warden inside the voter's
+package would delete $k_b$, the in-guest encapsulations and a whole ceremony stage, but
+every single warden would then see every voter's write history as it happens, and a
+coercer with one corrupt warden could re-coerce before the election ends. The θ gate is
+worth its cost.
 
 ### 8.6 Blob layout v3 and DA numbers
 Blob cells carry 31 payload bytes each (a v3 codec choice; v2 packed typed values, v3 packs
 an opaque byte stream per section), 4096 cells per blob ⇒ 126,976 B per blob. Sections, in
-order: header · new packages (CanonicalPackage bytes) · slot-update list
-(slot index 8 B + the new blinded vector $T_s$, 8·ν·nf B, so a touched slot costs
-`8 + 8·ν·nf` B, e.g. 1,032 B at ν=8/nf=16; drafts ≤1.3 published 40-B opaque leaves plus
-nullifiers, which no longer exist) · accumulator value $A'$ (ν·nf·8 B; inactive fields are
-identically zero and not serialized) · warden payload (§8.5, now including the encrypted
-operation log, 5 B/entry).
+order: header · admitted packages (CanonicalPackage bytes, voteID order) · first-write
+slots (8 B each, ascending) · warden payload (§8.5: the encrypted write log at 8 B per
+package plus a 32-B tag, and per warden one ML-KEM ciphertext, one wrapped share and one
+share commitment, ≈1.2 KB). An overwrite adds its package and its 8-byte log entry and
+nothing else.
 Byte-exact cell maps live in the davinci-zkvm normative docs, as in v2. One divergence from
 v2's blob flow: the evaluation point becomes
 $z_b = \mathrm{keccak256}(\text{processID} \,\|\, \text{stateRoot}^{old} \,\|\, \text{blobCommitment}_b) \bmod q_{BLS}$,
 keccak because the **registry contract** computes it (Solidity-native; the guest recomputes
 it via the keccak precompile, one call per blob, a §2 island).
 
-Per-package size: `72 + ν·(32 + ct_len + 8·nf)` bytes ⇒ at nf=16: **20,040 B** at
-ν=16/ML-KEM-768; 10,056 B at ν=8; 6,312 B at ν=5; 1,320 B at ν=1 (all ML-KEM-768, the only
-allowed transport, §2). nf-sizing: 9,096 B at ν=8/nf=1.
+Per-package size: `72 + ν·(32 + ct_len + 8·nf)` bytes ⇒ at nf=16: 10,056 B at ν=8, the
+v3.0 maximum; 6,312 B at ν=5; 3,816 B at ν=3; 1,320 B at ν=1 (all ML-KEM-768, the only
+allowed transport, §2). nf-sizing: 9,096 B at ν=8/nf=1. Packages are 99% of a batch.
 
-| Profile (256 first votes + 256 refreshes, nf=16) | batch bytes | blobs (126,976 B each) | vs v2 (~5 blobs) |
-|---|---|---|---|
-| **ν=8, ML-KEM-768 (v3.0 max)** | ≈ 3.1 MB | **≈ 25** | ~5× |
-| ν=5, ML-KEM-768 | ≈ 2.0 MB | ≈ 16 | ~3.2× |
-| ν=1 (sequencer mode) | ≈ 0.4 MB | ≈ 4 | ~0.8×, about v2's cost |
-| ν=16, ML-KEM-768 (future profile) | > 32-blob cap ⇒ smaller batches, or the tracked multi-recipient-Kyber transport (§15.5: package 5,640 B; 256+256 ≈ 2.5 MB ⇒ ≈20 blobs incl. the 2,056-B slot-update vectors) | — | — |
+| Profile (256 votes, nf=16) | batch bytes | blobs (126,976 B each) | drafts ≤1.5 (with 256 refreshes) | vs v2 (5 blobs) |
+|---|---|---|---|---|
+| **ν=8, ML-KEM-768 (v3.0 max)** | ≈ 2.59 MB | **21** | 25 | ~4× |
+| ν=5 | ≈ 1.63 MB | 13 | 16 | ~2.6× |
+| ν=3 | ≈ 0.98 MB | 8 | 10 | ~1.6× |
+| ν=1 (sequencer mode) | ≈ 0.34 MB | 3 | 4 | ~0.6× |
+| ν=16 (future profile) | ≈ 5.15 MB ⇒ over the 32-blob cap: smaller batches, or the tracked multi-recipient-Kyber transport (§15 item 5: package 5,640 B ⇒ ≈ 1.47 MB ⇒ 12 blobs) | — | — | — |
 
-(Overwrite-heavy batches cost more: v2's unchanged sampling rule requires ~2w refreshes for
-w overwrites, so 256 overwrites + 512 refreshes ≈ 2.15/3.4 MB ⇒ 17/27 blobs at ν=5/8. The
-slot-vector bytes are the price of uniform, publicly-replayable updates, the mechanism that
-restores v2-grade revote hiding; ≈0.3-0.5 MB per 512-touch batch over drafts ≤1.3, which is
-bought back elsewhere by deleting nullifiers, revote metadata and the pad.)
+A batch costs the same whether its packages are first votes or revotes: there is no
+refresh cover to pay for. (In drafts ≤1.5 an overwrite-heavy batch grew to 27 blobs at
+ν=8, because every overwrite dragged two refreshed slot vectors with it.)
 
 **Settlement modes.** **L1-blob mode** (v2's production path, the OP-Stack flow) posts
 blobs across multiple Ethereum transactions and proves their chain inclusion on the rollup;
@@ -1060,18 +1159,18 @@ v2's flow: for every blob the registry reads its own transaction's versioned has
 `blobhash` opcode (the only trustworthy on-chain binding between a versioned hash and an
 actually-published blob) and preserves the binding chain stored versioned hash → commitment
 via the point-evaluation precompile → $z_b$ as above → the proof-bound ordered blob digest.
-Native deployments use correspondingly smaller batches (at ν=5/nf=16, six blobs fit ≈105
-first votes plus their refresh cover), and L1-blob mode is not an automatic escape hatch on
-a chain lacking the rollup inclusion-verification path: pick the mode at deployment. Drafts
+Native deployments use correspondingly smaller batches: six blobs hold **≈119 votes at
+ν=5, ≈74 at ν=8, ≈197 at ν=3**, and all 256 at ν=1. L1-blob mode is not an automatic
+escape hatch on a chain lacking the rollup inclusion-verification path: pick the mode at
+deployment. Drafts
 ≤1.4 specified a multi-transaction native registration subsystem (`registerBlobs` manifests
 with freshness, merge and cleanup rules) so native mode could also reach 32 blobs; it is
 **removed from v3.0** and tracked in §15 in a simplified fold-hash form, to be reinstated
 only if a native deployment demonstrably needs larger batches. Ceremony and complaint
-publications never need manifests: they ride their own transactions' blobs, `blobhash`-bound
-like every blob here.
+publications ride their own transactions' blobs, `blobhash`-bound like every blob here.
 
 **The archive manifest chain.** On every accepted transition the registry folds the batch
-into a contract-side running accumulator,
+into a contract-side running value,
 `archiveAcc' = keccak256(archiveAcc ‖ batchNumber ‖ stateRoot_new ‖ blobsDigest)` (keccak: it
 is contract-computed, the island rule), and stores `(archiveAcc, batchNumber)`. At the
 exclusion freeze this pair is frozen with the tally snapshot. It authenticates the ordered
@@ -1079,9 +1178,10 @@ batch **manifest**; actual blob bytes are authenticated by their commitment/vers
 bindings (§4), and the §8.7 views are bound transitively through each `stateRoot`.
 
 DA is v3's main cost regression and is linear in ν: size committees to the election's
-stakes. The tracked reduction path is **multi-recipient Kyber** (§15.5): one shared 960 B
+stakes. The tracked reduction path is **multi-recipient Kyber** (§15 item 5): one shared 960 B
 component plus 128 B per warden ⇒ transport 1,984 B at ν=8 (vs 8,704 B), package
-10,056 → 3,336 B, a ~3× DA cut with ML-KEM security assumptions. (v1.2 tracked Classic
+10,056 → 3,336 B, a ~3× DA cut with ML-KEM security assumptions (a 256-vote batch at ν=8
+would fit 7 blobs). (v1.2 tracked Classic
 McEliece here; withdrawn, since BSI's 2026-09 guidance advises against it in new
 developments and 2026 cryptanalysis reduced its margins, while its 0.26-1 MB public keys
 were a poor browser fit anyway.)
@@ -1090,12 +1190,8 @@ were a poor browser fit anyway.)
 
 The batch guest already touches every admitted package; this section makes that work
 reusable so warden tally proofs never re-hash full `CanonicalPackage` bytes and never re-fold
-the full blob archive (it replaces the per-warden archive re-fold of earlier drafts and
-satisfies what v1.2 tracked as upgrade 7). Two ordered record streams exist per warden $i$:
-
-**Base records** — for each admitted package $v$, in canonical admission order (each
-package's position in this global order is its **admission ordinal**, referenced by the §8.5
-operation log), the `(104 + 8·nf)`-byte
+the full blob archive. For each warden $i$ and each admitted package $v$, in admission
+order (§8.4), the `(104 + 8·nf)`-byte
 
 ```text
 ColumnRecord(v, i) = voteID (8 B) ‖ pkgDigest (32 B) ‖ E[i][1..nf] (8·nf B, canonical LE)
@@ -1105,54 +1201,55 @@ ColumnRecord(v, i) = voteID (8 B) ‖ pkgDigest (32 B) ‖ E[i][1..nf] (8·nf B,
 (`pkgDigest` is load-bearing: the exclusion set $X$ identifies packages by
 digest, so the record certifies the join between identity and row.)
 
-**Update records** — for each touched slot, in the public slot-update order, the 8-byte
-`UpdateRecord(s) = slot`, one **shared** stream identical for every warden: the §10.1 tally
-needs the touched-slot order for final-base selection, not vector coordinates (drafts ≤1.4
-carried a per-warden row $T_s^{new}[i]$, which no consumer needs under the direct-share
-contribution equation). Observers replay full slot vectors from the published blob bytes as
-before.
+Per batch $b$ the guest computes the domain-separated commitments of §2.2's `viewCtx`
+family (view encoding version 2):
 
-Per batch $b$ the guest computes the domain-separated commitments of §2.2's `viewCtx` family:
-
-- `rowsDigest[b,i]` — hash of the ordered ColumnRecords **and** UpdateRecords of batch $b$
-  for warden $i$, with both counts;
-- `payloadDigest[b]` — hash of the batch's **complete encrypted §8.5 payload envelope**
-  (operation-log ciphertext, tag, context, per-share commitments, wrapping material).
+- `rowsDigest[b,i]` — hash of the batch's K ordered ColumnRecords for warden $i$, with K;
+- `firstWritesDigest[b]` — hash of the batch's ordered first-write slot list, with its
+  count (the same bytes the blobs publish);
+- `payloadDigest[b]` — hash of the batch's **complete encrypted §8.5 payload envelope**,
+  which carries its own encoding version (version 2 from v1.6: a write log of 8-byte
+  slots)
+  (write-log ciphertext, tag, context, per-share commitments, wrapping material). So that
+  tally proofs need not re-hash ν wrapped shares they never open, the envelope is hashed
+  as `Blake3(logPart ‖ commitments ‖ Blake3(wraps))`, with the wraps pre-digested.
   **Never a digest of the plaintext log: a deterministic plaintext fold is enumerable and
-  would leak the write/refresh history;**
+  would leak which slots were overwritten;**
 - `viewAcc[i,b] = Blake3(viewCtx_acc ‖ i ‖ b ‖ viewAcc[i,b−1] ‖ admittedCount[b] ‖
-  touchedCount[b] ‖ rowsDigest[b,i] ‖ payloadDigest[b])`;
-- `viewsRoot[b] = Blake3(viewCtx_root ‖ batchCount ‖ totalAdmitted ‖ totalTouched ‖ ν ‖
+  firstWriteCount[b] ‖ rowsDigest[b,i] ‖ firstWritesDigest[b] ‖ payloadDigest[b])`;
+- `viewsRoot[b] = Blake3(viewCtx_root ‖ batchCount ‖ totalAdmitted ‖ totalFirstWrites ‖ ν ‖
   ordered (i, viewAcc[i,b]))`, stored at config leaf `0x8` (§7).
 
-Guest obligations: every projected value is derived from the **same** `CanonicalPackage` /
-slot update the guest admits and publishes; it computes `pkgDigest` and each ciphertext
-digest itself; every admitted package and every touched slot appears exactly once, in
-published order, with ordinals identical in all ν views; every accepted batch folds its
-canonically encoded digests (every accepted batch admits ≥ 1 package, §2.3; the pinned
-empty-view encoding exists only inside the genesis predicate, §7); the `0x8` update is
-atomic with the rest of the batch state. Cost: ≈ ν·(18 + 3.9) Blake3 compressions per admitted package (~110 at ν=5, ~175 at
-ν=8) plus a negligible shared touched-slot term (8 B per touch) and bounded per-batch work.
-The ciphertext digests (18 compressions each) dominate.
+Guest obligations: every projected value is derived from the **same** `CanonicalPackage`
+the guest admits and publishes; it computes `pkgDigest` and each ciphertext digest itself;
+every admitted package appears exactly once, in voteID order, with ordinals identical in
+all ν views; the batch's ColumnRecords and its write log cover exactly the same K packages
+in the same order, superseded and later-excluded ones included; every accepted batch folds
+its canonically encoded digests (the pinned empty-view encoding exists only inside the
+genesis predicate, §7); the `0x8` update is atomic with the rest of the batch state. Cost:
+≈ ν·(18 + 3.9) Blake3 compressions per admitted package (~110 at ν=5, ~175 at ν=8) plus
+bounded per-batch work. The ciphertext digests (18 compressions each) dominate.
 
 No new blob bytes are required: observers and archive providers reconstruct every
 `ColumnRecord` deterministically from the published `CanonicalPackage` bytes, so views are a
 *commitment layout*, not extra published data. The registry retains the per-batch
-`(batchNumber, viewsRoot)` checkpoints it has accepted (bounded storage, one slot per batch,
+`(batchNumber, viewsRoot)` checkpoints it has accepted (one new storage slot per batch,
 retained until election finalization plus the complaint window, then permissionlessly
 cleanable), because early complaints (§9.2)
 prove against historical accepted checkpoints, not the moving current root.
 
-Regression tests (normative, from review): omit/duplicate/reorder/substitute one record or
-batch (both streams); change `pkgDigest` keeping the row; substitute another warden's row
-or ciphertext digest; replay a view across
-elections/epochs/profiles/recipient indices; omit a payload; derive the operation history differently from the
-authenticated payloads; verify
-no plaintext log digest appears in any public transcript or continuation state; verify no
-public branch flag, length or framing difference between real-write and refresh records; and
+Regression tests (normative, from review): omit/duplicate/reorder/substitute one record,
+one first-write slot or one batch; change `pkgDigest` keeping the row; substitute another
+warden's row or ciphertext digest; replay a view across
+elections/epochs/profiles/recipient indices; omit a payload; admit packages out of voteID
+order; put two packages of one slot in a batch; write a log entry that differs from the
+package's census-derived slot; list a first-write slot that is already occupied or omit
+one that is not; seal twice from one seed with different contents and check that no key,
+coin or nonce repeats; verify no plaintext log digest and no unsalted slot-map digest
+appears in any public transcript or continuation state; and
 check, for all θ-subsets through overwrite chains and exclusions, that the §10.1 direct
 share sum $\sum_{s:\,P_s \notin X} s_{P_s,i,f} + G_f(i)$ interpolates at 0 to the per-field
-tally and equals the layered identity of drafts ≤1.4 minus its zero-constant terms.
+tally.
 
 ---
 
@@ -1163,15 +1260,15 @@ The v2 timeline (end → grace window) gains two phases before results:
 ![Election timeline v3](figures/timeline.svg)
 
 ### 9.1 Casting freeze
-When the grace window closes the registry stops accepting transitions (as v2) and the
-accumulator freezes as $A_{\text{cast}}$, bound to the frozen final root $R_{\text{cast}}$
-(the state root at the casting freeze).
+When the grace window closes the registry stops accepting transitions (as v2). The state
+root at that moment is the frozen final root $R_{\text{cast}}$; with it freeze the terminal
+view checkpoint `(batchCount, viewsRoot)` and the counters.
 
 **Zero-transition short-circuit.** If no transition was accepted by the freeze
 (`batchNumber = 0`: the election never initialized, §7), anyone MAY call `finalizeResults`
 after the freeze; the registry checks the freeze status and `batchNumber = 0` atomically,
 records the zero vector as the result, and no exclusion freeze, tally session, complaint or
-warden action ever occurs ($R_{\text{cast}}$, $A_{\text{cast}}$ and $X$ are undefined and
+warden action ever occurs ($R_{\text{cast}}$ and $X$ are undefined and
 never referenced; `submitComplaint` and session opening revert at `batchNumber = 0`;
 `archiveAcc` stays at its initial value 0). Zero accepted transitions is not the same thing
 as zero *counted* ballots: an election whose every final base lands in $X$ still runs the
@@ -1182,16 +1279,17 @@ ordinary tally.
 and until the complaint deadline after the casting freeze (the deadline's *coefficients and
 margins* come from the named deadline profile referenced at creation, §2.3; the deadline
 itself is computed once at the freeze, below). This is safe because $X$ is **idempotent and append-only** and complaints
-**never touch the accumulator**: no complaint needs to know whether its package was already
-counted, and ordering cannot matter. The payoff is voter recovery. An honest voter whose
+**change no election state**: no complaint needs to know whether its package is still its
+slot's current one, and ordering cannot matter. The payoff is voter recovery. An honest voter whose
 package carried broken transport (a buggy client) learns while casting is still open and
 simply **revotes**, an ordinary slot overwrite (§5.3) with no special path (the excluded base is
 then no longer any slot's final base, and §10.1's direct sum omits a slot's share only when
 its *final* base is excluded). In
 v1.2 the same voter discovered the exclusion only after casting closed, unrecoverable.
 
-Mechanics: **registered wardens of the election** submit
-`submitComplaint(processID, pkgDigest, publicValues, proof)` where the ZisK proof shows
+Mechanics: anyone may relay
+`submitComplaint(processID, pkgDigest, publicValues, proof)`; only a warden of the election
+can produce the proof, a ZisK proof showing
 `Decaps(sk_i, ct_i)` yields a key inconsistent with the package's admitted $h_i$ (witness:
 the warden's registered key seed; statement bound to the admitted `pkgDigest` and a
 **registry-retained accepted checkpoint**, §8.7, never the moving current root, so settled
@@ -1205,9 +1303,9 @@ unreported transports are valid** (that would force decapsulation proofs over ho
 packages; the final contribution proof independently requires valid openings for everything
 it counts). The submitter pays gas.
 
-Normative exclusion semantics: **exclusion never resets slot occupancy, never restores an
-earlier package, and never modifies the casting
-accumulator.** A voter whose slot's *final base* package ends up in $X$ after casting closes
+Normative exclusion semantics: **exclusion never resets slot occupancy and never restores an
+earlier package**: $X$ is applied only after each slot's final package has been selected
+(§10.1). A voter whose slot's *final base* package ends up in $X$ after casting closes
 is not counted. A deliberately malformed last cast is a
 provable self-abstention, and a voter+warden coalition retains a bounded post-close
 withdrawal option for that voter's own ballot. A package malformed toward warden $i$ that is
@@ -1223,11 +1321,11 @@ risk (§12.3).
 
 **Capacity is sized to the actual workload via the adaptive deadline of §2.3**: at casting
 freeze the registry computes $d_{\text{complaint}} = t_{\text{freeze}} + d_0 + \alpha C +
-\beta M + \gamma U$ from the authenticated terminal counts (admitted casts $C$, batches $M$,
-slot touches $U$), with coefficients and margins fixed by the deadline profile referenced at
+\beta M$ from the authenticated terminal counts (admitted casts $C$, batches $M$), with
+coefficients and margins fixed by the deadline profile referenced at
 creation (§2.3). The per-warden budget
 it must cover: one scan/decapsulation pass over up to $C$ packages, column-view
-authentication over both record streams, **a proven decapsulation per reported fault**
+authentication, **a proven decapsulation per reported fault**
 (worst case $q_i = C$, up to $νC$ across wardens; batching removes per-complaint
 transaction and verification overhead, not the decapsulations), plus proof generation,
 publication, inclusion, archive catch-up and reorg margin. Subsequent complaints never
@@ -1248,13 +1346,13 @@ downgrade** in the warden message layer: forging a signal needs a warden's Ether
 and can only accelerate closure, a liveness and timing lever, never an integrity or
 confidentiality one (§12.5; drafts ≤1.4 used SLH-DSA waiver certificates here, which no
 contract could affordably verify). At the deadline (or all-ν early close) $X$
-freezes on-chain; every tally proof binds the frozen
-$(\text{root}, A_{\text{cast}}, X)$ snapshot.
+freezes on-chain, as its running digest `xDigest` (§2.2); every tally proof binds the frozen
+snapshot `snap` $= (R_{\text{cast}}, \text{xDigest}, \text{batchCount}, \text{viewsRoot})$.
 
 ### 9.3 Liveness
 The tally needs at least θ wardens (the tally threshold) that complete the scan (and any
 complaints) inside the window, complete the ceremony (§10.3-10.4), and publish proven
-contributions. It also needs, as in v2, timely inclusion of their transactions, **plus a funded
+contributions, and someone (anyone) to submit each attempt's roster proof. It also needs, as in v2, timely inclusion of their transactions, **plus a funded
 processing commitment covering the adaptive workload-derived deadlines (§2.3/§9.2: warden
 work is linear in admitted casts, and "admission is priced" is not a substitute, since an
 attacking sequencer pays itself)**, **plus at least one complete, available archive of the
@@ -1269,14 +1367,15 @@ time eat into deadlines and must be budgeted. Missing payload history means the 
 complete. Compared with v2: v2 also requires post-pruning archival for anyone replaying
 the election, but v2 wardens tally from one authenticated final accumulator, so **v3's
 dependence of tally completion on the complete history is strictly stronger**.
-Fewer ⇒ results are lost, exactly as v2's "θ of ν wardens take part in decryption".
+With fewer than θ such wardens the results are lost, exactly as with v2's "θ of ν wardens
+take part in decryption".
 
 ---
 
 ## 10. Tally: warden sums and Lagrange
 
-In one line: this is where the masked running total becomes the election result, in public,
-with proofs, and without any decryption key.
+In one line: this is where the wardens' recovered shares become the election result, in
+public, with proofs, and without any decryption key.
 
 ### 10.1 What each participating warden computes
 After the exclusion freeze, each participating warden $i$:
@@ -1289,68 +1388,61 @@ After the exclusion freeze, each participating warden $i$:
    ($\mathrm{Blake3.keyed}(K_{v,i}, \mathrm{streamCtx}(i))$, §2.2), recovers shares
    $s_{v,i,f} = e_{v,i,f} - \mathrm{mask}_{v,i,f}$, and checks each against
    the admitted $h_{v,i}$;
-3. joins the **tally ceremony**: the participants exchange batch-payload-key shares via
-   **signed, encrypted bundles on the public DA path, with plaintext shares never public**
-   (§10.4), reconstruct the per-batch payload
-   keys (θ shares each), decrypt the payloads, obtaining the **operation log** (which slot
-   updates were real writes vs refreshes, and which admitted package each real write
-   installed), all verified against the batch proofs that committed them, and run the
-   zero-blinding round producing $G_f$ (§10.3; no blinding layer is ever re-derived at
-   tally time);
-4. reconstructs, from the authenticated operation history, each occupied slot's **final base
-   package** $P_s$ (deterministic last-write selection), then computes the **direct share
-   sum**:
+3. joins the **tally ceremony** (§10.3-§10.4): the participants exchange batch-key shares
+   in signed, encrypted bundles on the public DA path (plaintext shares are never public),
+   reconstruct each $k_b$ from θ shares, decrypt the **write logs** and so learn which slot
+   every admitted package wrote, all verified against the batch proofs that committed them,
+   and run the zero-blinding round producing $G_f$;
+4. selects each occupied slot's **final base package** $P_s$: the package the logs assign
+   to slot $s$ in the highest-numbered batch (a batch holds at most one package per slot,
+   so there is never a tie). Only then applies the exclusion set: a slot whose final base
+   is in $X$ counts nothing; an earlier package is never restored. Then computes the
+   **direct share sum**:
 
 $$S_{i,f} = \sum_{s:\,P_s \notin X} s_{P_s,i,f} \;+\; G_f(i)$$
 
 In words: sum your recovered share of every counted ballot, add your blinding share, done.
 The shares come from opening the admitted commitments $h_{P_s,i}$, each AIR-bound at
-admission to the exact $(s_i, K_i)$ used in masking (§5.1, §6); excluded final bases are
-simply omitted; no mask, no $Z$ or $M$ layer and no slot vector enters the computation.
-Drafts ≤1.4 instead started from $A_{\text{cast}}$ and subtracted every blinding layer; the
-two differ only by evaluations of zero-constant polynomials, so any θ same-equation
-contributions interpolate to the identical tally (verified over 30,120 subset/field cases
-through overwrites, refreshes and exclusions at ν=1..8). The direct form **replaces** the
-layered one: exactly one contribution program is pinned per registry deployment, and no
-profile may select the old equation (a θ-set split across different equations would
-interpolate garbage that still verifies on-chain).
+admission to the exact $(s_i, K_i)$ used in masking (§5.1, §6). Each counted term is an
+evaluation of one degree-(θ−1) ballot polynomial, so the sum is an evaluation of their
+aggregate; adding $G_f(i)$ (with $G_f(0)=0$) keeps the interpolation at 0 equal to the
+exact tally. Exactly one contribution program is pinned per registry deployment: a θ-set
+of contributions computed under two different equations would interpolate garbage that
+still verifies on-chain.
 
-One-line sanity check: each counted term is an evaluation of one degree-(θ−1) ballot
-polynomial, so the sum is an evaluation of their aggregate; adding $G_f(i)$ (with
-$G_f(0)=0$) keeps the interpolation at 0 equal to the exact tally.
-
-5. publishes $S_i$ with a **ZisK proof** whose statement binds: the election, the frozen
-   $(\text{root}, A_{\text{cast}}, X)$ snapshot, **the frozen terminal view checkpoint
-   `(batchCount, viewsRoot)` of §8.7**, registry-selected and never warden-supplied
-   (consistency with a chosen list is not completeness), its recipient index, and the
-   accepted ceremony transcript (§10.3-§10.4); and whose witness contains its KEM key seed
-   (authenticating it as warden $i$ against the registered commitment), the
-   $(s, K)$ openings **for every counted slot's final base package** (each checked against
-   its admitted $h_{v,i}$), the reconstructed payload keys and payload openings, and its
-   dealer-delivered blinding evaluations (opening the $cm_{k,i}$ of §10.3). The program processes warden $i$'s **column records, update records and the
-   authenticated
-   batch payloads**, never full `CanonicalPackage` bytes, and never a re-fold of the blob
-   archive (the chain of accepted batch proofs already certifies view completeness; the
-   registry's `archiveAcc` binds the views transitively through each `stateRoot`). It
-   enforces **complete, exactly-once processing** of the entire operation history (every
-   admitted package and every slot update: final-base, superseded, or excluded, with nothing
-   skipped), with deterministic final-base selection, reaching the
-   frozen terminal `viewsRoot` and
-   counts. Payload keys are authenticated by reconstruction from **θ distinct original
-   committed share openings** (§8.5) followed by DEM verification (successful decryption
-   under an arbitrary supplied key proves nothing); recovered key limbs must satisfy the
-   32-bit limb encoding; and the operation history is derived from **all** authenticated
-   payloads, never from
-   host-supplied flags. (A tally proof opens $h_{v,i}$; it never hashes actual ciphertext
-   bytes; only complaint proofs do.) For scale, chunked proving follows the §2.5
-   contract. Sizing:
-   total authentication work is $O(C + U + M\nu)$, history-linear rather than
-   active-voter-only;
-   the secret opening work scales with counted final bases.
+5. publishes $S_i$ with a **ZisK proof** whose statement binds: the election context, the
+   frozen snapshot `snap` (§2.2; the proof opens `xDigest` to the exclusion set it applies),
+   registry-selected and never warden-supplied (consistency with a chosen list is not
+   completeness), its recipient index, the session id, the attempt and the frozen dealer
+   set (§10.3-§10.4); and whose witness contains its KEM key seed (authenticating it as
+   warden $i$ against the registered commitment), the $(s, K)$ openings **for every
+   counted slot's final base package** (each checked against its admitted $h_{v,i}$), the
+   reconstructed payload keys and log openings, and its dealer-delivered blinding
+   evaluations (opening the $cm_{k,i}$ of §10.3). The program processes warden $i$'s
+   **column records, the first-write lists and the authenticated batch payloads**, never
+   full `CanonicalPackage` bytes, and never a re-fold of the blob archive (the chain of
+   accepted batch proofs already certifies view completeness; the registry's `archiveAcc`
+   binds the views transitively through each `stateRoot`). It enforces **complete,
+   exactly-once processing** of the whole history (every admitted package: final base,
+   superseded, or excluded, with nothing skipped), reaching the frozen terminal
+   `viewsRoot` and counts. Payload keys are authenticated by reconstruction from
+   **θ distinct original committed share openings** (§8.5) followed by DEM verification
+   (successful decryption under an arbitrary supplied key proves nothing); recovered key
+   limbs must satisfy the 32-bit limb encoding; and the slot of every package comes from
+   the authenticated logs, never from host-supplied values. As an internal cross-check
+   the program asserts, per batch, that the slots the log shows written for the first
+   time are exactly that batch's public first-write list, and at the end that the number
+   of distinct slots equals `votersCount`. These are assertions, **never outputs**: no public value
+   may expose how many final bases were counted or excluded, nor any unsalted digest of
+   slot data. (A tally proof opens $h_{v,i}$; it never hashes actual ciphertext bytes;
+   only complaint proofs do.) For scale, chunked proving follows the §2.5 contract.
+   Sizing: total authentication work is $O(C + M\nu)$, history-linear rather than
+   active-voter-only; the secret opening work scales with counted final bases.
 6. `submitTallyShare(processID, i, S_i, publicValues, proof)`; after θ verified shares,
    anyone calls `finalizeResults(processID)`: **the registry performs the Lagrange
-   interpolation on-chain** (θ ≤ 16 points over Goldilocks, a few u64 mulmods per field),
-   records the per-field results, and emits `ProcessResultsSet`.
+   interpolation on-chain** (θ ≤ 8 points over Goldilocks in v3.0, a few u64 mulmods per
+   field; measured gas in Annex A.3), records the per-field results, and emits
+   `ProcessResultsSet`.
 
 Wardens run their **own provers**: the witness contains their secrets, and a shared proving
 service used by θ wardens would itself hold reconstruction capability. One operator MAY
@@ -1360,15 +1452,13 @@ enough, since epoch keys reused across elections can silently hand one operator 
 some committee. Untrusted public
 *preparation* is fine: anyone may pre-build columns, manifests and lookup structures, since
 the proof authenticates their use against the frozen commitments, but nothing holding secret
-witnesses may be outsourced. Proving cost scales with total casts. With the §8.7 column
-views and the direct share sum, the per-package work is ≈3.9 compressions of public view
-authentication plus **≈5-8 private compressions** (the $h_{v,i}$ opening; the mask-stream
-regeneration of drafts ≤1.4 left the circuit with the layered equation; provisional until
-serialization is pinned). A million-cast tally job is on the order of **9-12M compressions
-plus payload/ceremony verification and bookkeeping**, versus the >10^8 of v1.2's
-full-package re-hashing: **≈10× fewer compressions (compression counts, not end-to-end
-runtime; an unvalidated projection to be benchmarked before warden hardware guidance is
-given)**.
+witnesses may be outsourced. Proving cost scales with total casts. The inner loop (column
+record folding, $h_{v,i}$ opening, share accumulation, per-batch key reconstruction and
+log decryption) has been measured: **9.4 Blake3 compressions and ≈2,000 guest steps per
+counted package**, about 3.9 of them public view authentication and 4.0 the opening
+(Annex A.2), against the >10^8 compressions per million casts of v1.2's full-package
+re-hashing. What that measurement does not yet contain is the slot → latest-package map
+across batches; Annex A.2 says so.
 
 ### 10.2 Why malformed voter transport cannot corrupt anything
 **Decapsulation never appears in any tally proof.** Contributions open the admitted
@@ -1385,19 +1475,33 @@ In plain terms: before publishing their partial sums, the participating wardens 
 noise that cancels out exactly at the finish line (x = 0), so the published sums reveal the
 result and nothing else. Why it's needed: published raw, θ sum-shares determine the aggregate
 polynomial $F$; any single warden, participant or not, could evaluate it at its own index,
-compare with the sum of its decoded per-package shares, and fingerprint the write/refresh
-history (which slots were overwritten). The
+compare with sums of its decoded per-package shares, and fingerprint which packages are
+final bases (hence which slots were overwritten). The
 ceremony prevents that:
 
-1. A `tallySession` is recorded on-chain: session id = `H(processID ‖ root ‖ X ‖ roster ‖ attempt)`, where `attempt` is a **registry-controlled monotonic nonce** incremented on every restart (the id must change even with an identical roster and snapshot); the registry tracks exactly one active attempt and rejects messages and contributions bound to stale attempts. Three sets are distinguished (§10.4): the **roster $P$** (all eligible wardens that join by the roster deadline, $|P| \ge \theta$; it MAY exceed θ, and should, because extra members are failure margin), the **accepted dealer set $D \subseteq P$** (frozen at the dealer deadline, $|D| \ge \theta$ required so at least one accepted dealer is honest under the $f < \theta$ corruption bound), and the **contributor subset $C$** (any θ roster members with valid contributions). Candidate dealers are the roster; blinding evaluations are delivered **only to the frozen roster, never pre-dealt to all ν wardens or to future replacement candidates** (pre-dealing would hand every warden its $G(i)$, letting any single non-participant strip the blinding at its own index and fingerprint the revoked set, a confirmed attack).
+1. A tally attempt has three sets (§10.4). The **roster $\Pi$**: the wardens whose join
+   was proven valid, frozen by the roster proof, $|\Pi| \ge \theta$; it MAY exceed θ, and
+   should, because extra members are failure margin. The **accepted dealer set
+   $D \subseteq \Pi$**: frozen at the dealer deadline, $|D| \ge \theta$ required so at
+   least one accepted dealer is honest under the $f < \theta$ corruption bound. The
+   **contributors $\Gamma \subseteq \Pi$**: any θ roster members with valid contributions.
+   The registry computes the **session id** when $\Pi$ freezes,
+   `sessionId = keccak256("v3/session", ectx, snap, attempt, Π)` (§2.2), where `attempt` is a
+   registry-controlled monotonic nonce incremented on every restart, so the id changes
+   even with an identical roster and snapshot; the registry tracks exactly one active
+   attempt and rejects anything bound to a stale one. Candidate dealers are the roster;
+   blinding evaluations are delivered **only to the frozen roster, never pre-dealt to all
+   ν wardens or to future replacement candidates** (pre-dealing would hand every warden
+   its $G(i)$, letting any single non-participant strip the blinding at its own index and
+   fingerprint which packages are final bases, a confirmed attack).
 2. Each dealer $k$ samples a seed and derives, per field, blinding coefficients
    $c_{k,f,1..\theta-1}$, defining $g_{k,f}(x) = \sum_j c_{k,f,j} x^j$. **The constant term
    is structurally absent, so $g_{k,f}(0) = 0$ by construction** (this is the
    "zero-certificate": the dealer proof's coefficient witness simply has no degree-0 entry).
 3. Dealer $k$ publishes (in a session blob): **per-recipient hiding evaluation commitments**
    $cm_{k,i} = \mathrm{Blake3}(g_{k,1..16}(i) \,\|\, r_{k,i})$; the KEM-DEM ciphertexts to each
-   co-participant $i$ encrypting $(g_{k,1..16}(i), r_{k,i})$, where the dealer MUST verify
-   each recipient's SLH-DSA join envelope before encrypting to its ephemeral key (§10.4);
+   co-participant $i \in \Pi$ encrypting $(g_{k,1..16}(i), r_{k,i})$, after the dealer has
+   re-run the roster check itself (§10.4);
    and a **ZisK dealer proof** over one coefficient witness showing that the degree-0 term
    is structurally absent and that every $cm_{k,i}$ and every ciphertext is consistent with
    that witness, under the recipients' **ephemeral session keys** (§10.4) and this session's
@@ -1422,106 +1526,143 @@ ceremony prevents that:
 
 As long as one accepted dealer is honest, no one outside the ceremony, and no
 non-participating warden, learns anything about $F$ beyond what the public tally
-$F(0)$ itself reveals. Under the direct share sum (§10.1), tally-time operation-history
+$F(0)$ itself reveals. Under the direct share sum (§10.1), tally-time write-history
 hiding rests **solely** on this one-honest-accepted-dealer property, and the committee
-bound $f < \theta$ itself implies it: $|D| \ge \theta$ and $D \subseteq P$, so an
+bound $f < \theta$ itself implies it: $|D| \ge \theta$ and $D \subseteq \Pi$, so an
 all-malicious accepted dealer set would require ≥ θ corrupt roster members, and θ corrupt
-roster members already hold θ shares of every batch key and know the complete operation
+roster members already hold θ shares of every batch key and know the complete write
 history without touching $F$. Whenever the blinding could matter, that adversary has
-already crossed the θ boundary. Participants do jointly learn the
-operation history (which slot updates were overwrites); that is the documented θ-gated
-metadata leakage (§12.2).
+already crossed the θ boundary. The blinding has nothing to do with slots or logs: it
+protects the aggregate share polynomial, which is why it stays although every slot-level
+blinding of earlier drafts is gone. Roster members do learn the
+write history (which slot each package wrote); that is the documented
+metadata leakage of §12.2.
 
 ### 10.4 The batch-key exchange and the session state machine
 
-The batch-payload keys $k_b$ (§8.5) are θ-of-ν shared; **reconstructing them must not leak
-them**: publicly releasing enough shares of any $k_b$ reveals that batch's operation log and
-blinding, exactly the write/refresh metadata the uniform slot updates exist to conceal. The
-ceremony is
-**four one-shot publications** (join and share bundle SLH-DSA-signed; dealer bundles and
+The batch keys $k_b$ (§8.5) are θ-of-ν shared; **reconstructing them must not leak
+them**: publicly releasing enough shares of any $k_b$ reveals that batch's write log,
+exactly the metadata hidden writes exist to conceal. An attempt is **five one-shot
+publications** (join and share bundle SLH-DSA-signed; roster proof, dealer bundles and
 contributions proof-authenticated), with no pairwise request/response on the success path:
 
-1. **Join.** Each participating warden joins the session, publishing a **fresh ephemeral
-   ceremony ML-KEM keypair for this attempt**, signed with its registered SLH-DSA key (§4).
-   Roster admission is the transaction itself (`msg.sender` = the snapshot-pinned settlement
-   account, §4; nothing is verified on-chain beyond that); the SLH-DSA envelope
-   authenticates the **ephemeral key**, and every sender (dealers before encrypting blinding
-   evaluations, §10.3; bundle senders before wrapping bundle keys, step 3) MUST verify it
-   off-chain before encrypting anything to that key. A roster member whose envelope fails
-   verification is treated as absent (margin) and never encrypted to, so an account-only
-   forgery is a one-slot denial of service, never a privacy event. (A forged ephemeral key
-   that senders *did* encrypt to would receive $m{-}1 \ge \theta$ shares of every batch key,
-   the complete operation history; that is why this envelope keeps post-quantum
-   authentication while §9.2's closure signals do not.)
+1. **Join.** Each participating warden publishes a **fresh ephemeral ceremony ML-KEM
+   keypair for this attempt** in a join envelope: the 1,184-byte encapsulation key and an
+   SLH-DSA signature, under its registered signing key (§4), over `joinCtx` (§2.2), which
+   **includes the ephemeral key itself**, the election context, the frozen snapshot, the
+   attempt and the sender index. The join is a transaction from the warden's
+   snapshot-pinned settlement account (§4) carrying the envelope as calldata; the registry
+   enforces the exact envelope length, computes `keccak256` of those calldata bytes
+   itself, and stores the digest at the warden's index. One join per index per attempt,
+   immutable. The join stage closes at its deadline or as soon as all ν wardens have
+   joined; no join is recorded after that.
    **Long-term warden keys MUST NOT be the recipients of ceremony ciphertexts**, and the
-   ephemeral secret MUST be destroyed once the tally finalizes (§15's key-destruction
-   guidance applies to ceremony keys with highest priority). Why: the bundles below are
+   ephemeral secret, together with every recovered bundle key, share and reconstructed
+   batch key, MUST be destroyed once the tally finalizes. Why: the bundles below are
    published on a DA path and archived forever. If they were encrypted to lifetime keys, a
    *single* participant's later key compromise would reveal ≥θ shares of every $k_b$, i.e.
-   the complete write/refresh history and all blinding, from the public archive alone
-   (§12.2).
-   Ephemeral keys restore "steal a key later ⇒ learn nothing" for honest-deleting
-   participants. Roster $P$ freezes at the join deadline ($|P| \ge \theta$).
-2. **Dealer bundles** (§10.3), $D$ frozen at their deadline.
-3. **Share bundles.** Each participant publishes ONE signed, authenticated logical bundle
-   (envelope context `cerCtx`, §2.2): its canonical vector of §8.5 shares and commitment
+   the complete write history, from the public archive alone (§12.2). Ephemeral keys
+   restore "steal a key later ⇒ learn nothing" for honest-deleting participants.
+2. **Roster proof.** The account check says *who* joined; it says nothing about whether
+   the envelope is usable. So once the join stage has closed, anyone submits one ZisK
+   proof, with no secret witness, that decides it. Its statement binds the election
+   context, the frozen snapshot, the attempt, the registry's indexed vector of join
+   digests and the snapshot-pinned signing-key commitments. For **every** recorded join it
+   computes a verdict: the signature verifies under the registered key and `joinCtx`,
+   **and** the encapsulation key passes the FIPS 203 validity check. The program is
+   total: malformed bytes yield "invalid", never an abort (otherwise one garbage join per
+   attempt would block the tally forever). It outputs the roster $\Pi$ as the ordered
+   (index, envelope digest) pairs of the valid joins. The registry requires
+   $|\Pi| \ge \theta$, freezes $\Pi$, and only then computes the session id (§10.3). Every
+   later message binds that id, and every delivery obligation, completion rule and
+   threshold below refers to $\Pi$. An invalid join is simply not in it: one lost slot of
+   margin, whoever sent it.
+   **Senders re-check.** Before encrypting anything to a roster key (dealers in step 3,
+   bundle senders in step 4), a sender recomputes $\Pi$ by running the same pinned roster
+   program on the published envelopes. This is what keeps the authentication of ephemeral
+   keys post-quantum: the registry's acceptance rests on a wrapped proof whose wrapper is
+   classical (§12.5), the sender's own run rests on SLH-DSA. If the frozen $\Pi$ contains
+   an envelope the sender's run rejects, the proof system or its wrapper is broken: the
+   sender stops sending and contributing in this election and raises the alarm. It never
+   triggers an on-chain reset. (If $\Pi$ omitted an envelope the sender's run accepts, the
+   sender would simply proceed with $\Pi$; running the identical program leaves no room
+   for two libraries to disagree on an edge-case key.) The stakes: a forged ephemeral key
+   that senders did encrypt to would collect up to $m - 1$ shares of every batch key from
+   a roster of $m$, enough to read every write log whenever $m > \theta$. That is why
+   this one message keeps post-quantum authentication while §9.2's closure signals do not.
+3. **Dealer bundles** (§10.3), delivered to every member of $\Pi$; $D$ frozen at their
+   deadline.
+4. **Share bundles.** Each roster member publishes ONE signed, authenticated logical
+   bundle (context `cerCtx`, §2.2): its canonical vector of §8.5 shares and commitment
    salts for **all batches**, DEM-encrypted once under a fresh 256-bit CSPRNG **bundle key**
    (fresh per attempt, never reused), plus one KEM-DEM wrap of that bundle key to each
-   co-participant's verified ephemeral key. The SLH-DSA envelope covers the body ciphertext
+   other roster member's ephemeral key. The SLH-DSA envelope covers the body ciphertext
    **and the complete ordered per-recipient wraps** (stripping or substituting a wrap is
    only denial of service, since a wrong key fails the DEM tag, but binding them is free
-   attribution hygiene). Every recipient receives the identical sender vector, exactly what
-   drafts ≤1.4's per-recipient encryptions delivered, so no one learns more; bundle bytes
-   drop from $O(m^2 M)$ to $O(mM + m^2)$ (at 1M casts in 256-cast batches: 21.1 → ≈3.1 MB
-   for m=8, 7.5 → ≈1.9 MB for m=5). Publication is on a **publicly verifiable DA path** so
-   missing-message timeouts are objective ("I sent it privately" proves nothing); one
-   logical bundle may span multiple transactions/blobs. A recipient **validates every
-   recovered share against the batch's published per-share commitments** (§8.5) before use.
-   An invalid opening is simply ignored; any θ valid distinct shares reconstruct each $k_b$
-   (all decapsulations follow the §2 full-ciphertext constant-time FO rule).
+   attribution hygiene). Every recipient receives the identical sender vector; bundle
+   bytes are $O(mM + m^2)$ (at 1M casts in 256-cast batches: ≈3.1 MB for m=8, ≈1.9 MB for
+   m=5; drafts ≤1.4 encrypted the vector once per recipient, 21.1 and 7.5 MB).
+   Publication is on a **publicly verifiable DA path** so missing-message timeouts are
+   objective ("I sent it privately" proves nothing); one logical bundle may span multiple
+   transactions/blobs. A recipient **validates every recovered share against the batch's
+   published per-share commitments** (§8.5) before use. An invalid opening is simply
+   ignored; any θ valid distinct shares reconstruct each $k_b$ (all decapsulations follow
+   the §2 full-ciphertext constant-time FO rule).
    Signatures give authorship attribution; the protocol still does **not** claim publicly
    verifiable fault attribution for encrypted contents (a signature proves who sent a
    ciphertext, not what it decrypts to; confidential ZK fault proofs are a tracked
    hardening, §15). Faults are absorbed by **margin**, and fault adjudication is never on
    the successful tally's critical path.
-4. **Contributions** (§10.1 step 5): any θ valid contributions from roster members, all
-   bound to the same snapshot, attempt, and frozen $D$. No separate signature: the
+5. **Contributions** (§10.1 step 5): any θ valid contributions from roster members, all
+   bound to the same snapshot, session, attempt and frozen $D$. No separate signature: the
    contribution proof authenticates the warden through its registered key seed, binding the
    full envelope digest and `cerCtx` exactly as dealer proofs do (§10.3).
 
 Plaintext key shares and reconstructed keys never appear on-chain or in blobs; contribution
-proofs reference the payload *openings* (witness), not the keys.
+proofs reference the log *openings* (witness), not the keys.
 
-**Session state machine** (contract-side): any registered warden of the election may open a
-`tallySession` after the exclusion freeze; roster accepted at the join deadline with
-$|P| \ge \theta$; dealer deadline freezes $D$ ($|D| \ge \theta$, immutable, §10.3);
-share-bundle deadline; contribution deadline. **Every stage closes early on completion**:
-the join stage when all ν pinned wardens have joined; the dealer stage when every roster
-member's bundle with a verifying proof is published; the share-bundle stage when every
-roster member's bundle has completed authenticated DA publication (publication is the
-observable event, never the validity of encrypted contents); the contribution stage when θ
-valid contributions are accepted, which already finalizes. Early advancement never shortens
-the workload-derived contribution deadline and never justifies an early restart; deadlines
-remain the backstop for missing participants, and a fully-responsive committee goes from
-exclusion freeze to results in minutes (the same rule gives §9.2 its early exclusion
-freeze). **A missing or invalid participant at any
-stage reduces margin, never forces a restart**; `finalizeResults` accepts θ distinct
-roster members' contributions **bound to one accepted session and its frozen dealer set**.
-**Restart** (new session id and attempt, fresh blinding and transport randomness; settled
-batch keys and pads never change; automatic invalidation of stale-session contributions)
-occurs only by **objective deadline rules when θ valid contributions have become
-impossible**; no caller may trigger an arbitrary reset. To be clear about what remains:
-**removing the
+**Deadlines and restarts** (contract-side). At the casting freeze the registry fixes five
+stage **durations** from the deadline profile and the terminal counts (§2.3). Attempt 1
+starts at the exclusion freeze; each attempt turns the durations into absolute deadlines
+counted from its own recorded start, in the order join close, roster proof, dealer
+bundles, share bundles, contributions. One boundary convention holds everywhere: a message
+is on time if its block timestamp is at or before the deadline. A stage opens as soon as
+its predecessor closes, and **every stage closes early on completion**: the join stage
+when all ν pinned wardens have joined; the roster stage when the roster proof is accepted;
+the dealer stage when every member of $\Pi$ has a bundle with a verifying proof on-chain;
+the share-bundle stage when every member of $\Pi$ has completed authenticated DA
+publication of its bundle (publication is the observable event, never the validity of
+encrypted contents); the contribution stage when θ valid contributions are accepted, after
+which anyone can call `finalizeResults`. Closing a stage early only opens the next one sooner; it never moves a
+deadline earlier for a party that has not yet published. A fully-responsive committee
+goes from exclusion freeze to results in minutes (the same rule gives §9.2 its early
+exclusion freeze).
+
+An attempt **fails** on exactly three contract-decidable conditions, and on nothing else:
+no accepted roster proof with $|\Pi| \ge \theta$ by the roster deadline; $|D| < \theta$ at
+the dealer deadline; fewer than θ accepted contributions at the contribution deadline.
+The share-bundle deadline has no failure condition of its own: a missing or faulty bundle
+is never adjudicated and shows up, if it matters, as a contribution shortfall. After a
+failure anyone may call the registry to advance; that transaction records the next
+attempt (attempt + 1) starting at its own timestamp, with fresh deadlines, a fresh roster
+and fresh blinding and transport randomness; batch keys never change, and anything bound
+to the old attempt is rejected from then on. **A missing or invalid participant reduces
+margin and never by itself forces a restart**; no accusation, no claim about encrypted
+contents and no early completion can trigger one. Attempts are not capped: with θ
+responsive honest roster members no single participant who joins and then withholds can
+make an attempt fail, and without them neither a cap nor a bond would produce a tally.
+`finalizeResults` accepts θ distinct roster members' contributions bound to one accepted
+session and its frozen dealer set. To be clear about what remains: **removing the
 election-key DKG does not remove coordinated cryptographic ceremonies. v3 replaces it with
 different (smaller, tally-time-only) coordination work**, and the exchange stays interactive
 in substance (no PQ primitive lets θ parties privately reconstruct without communicating;
-there is no silent-threshold shortcut; the four stages are the minimum for ν ≥ 2).
+there is no silent-threshold shortcut; these stages are the minimum for ν ≥ 2).
 
-**The ν=θ=1 fast path.** In sequencer mode the ceremony collapses entirely: no session
-stages, no dealer bundles, no share exchange, and $G_f = 0$ (blinding only protects against
-parties outside the ceremony, and there are none). The exclusion freeze, the authenticated
-payload reconstruction (the single warden decapsulates its own §8.5 share, which alone
-reconstructs each $k_b$) and the contribution proof remain, bound to a canonical
+**The ν=θ=1 fast path.** In sequencer mode the ceremony collapses entirely: no join, no
+roster proof, no dealer bundles, no share exchange, and $G_f = 0$ (blinding only protects
+against parties outside the ceremony, and there are none). The exclusion freeze, the
+authenticated payload reconstruction (the single warden decapsulates its own §8.5 share,
+which alone reconstructs each $k_b$) and the contribution proof remain, bound to a canonical
 single-warden context and the frozen snapshot. The sole-operator privacy trust of §4
 applies.
 
@@ -1529,50 +1670,78 @@ applies.
 
 ## 11. Census and authentication
 
-- **Census trees** migrate from Poseidon-BN254 to **Blake3** (a breaking format change; same
-  lean-IMT structure; membership verified by the batch program, §8.2). Leaf encoding:
-  `leaf = Blake3(address ‖ weight ‖ pk_PQ)` with `pk_PQ = H(sk)` for a CSPRNG-generated
-  secret, or `pk_PQ = 0` for a not-yet-enrolled voter (hybrid-legacy censuses only).
-- **PQ-key enrollment.** The Ethereum wallet signs an enrollment message binding
-  `address ↔ pk_PQ`; the signature *authorizes* the binding and is never key entropy (a
-  future ECDSA break must not reveal PQ secrets). Enrollment paths per census origin:
-  off-chain censuses collect `pk_PQ` at census construction; on-chain/token censuses read a
-  global **PQKeyRegistry** contract where voters register once (one transaction, reusable
-  across all elections); CSP censuses include `pk_PQ` in the credential.
+- **Census trees are v2's, unchanged** (§8.2): the same Keccak lean-IMT, leaf packing,
+  root policies per origin and slot rule. A v2 census is a v3 census; nothing is converted
+  or rebuilt. What v3 adds is the voter's post-quantum key, and it lives outside the
+  census.
+- **The PQ key map.** `pk_PQ = H(sk)` for a CSPRNG-generated secret `sk`. Each election
+  pins a `pqKeyRoot` at creation (§8.2): the root of an address-keyed sparse Merkle map
+  from address to `pk_PQ`, where a missing address means "not enrolled".
+  - *On-chain and token censuses* use the global **PQKeyRegistry** contract. A voter
+    enrolls with one transaction, reusable across all elections. **Registration is
+    authorized by the address itself**: the transaction's sender, or a relayed wallet
+    signature over the domain-separated tuple `(chainID, PQKeyRegistry address, voter
+    address, new pk_PQ, nonce)`, where the registry keeps a **per-address nonce** and
+    increments it on *every* successful update, direct or relayed. The signature
+    *authorizes* and is never key entropy, so a future ECDSA break does not reveal PQ
+    secrets. As long as ECDSA holds at registration time, nobody else can enroll or squat an
+    address (§12.5). A voter may replace their key the
+    same way; a replacement affects only elections created afterwards, and because of the
+    nonce an old authorization can never be replayed to put a replaced (possibly
+    compromised) key back.
+  - *Off-chain censuses* SHOULD use the global registry too. Where that is impractical
+    the organizer publishes its own key map of the same structure next to the census
+    list, and MUST obtain each key from the voter it belongs to (validated enrollment).
+    An organizer who assigns
+    keys holds **identity authority**, not only eligibility authority: in a `pq-only`
+    election it could vote as a listed member. That is stronger trust than v2's off-chain
+    census (where the organizer chose who may vote but could not vote as them) and
+    deployments MUST say so; `hybrid` removes it, since the organizer has no wallet keys.
+    The key list is published with the census, and `pqKeyRoot` is immutable for every
+    origin.
+  - *CSP censuses* carry `pk_PQ` in the credential (below) and use no key map.
+- **Snapshot rule.** `pqKeyRoot` for an on-chain registry is the root the registry holds
+  **at the moment of the election-creation transaction**, read in that transaction:
+  registrations earlier in the same block count, later ones do not. A voter's key and
+  enrollment status for an election never change afterwards, whichever (newer)
+  eligibility root the census contract later accepts.
 - **Election auth policy** (immutable registry parameter, fixed at creation):
-  - `pq-only`: every leaf must carry `pk_PQ`; authentication is the in-STARK preimage proof
-    alone; no ECDSA anywhere in the ballot path.
-  - `hybrid`: every leaf must carry `pk_PQ`, and every package is verified on **both**
-    authenticators, the in-STARK preimage proof *and* `hybridSig` (ECDSA over `pkgDigest`,
-    verified by the batch program). No OR-downgrade exists in this mode.
-  - `hybrid-legacy`: like `hybrid`, but leaves with `pk_PQ = 0` are admitted with identity
-    resting on ECDSA alone: every package (first vote or revote, identical statements,
-    §5.3) is authorized by a mandatory `hybridSig` over its `pkgDigest`, and the STARK's
-    PQ-preimage clause is skipped for these voters. (Drafts ≤1.3 needed a self-chosen
-    per-election package key `sk_pkg` to chain revotes; with slot-overwrite revoting there
-    are no chains and the machinery is removed. A hybrid-legacy package-key commitment from
-    an earlier draft is NOT PQKeyRegistry enrollment and never alters an election's
-    creation-time authentication snapshot; durable enrollment stays a one-time
-    transaction.) The batch program dispatches per
-    leaf: `pk_PQ ≠ 0` ⇒ both authenticators against the census key; `pk_PQ = 0` ⇒
-    `hybridSig` alone. Anyone can count the legacy-status census members
-    (leaf contents are public census data), though not, of course, which *final* packages
-    are theirs beyond what slot-participation already reveals. Ballot *privacy* is fully PQ
-    for these voters; the election's **integrity assumptions include ECDSA security for its
-    legacy voters** (§12.1). This mode is what makes existing token censuses usable before
+  - `pq-only`: every package must present a key-map entry for its address; authentication
+    is the in-STARK preimage proof alone; no ECDSA anywhere in the ballot path. A census
+    member with no entry simply cannot vote in this election: checking enrollment coverage
+    before creating a `pq-only` election is the organizer's job, and SDKs SHOULD refuse to
+    create one over a census with unenrolled members without an explicit override.
+  - `hybrid`: as `pq-only`, and every package is also verified on the second
+    authenticator, `hybridSig` (ECDSA over `pkgDigest`, verified by the batch program).
+    No OR-downgrade exists in this mode.
+  - `hybrid-legacy`: an enrolled voter authenticates on **both**, exactly as in `hybrid`;
+    a voter **proven absent** from the key map is admitted on `hybridSig` alone, with the
+    STARK's PQ-preimage clause skipped (`pk_PQ = 0`). The batch program decides the branch
+    from the key-map lookup, never from the package: an enrolled voter cannot be treated
+    as unenrolled, so stealing only their wallet key is not enough to vote as them.
+    Anyone can count the unenrolled census members (census and key map are public),
+    though not which packages are theirs. Ballot *privacy* is fully PQ for these voters;
+    the election's **integrity assumptions include ECDSA security for its unenrolled
+    voters** (§12.1, §12.5). This mode is what makes existing token censuses usable before
     universal enrollment.
-- **Enrollment snapshot rule.** A voter's authentication status and key for an election are
-  pinned at the election's **creation snapshot**: for on-chain/token censuses the registry
-  records the PQKeyRegistry root at the creation block, and membership proofs must present
-  the enrollment status under that snapshot regardless of which (newer) eligibility root the
-  census contract later accepts. Enrolling *after* an election was created affects
-  subsequent elections only; an existing package chain never changes keys mid-election.
-- **CSP censuses**: credentials become SLH-DSA signatures [FIPS 205] over the v2 message
-  format extended with `pk_PQ`; verification is pure hashing via the SHA-256 precompile
-  (SLH-DSA's internal SHA-2 is a FIPS island, §2, not an application-level hash choice).
-- Slot derivation, participation visibility, census origins 1-4 mechanics: as v2, with the
-  enrollment additions above. The v2 census invariants (slot uniqueness across the census;
-  stable distinct CSP indexes) remain assumptions of integrity.
+- **CSP censuses** (origin 4). v2 identified the CSP by its Ethereum address and recovered
+  its key from each ECDSA credential; SLH-DSA has no key recovery, so the key is pinned
+  directly: `censusRoot` **is** the CSP's 32-byte SLH-DSA-SHA2-128s public key
+  (`PK.seed ‖ PK.root`), byte-exact, never reduced or range-checked as a field element.
+  A credential is a FIPS 205 pure signature [FIPS 205], with the fixed context string
+  `davinci-v3-csp`, over v2's credential message extended with the deployment and the
+  voter's key: `chainID_32 ‖ registry_20 ‖ processID_32 ‖ address_20 ‖ weight_32 ‖ idx_8 ‖
+  pk_PQ_32` (big-endian byte lengths, as v2). The batch guest verifies each credential
+  against the registry-held key (pure hashing through the SHA-256 precompile; SLH-DSA's
+  internal SHA-2 is a FIPS island, §2) and uses `slot = 16 + idx` as v2. A stable
+  one-to-one mapping between addresses and indexes, and one fixed `pk_PQ` per voter per
+  election, are **issuer obligations**: no single credential can prove them, and a CSP
+  that signs the same index for two addresses lets the second overwrite the first.
+  `pk_PQ = 0` in a credential is accepted only under `hybrid-legacy`; the hybrid modes
+  keep their voter ECDSA check independently of the credential.
+- Participation visibility and the census origins 1-4 mechanics: as v2, with the additions
+  above. The v2 census invariants (slot uniqueness across the census; stable distinct CSP
+  indexes) remain assumptions of integrity.
 
 ---
 
@@ -1582,76 +1751,87 @@ applies.
 
 | Property | Holds if |
 |---|---|
-| **Tally integrity** | STARK/zkVM soundness (FRI + hashes), binding commitments, correct pinned programs, the settlement chain executes the registry, and the v2 census invariants (unique slots / stable CSP indexes). Then no coalition of voters, sequencers, provers or wardens can shift a tally, including via malformed KEM transport (§10.2). |
+| **Tally integrity** | STARK/zkVM soundness (FRI + hashes) and the classical wrapper (§12.5), binding commitments, correct pinned programs, the settlement chain executes the registry, the v2 census invariants (unique slots / stable CSP indexes), and an authentic key map (§11; organizer trust where the organizer publishes it; ECDSA at registration time for the on-chain registry), plus ECDSA itself for the unenrolled voters of a `hybrid-legacy` election. Then no coalition of voters, sequencers, provers or wardens can shift a tally, including via malformed KEM transport (§10.2). |
 | **Ballot privacy** | fewer than θ warden keys compromised **over their whole lifetime** (not just the active epoch), ML-KEM IND-CCA, PRF/hash security, hiding STARKs, and honest voter devices. Below θ, shares in isolation are information-theoretically independent of the ballot. **Post-quantum computational privacy, not "everlasting"**: an unbounded adversary could attack archived KEM transcripts. Claimed only beyond what the published tally and public metadata reveal: in a small electorate, or when overlapping tallies are combined, the tally itself may reveal choices (as in v2). |
-| **Revote hiding (public data)** | hiding proofs + PRF/hash security + the sealing sequencer/prover draws the batch seed *and the refresh set* from fresh randomness and keeps them secret (v2's exact trust statement; §8.4's uniform updates are the v3 analog of v2's re-encryption). **No public-data test distinguishes an overwrite from a refresh, even for a coercer holding the voter's identity key and the coerced package's complete opening (§12.3)**; this is the v2-parity property drafts ≤1.3 lacked. Public data still reveals participation per slot, update counts/timing, `numOverwrites`, complaint timing: v2's leakage surface. Sparse cover (few occupied slots) can disclose overwrites, as in v2. |
-| **Exact tally** | unconditional arithmetic (mod-$p$ sums, Lagrange). ML-KEM's residual decapsulation-failure probability (≈2^-164 at ML-KEM-768; election-wide union bound over *all* encapsulations: per-ballot, batch shares, ceremony deliveries) is not zero even for proven-correct encapsulations. Each failure degrades gracefully: a per-ballot failure becomes a complaint (filable immediately, §9.2, so the voter can revote); a batch-key *share* failure is tolerated provided at least θ valid shares remain available (with ν=θ, or only θ responsive wardens, one failed share means that payload cannot be reconstructed and the tally cannot complete, so size ν above θ accordingly); a ceremony delivery failure reduces margin, and only an unrecoverable shortfall restarts the session (§10.4). Deliberately malformed batch transport is a different thing entirely: it is unprovable (§8.5), so it cannot appear in an accepted batch. |
-| **Liveness** | ≥1 honest sequencer with proving capacity and timely inclusion (as v2), plus ≥θ responsive honest roster members through the ceremony's deadlines with θ valid accessible original shares per batch (§10.4; margins absorb individual failures), plus **≥1 complete available archive of the published history spanning casting, complaints, every tally attempt and the retention period** (blobs prune in ≈18 days; providers untrusted, data chain-authenticated; missing payload history prevents tally completion, §4/§9.3), plus a funded processing commitment for the workload-derived deadlines (§2.3/§9.2). |
+| **Revote hiding (public data)** | hiding proofs + PRF/hash and DEM security + ML-KEM (the write log's key shares travel under it) + no party able to read the logs discloses them (θ colluding wardens before the tally; any single roster member after a share exchange, §12.2) + the sealing sequencer/prover keeps its batch seed and what it sealed secret. **An overwrite publishes nothing about its slot**: per batch the public learns how many overwrites occurred, never which occupied slots received them, so an overwrite hides among all occupied slots (v2: among its refresh sample), and no party's sampling randomness is trusted. This holds even for a coercer holding the voter's identity key and the coerced package's complete opening (§12.3). **Edges, all inherent to public counts and timing:** (a) degenerate batches: a single-package first-write batch links that package to its slot, and a batch with all or no first writes shows every package's status; (b) counts: zero overwrites in every later batch is a certain "nobody revoted", and in a small election a count of one narrows it to few candidates; a party that fills a batch with K−1 packages of its own learns whether the remaining one was a first write, though not an overwrite's slot; (c) re-sealing: two published versions of a batch that differ in admitted packages reveal, through their first-write lists and counts, a dropped first-write package's slot and any dropped package's status; (d) exclusion counts and (e) an active one-per-batch probe, both in §12.3. Participation per slot (first writes), turnout and complaint timing are public, as in v2. |
+| **Exact tally** | unconditional arithmetic (mod-$p$ sums, Lagrange). ML-KEM's residual decapsulation-failure probability (≈2^-164 at ML-KEM-768; election-wide union bound over *all* encapsulations: per-ballot, batch shares, ceremony deliveries) is not zero even for proven-correct encapsulations. Each failure degrades gracefully: a per-ballot failure becomes a complaint (filable immediately, §9.2, so the voter can revote); a batch-key *share* failure is tolerated provided at least θ valid shares remain available (with ν=θ, or only θ responsive wardens, one failed share means that payload cannot be reconstructed and the tally cannot complete, so size ν above θ accordingly); a ceremony delivery failure reduces margin, and only a shortfall below θ at a deadline fails the attempt (§10.4). Deliberately malformed batch transport is a different thing entirely: it is unprovable (§8.5), so it cannot appear in an accepted batch. |
+| **Liveness** | ≥1 honest sequencer with proving capacity and timely inclusion (as v2), plus someone submitting each attempt's roster proof (permissionless) and ≥θ responsive honest roster members through the ceremony's deadlines with θ valid accessible original shares per batch (§10.4; margins absorb individual failures), plus **≥1 complete available archive of the published history spanning casting, complaints, every tally attempt and the retention period** (blobs prune in ≈18 days; providers untrusted, data chain-authenticated; missing payload history prevents tally completion, §4/§9.3), plus a funded processing commitment for the workload-derived deadlines (§2.3/§9.2). |
 
 ### 12.2 What wardens and insiders learn
 θ colluding wardens can reconstruct **every package's ballot**, exactly v2's boundary, where
 θ wardens can decrypt every ballot. New, and narrower: the parties that can learn the
-**operation history** (which slot updates were overwrites; metadata, not contents) are
-defined **cumulatively**. For each
+**write history** (which slot each package wrote, hence who revoted and when; metadata,
+not contents) are defined **cumulatively**. For each
 batch, that set is anyone who obtains $k_b$, receives its plaintext onward, or
 **accumulates θ distinct
-valid original shares of $k_b$, including shares received across different session
+valid original shares of $k_b$, including shares received across different
 attempts** (fresh blinding cannot revoke knowledge already obtained; two incomplete attempts
 can cumulatively suffice). In a delivered share exchange to a roster of size $m$, **every
 roster recipient**, not only the final θ contributors, gains reconstruction capability,
-and any one of them can leak the history onward. Because share bundles are DA-published
+and any one of them can leak the history onward. So the precise statement is: before the
+tally it takes θ colluding wardens to read a write log; after a share exchange, one
+roster member suffices. Because share bundles are DA-published
 (§10.4), compromise of a recipient's ceremony decryption key would reveal the complete
-operation history and blinding from
+write history from
 the permanent public archive, which is why ceremony keys are **ephemeral per attempt and
-destroyed after finalization** (§10.4): for honest-deleting participants, a later key theft
+destroyed after finalization**, together with every recovered bundle key, share and batch
+key (§10.4): for honest-deleting participants, a later key theft
 reveals nothing. Non-participating wardens and the public learn nothing about the history
-(uniform slot updates §8.4 + blinding §10.3 close those channels; tally-time history hiding
+(hidden writes §8.4 + tally blinding §10.3 close those channels; tally-time hiding
 rests solely on ≥1 honest accepted dealer, which the committee bound $f < \theta$ itself
 implies, §10.3, with blinding delivered only to the frozen roster). The sequencer/prover that seals a
-vote learns which of its own updates are overwrites (§5.4), as in v2.
+package learns its slot and whether it is an overwrite (§5.4), as in v2, and a malicious
+sealer can disclose that; removing the refresh sample does not make sealers oblivious.
 
 ### 12.3 The coercion statement
-v3 restores v2's informal posture (no formal receipt-freeness; revotes hidden among
-refreshes) **at parity for public revote obfuscation**: there is **no predecessor-status
-spend object**, no nullifier, no ticket, no counter, so no public, deterministic test
-tells a coercer whether a coerced ballot was later replaced. Drafts ≤1.3 lacked exactly
-this; the review history (a demandable-ticket attack blocked the first quota design) is why
-the final rule is: *no public, finite, voter-derivable spend objects of any kind*. The
-claims below were adversarially derived and simulation-checked; wording is deliberately
+v3 keeps v2's informal posture (no formal receipt-freeness; a revote is hidden) and
+improves on it for public data: there is **no predecessor-status spend object**, no
+nullifier, no ticket, no counter, and since v1.6 **no per-slot mark of a revote at all**.
+v2's public data let anyone conclude "this slot was never touched again, so its voter did
+not revote"; here that conclusion is unavailable for an individual slot, outside the
+degenerate cases of §12.1 (a batch holding one vote; an election with no later overwrite
+at all). Drafts ≤1.3
+lacked even v2's level; the review history (a demandable-ticket attack blocked the first
+quota design) is why the standing rule is: *no public, finite, voter-derivable spend
+objects of any kind*. The claims below were adversarially derived; wording is deliberately
 exact.
 
 | Coercer's access | Defensible claim |
 |---|---|
-| Public data only | No package-content equality test identifies overwrite vs refresh (hiding assumptions). Participation, counts, updated-slot sets, timing, complaints and tally leakage remain: v2's surface. Sparse cover can disclose overwrites, as in v2. |
-| Captured unsubmitted authorization (a signed/proven but unsent package) | Its admission does not depend on whether an earlier package remains current: holding it reveals nothing about later revotes. Submitting it actively overwrites the voter's ballot; that is impersonation, not detection, and is not prevented (as in v2). |
-| Identity key, or the coerced package's complete opening | Cannot derive a later-replacement status test from that material alone. A disclosed opening can still prove the historical package's admission and contents. Key possession permits impersonation. **The v2 delta:** v2's sealer-side re-encryption meant no published ciphertext corresponded to a voter's opening, so even *historical* content was unprovable from public data; v3 publishes the voter-built package verbatim, so historical-content provability is inherent to the design. What is preserved, and is the coercion-relevant boundary, is that no material proves the package is still the *counted* ballot, and the voter can always revote after disclosure. The operational rules below (opening-export warnings; no UI claim that derivation proofs are harmless) exist for exactly this channel. |
+| Public data only | Nothing published names the slot of an overwrite, and no package-content equality test exists (there is no per-slot value). Participation, per-batch counts, timing, complaints, exclusions and tally leakage remain, with the edges listed in §12.1. |
+| Captured unsubmitted authorization (a signed/proven but unsent package) | Its admission does not depend on whether an earlier package remains current: holding it reveals nothing about later revotes. Submitting it actively overwrites the voter's ballot; that is impersonation, not detection, and is not prevented (as in v2). The voter sees it happen, because they know that package's voteID (§5.2), and can cast again. |
+| Identity key, or the coerced package's complete opening | Cannot derive a later-replacement status test from that material alone. A disclosed opening can still prove the historical package's admission and contents. Key possession permits impersonation, and an overwrite by a package the voter did not build is invisible to the voter (§5.3). **The v2 delta:** v2's sealer-side re-encryption meant no published ciphertext corresponded to a voter's opening, so even *historical* content was unprovable from public data; v3 publishes the voter-built package verbatim, so historical-content provability is inherent to the design. What is preserved, and is the coercion-relevant boundary, is that no material proves the package is still the *counted* ballot, and the voter can always revote after disclosure. The operational rules below (opening-export warnings; no UI claim that derivation proofs are harmless) exist for exactly this channel. |
+| Identity key, used actively (a probe) | A coercer holding the key can submit a probe package for the victim's slot to the sequencer the victim uses: if the victim's own package already holds that slot's one-per-batch place, the probe is deferred a batch, which the coercer observes. This needs the key and the same sequencer, costs the coercer an overwrite of the victim's vote anyway, and exists in v2 as well; it is listed because "from that material alone" above does not cover active use. |
+| A deliberately malformed coerced package | **A test exists in fixed-sum elections.** If the coercer makes the voter cast a package with broken transport, an honest warden excludes it (§9.2). Where every ballot's fields sum to a known constant, the result totals reveal how many ballots were counted, hence whether the excluded package was still its slot's final base. This is the public face of §9.2's "provable self-abstention": it lets a coercer enforce abstention, for one victim at a time, more precisely than v2's visible non-participation. Contribution proofs therefore never output counted or excluded totals, but the result itself can. |
 | Adaptive demands for future authorizations | A demanded finite list is never exhaustive: the voter can always generate fresh randomness and another authorized ballot afterward. There is no committed finite universe (ticket or counter) to enumerate. |
 | Full device snapshot BEFORE the escape vote | Protection requires fresh entropy after the snapshot and an uncompromised later submission path; merely continuing an extracted PRNG state is insufficient. |
-| Continuous compromise, or disclosure of the escape package's opening | **Not protected**: the coercer recognizes or proves the later admission. Best achievable here is cancellation (the Hirt–Sako axiom); the nullification failsafe is tracked (§15). |
-| Sealing insider, or an operation-log reconstruction recipient (§12.2) | **Not protected**: these parties learn the write/refresh history and can leak it. The sealing-sequencer boundary is v2's own; the θ-gated log recipients are v3's addition. |
+| Continuous compromise, or disclosure of the escape package's opening | **Not protected**: the coercer recognizes or proves the later admission. Best achievable here is cancellation (the Hirt–Sako axiom [HS00]); the nullification failsafe is tracked (§15). |
+| Sealing insider, or anyone able to read the write logs (§12.2) | **Not protected**: these parties learn the write history and can leak it. The sealing-sequencer boundary is v2's own; the log readers (θ wardens before the tally, any roster member after a share exchange) are v3's addition. |
 
 Also unaddressed, in v2 and v3 alike: **forced abstention** (per-slot participation is
-public) and first-write visibility. This is **not receipt-freeness or formal coercion
-resistance**; the claims are conditional on §12.1's hiding/PRF assumptions, honest
+public) and first-write visibility; hiding first writes too is tracked (§15). This is **not receipt-freeness or formal coercion
+resistance** in the game-based sense of [KTV]; the claims are conditional on §12.1's hiding/PRF assumptions, honest
 escape-vote sealing, and independent future voter randomness (which is why deterministic
 recovery derivation was removed, §5.2).
 
 Additional documented leakage: complaint timing (§9.2; a malicious warden can time a valid
-complaint as a signal or delay it past recovery) and readiness-signal timing (§9.2's early
+complaint as a signal or delay it past recovery) and scan-complete signal timing (§9.2's early
 close is observable metadata).
 
 **Operational requirements for clients and deployments**: fresh CSPRNG package randomness
 always (§5.2); explicit warnings before exporting identity keys or package openings; **no UI
 or API claim that any derivation proof is harmless**; private authenticated submission to a
 sequencer the voter trusts; truthful "included" vs "finally counted" status indication (a
-vote-ID receipt proves inclusion, not final counting).
+vote-ID receipt proves inclusion, not final counting), computed over every voteID the
+client ever released (§5.2).
 
-**Remaining roadmap** (§15 Track-2): nullification failsafes (full-extraction class →
+**Remaining roadmap** (§15 item 2): nullification failsafes (full-extraction class →
 cancellation), trapdoor-chain depth precedence (last-minute coercion; protected-credential
 assumptions), fake credentials (the strongest class). The literature's structural dichotomy,
 recorded: duplicate resolution must either be keyed inside the batch program
-(sealing-sequencer trust, v2's own posture, which v3 now follows) or moved to the θ-warden
-tally; no known primitive gives public exactly-once enforcement that the involved voter
+(sealing-sequencer trust, v2's own posture) or moved to the θ-warden
+tally (v3 since v1.6: the batch program only enforces one ballot per slot per batch, and
+which package is a slot's last is resolved at the tally from the write logs); no known primitive gives public exactly-once enforcement that the involved voter
 cannot be forced to re-derive.
 
 ### 12.4 Proof-system notes
@@ -1684,8 +1864,8 @@ on arithmetization-oriented primitives [FL24]), while Blake3 carries long-standi
 analysis. This is a conservatism call, not a response to any full-round break.
 
 **Every published proof must be hiding, not merely sound.** The ballot STARK is not the only
-proof carrying secrets: batch proofs (the batch seed, $k_b$, the §8.4 blinding derivations
-and the operation-log plaintext), complaint proofs,
+proof carrying secrets: batch proofs (the batch seed, $k_b$, every package's slot and the
+write-log plaintext), complaint proofs,
 **including chunked complaint proofs and their authenticated continuation states** (warden
 key seeds, decapsulation outputs), dealer proofs (blinding coefficients), warden
 contributions **and their chunk continuations** (KEM seeds, shares, payload keys; chunking
@@ -1699,8 +1879,12 @@ verification" (§15) a **privacy question, not only a cost change**.
 ### 12.5 Out of scope / inherited
 EIP-4844 KZG commitments (Ethereum's own PQ roadmap), organizer/sequencer Ethereum accounts,
 hybrid-mode ECDSA (by construction), the BN254 PlonK wrapper around ZisK proofs, and the
-warden settlement accounts that authorize proof-less on-chain messages (§4: session joins
-and scan-complete signals; forging one moves closure timing and liveness only, §9.2). These
+warden settlement accounts that authorize proof-less on-chain messages (§4: ceremony joins
+and scan-complete signals; forging one moves closure timing and liveness only, §9.2; a
+forged join cannot enter the roster without a valid SLH-DSA envelope, §10.4), and the
+wallet keys that authorize PQ key registration and replacement (§11: an ECDSA forger
+could enroll or replace a key ahead of a future election and then vote in it, even under
+`pq-only`; elections already created are unaffected). These
 classical dependencies are **integrity-critical, and an integrity failure during execution
 can compromise privacy (§12.4)**. What they cannot do, provided the published proof paths
 retain their required hiding and the KEM/PRF assumptions hold, is retroactively decrypt
@@ -1713,18 +1897,21 @@ proofs; and a privacy-gated change, §12.4), tracked as the final migration phas
 
 ## 13. Cost summary
 
-Annex A reports the measured proof-of-concept figures behind (and beyond) this table:
-sequencer votes/s/GPU, warden GPU minutes, on-chain gas, and in-guest ML-KEM costs.
+Annex A reports the proof-of-concept measurements behind this table, and separates what
+was measured from what is extrapolated or estimated.
 
-| Metric | v2 | v3-PQ (estimates unless marked measured) |
+| Metric | v2 | v3-PQ |
 |---|---|---|
-| Browser proving | seconds (Groth16, 35.5 MiB key download) | projected ~2-4 s native (ν-dependent, re-laid full-Blake3 AIR at the blowup-32 profile, §6; needs recalculation/benchmark against the §2.2 stream-masking counts; no key download; the Blake3-trees prototype measured 0.69 s native at blowup 8) |
-| Ballot upload to sequencer | ~2 KB | ~20 KB package + ~195 KB proof (proof not stored on-chain) |
-| DA per ballot | ~2 KB | ≈1.3-20 KB depending on ν (§8.6 table; ML-KEM-768 only) |
-| DA per slot touch (refresh OR overwrite) | ~1-2 KB | `8 + 8·ν·nf` B (1,032 B at ν=8/nf=16; 648 B at ν=5/nf=16), the price of publicly-replayable uniform updates |
-| Batch proving | 2.3-4.0×10^8 steps | **≈0.37 s GPU per ballot measured end to end in a combined guest (verification + full state kernel; 256-ballot batch proves in 104 s; Annex A.1)**; verification alone 2.62M steps, 0.333 s at saturation (§8.1); state-tree hashing −30%/byte vs v2's SHA-256; commitment recomputations +13% vs a Poseidon2 precompile |
-| Tally | θ partial decryptions of one accumulator + BSGS | history-linear warden jobs over column views, O(C+U+Mν) authentication + per-final-base secret work (§8.7/§10.1: ~9-12M compressions per 1M casts; unvalidated projection) + one ceremony + on-chain Lagrange |
-| Ceremony DA | — (DKG runs pre-election) | 2 signed publications per participant (join + share bundle; dealer bundles and contributions are proof-authenticated, §10.3-10.4; ~79/126 KB of SLH-DSA signatures at m=5/8) + share bundles ≈ m·96·M + m(m−1)·1152 B, ≈1.9/3.1 MB at m=5/8 for 1M casts in 256-cast batches (drafts ≤1.4: 7.5/21.1 MB) |
+| Browser proving | seconds (Groth16, 35.5 MiB key download) | no key download. Final §6 circuit: projected ~2-4 s native, not yet built. Measured at the pinned profile on the prototype circuit: 1.7 s native single-thread, 4.5-5.2 s in WASM, 478 MiB peak (Annex A.4) |
+| Ballot upload to sequencer | ~2 KB | 6-10 KB package at ν=5-8 + ~195 KB proof (proof not stored on-chain) |
+| DA per ballot | ~2 KB, plus ~1-2 KB per refreshed slot | the package: 1.3 / 3.8 / 6.3 / 10.1 KB at ν = 1 / 3 / 5 / 8, plus 8 B of write log. A revote costs the same as a first vote; there are no refreshes (§8.6) |
+| Blobs per 256-vote batch (16 fields) | 5 | 3 / 8 / 13 / 21 at ν = 1 / 3 / 5 / 8 |
+| Batch proving, one RTX 5090, wrapped proof included | 76.7 s per 256-vote batch at 16 fields (0.30 s/vote); 46.2 s at 2 fields | **107 s per 256-ballot batch (0.42 s/vote), 61 s per 128, 38 s per 64**, measured (Annex A.1; verified proofs come from the prototype ballot circuit). ≈1.3-1.4× v2 at 16 fields |
+| Prover hardware | one 32 GB-class GPU | the same: the wrap stage needs ≈30 GB of GPU memory and 32-38 GB of host RAM, for sequencers **and for every warden that submits a proof** (Annex A.2) |
+| Tally | θ partial decryptions of one accumulator + BSGS | history-linear warden jobs over column views, $O(C + M\nu)$: inner loop measured at 9.4 compressions and ≈2,000 steps per package, ≈8 GPU-minutes per million casts by extrapolation (Annex A.2), + one ceremony + on-chain Lagrange (measured: 217-387k gas) |
+| Settlement gas per batch | 498-667k for 1-4 blobs (v2 benchmark) | ≈0.41M + ≈50k per blob: 0.46M at 1 blob, 0.56M at 3, 0.71M at 6 (measured parts, Annex A.3) |
+| Tally ceremony gas (fixed per election) | θ decryption transactions | ≈4.4M / 6.5M / 10.1M at ν/θ = 3/2, 5/3, 8/5; ≈1M in sequencer mode (**estimate** from measured parts: one wrapped-proof verification per roster proof, dealer and contribution; §15 item 11 tracks aggregating them) |
+| Ceremony DA | — (DKG runs pre-election) | 2 signed publications per participant (join + share bundle; ~79/126 KB of SLH-DSA signatures at m=5/8) + share bundles ≈ m·96·M + m(m−1)·1152 B, ≈1.9/3.1 MB at m=5/8 for 1M casts in 256-cast batches |
 | Registry tally cap | 10^12 | 2^61 |
 
 ### 13.1 Positioning against the literature
@@ -1753,15 +1940,20 @@ analysis (Belenios, Swiss Post).
 - **voteID collision** (admission finds the leaf occupied): resample `k` and re-cast, as
   v2.
 - **Slot-write race** (two sequencers hold packages for the same slot): the first settles;
-  the loser **rebases**. It re-targets the same package at the slot's new public vector
-  (no predecessor opening exists to invalidate) and seals it in a later batch, subject to
-  the ≤1-real-ballot-per-slot-per-batch rule. Last settled write wins (§5.3). Voters who
-  revote rapidly should use one sequencer, as v2 advises. **v2's coverage-history rule
-  carries over unchanged and is normative here**: a batch that re-seals a package whose
-  earlier batch was published but not settled MUST also refresh every slot that the earlier
-  batch touched and this batch does not write (the sequencer keeps the same coverage history
-  as v2). Otherwise, intersecting the two published touch sets singles out the real-write
-  slots, defeating §8.4's uniformity.
+  the loser simply seals its package in a later batch against the new root. Nothing in the
+  package refers to the slot's earlier contents, so there is nothing to rebase. Last
+  settled write wins (§5.3). Voters who revote rapidly should use one sequencer, as v2
+  advises.
+- **Re-sealing a published batch.** A batch whose data was published but which did not
+  settle may be re-sealed with the same or different packages. No cover rule applies
+  (v2's coverage-history rule existed to keep refresh sets consistent across retries, and
+  there are no refreshes), but two published versions that differ in content do reveal
+  what §12.1 edge (c) describes, so sequencers SHOULD re-seal the same package set when
+  they can. Every sealing uses a fresh seed; `sealCtx` makes an accidental reuse harmless
+  (§8.5).
+- **Stale package settled late.** A sequencer that held one of a voter's older packages
+  settles it after the voter's newer one, rolling the slot back. The voter's client sees
+  that package's voteID appear (§5.2) and casts again while casting is open.
 - **Slot's final base excluded** ($P_s \in X$): the client detects it (public $X$, watchable
   from the moment of casting, §9.2) and informs the voter. **While casting is open,
   recovery is an ordinary overwrite** (§5.3, no special path). After the casting freeze, no
@@ -1770,9 +1962,10 @@ analysis (Belenios, Swiss Post).
   complete package); election creation already requires all ν keys registered (§4).
 - **Ceremony participant failure**: absorbed by margin. A missing/invalid dealer before the
   dealer deadline simply doesn't enter $D$; after $D$ freezes, failures reduce the
-  contributor margin (§10.4). Restart (fresh masks, new attempt) only when θ valid
-  contributions become impossible; if no attempt can reach θ, the tally is lost, counted
-  under liveness (§9.3).
+  contributor margin (§10.4). An attempt fails only on the three deadline conditions of
+  §10.4; if no attempt ever reaches θ, the tally is lost, counted under liveness (§9.3).
+- **Invalid join.** A join whose envelope fails the roster proof's checks (bad signature,
+  malformed key) is not in the roster: one slot of margin, no stall (§10.4).
 
 ---
 
@@ -1780,42 +1973,54 @@ analysis (Belenios, Swiss Post).
 
 1. **In-AIR verifiable encapsulation** — prove **FIPS 203 ML-KEM-768 `Encaps` inside the
    ballot STARK**, retiring the complaint mechanism entirely (transport correctness becomes
-   part of admission). Estimated [est]: FIPS-exact ≈ +4M trace cells, +1.5-4 s native prover;
+   part of admission). Estimated (not measured): FIPS-exact ≈ +4M trace cells, +1.5-4 s native prover;
    fallback: K-PKE-768 with Blake3-derived coins (≈ +1.2M cells, +0.5-1 s) **plus a written
    IND-CCA argument** (FIPS 203 §3.3 forbids bare K-PKE; the FO-binding lemma of
-   Takahashi–Zaverucha supplies the key step). **Never prove encryption with non-FO-derived
+   Takahashi–Zaverucha [TZ21] supplies the key step). **Never prove encryption with non-FO-derived
    coins** (decryption-failure oracles). Batch-guest verification deltas must be recomputed
-   against the measured 2.62M-step baseline (§8.1) before choosing the variant. (v1.2
+   against the measured 2.53M-step-per-proof baseline (§8.1) before choosing the variant. (v1.2
    tracked "RLWE-LPR" here; withdrawn, since Ring-LWE over Goldilocks needs n ≥ 4096 and
    ≥6 KB ciphertexts, and dedicated lattice-VE schemes carry 19 KB proofs or relaxed
    decryption.)
-2. **PQ coercion-hardening ladder** (§12.3) — what remains AFTER the blinded-slot mainline
-   (adopted in v1.4 as §5.3/§8.4; design history: a Merkle-cast-ticket quota was proposed
+2. **PQ coercion-hardening ladder** (§12.3) — what remains after hidden writes
+   (§5.3/§8.4; design history: a Merkle-cast-ticket quota was proposed
    and then **rejected by adversarial review**, because a coercer demands the remaining
    ticket tags and watches the public spend tree, so any public finite per-voter posting
-   right is itself a coercion test; the quota-free design replaced it):
-   a. **Nullification failsafe** (VoteXX-style Shamir-shared flags): converts full key
+   right is itself a coercion test; the quota-free design replaced it; v1.4 hid revotes
+   behind re-blinded slot vectors, and v1.6 removed the per-slot mark altogether):
+   a. **Nullification failsafe** (VoteXX-style Shamir-shared flags [VXX]): converts full key
       extraction from total loss into vote cancellation, the best achievable outcome for
-      that class (Hirt–Sako).
-   b. **Trapdoor-chain depth precedence** (deepest-position-wins at tally): adds
+      that class [HS00].
+   b. **Trapdoor-chain depth precedence** [TDC] (deepest-position-wins at tally): adds
       last-minute-coercion resistance but admits a "cast at maximum depth" adaptive demand,
       presumes a protected credential store, and forces tally-time winner selection.
       Separate, deeper research.
-   c. **Fake credentials** (JCJ lineage) with warden-held rosters: strongest target,
+   c. **Fake credentials** (JCJ lineage [JCJ]) with warden-held rosters: strongest target,
       heaviest machinery (deniable enrollment + a reviewed filtering trust model: insider
       secrecy, a PQ verifiable mix, or malicious-secure MPC; a zkVM proof alone does not
       hide filtering from its prover).
-   d. **Compositional hiding argument for the blinded-slot layer** (formalization work, not
-      a mechanism): a written game-based argument covering disclosed old openings, repeated
-      updates, public proofs/continuations, and the final tally, feeding the ePrint
-      submission (gate 7 below).
+   d. **Hidden first writes** (participation privacy, the gap named in §13.1): drop the
+      slot markers too, so that a first write is as invisible as an overwrite. The slot
+      already travels only in the write log; what is missing is a replacement for the
+      occupancy counter: an authenticated bound on eligible slots (the census leaf count
+      for Merkle censuses, `idx < maxVoters` for CSP, append-only or excluded for dynamic
+      off-chain censuses) so the tally cannot overflow, and acceptance that live turnout
+      and overwrite counters disappear until the tally. It would hide participation from
+      the public only: the sealing sequencer still sees the address, and roster members
+      learn everything at tally. Not a small amendment; reviewed as worth tracking.
+   e. **Compositional hiding argument for hidden writes** (formalization work, not
+      a mechanism): a written game-based argument covering disclosed old openings, the
+      encrypted write logs, per-batch counts, public proofs/continuations, and the final
+      tally, feeding the ePrint submission (gate 7 below). The tally side is simple since
+      v1.5 (published contributions depend only on final-base shares and $G$); the casting
+      side is simpler since v1.6 (nothing per-slot is published).
 3. **Locked mode** as a separately specified and reviewed extension (§4).
 4. Direct on-chain STARK verification (drop the PlonK wrapper) once rollup gas permits,
    **gated on establishing the native proof path's hiding, not only its cost** (§12.4).
 5. **Multi-recipient Kyber transport** (KKPP20-style FO-mKEM [MMK]): one shared 960 B
-   component + 128 B per warden ⇒ package 10,056 → 3,336 B at ν=8 (~3× DA cut) and 5,640 B
-   at ν=16 (a 256-vote + 256-refresh batch ≈ 2.5 MB ⇒ ≈20 blobs; package bytes alone are
-   ≈12, but slot-update vectors cost 2,056 B per touch at ν=16, bringing the 16-warden
+   component + 128 B per warden ⇒ package 10,056 → 3,336 B at ν=8 (~3× DA cut: a 256-vote
+   batch fits 7 blobs, inside one native settlement at 6 blobs for ≈220 votes) and 5,640 B
+   at ν=16 (a 256-vote batch ≈ 1.47 MB ⇒ 12 blobs, bringing the 16-warden
    profile inside the 32-blob cap, §8.6); also the cheapest
    in-AIR circuit for item 1. **Gated on**: (i) warden-key well-formedness/distinctness
    proofs covering the pinned scheme's honest-key requirements (malicious keys break lattice
@@ -1826,8 +2031,8 @@ analysis (Belenios, Swiss Post).
    Phase 0, since this transport is also the cheapest circuit for item 1. (v1.2 tracked
    Classic McEliece here; withdrawn, §8.6.)
 6. **Proof-certified per-warden exclusion bitsets** for adversarial-extreme elections: each
-   admission carries a public immutable **ordinal** (position = (settled batch number,
-   in-batch admission index), assigned at settlement, bound to `pkgDigest` identically in
+   admission carries a public immutable **ordinal** (§8.4: settled batch number, then
+   position in the batch's voteID order), bound to `pkgDigest` identically in
    every §8.7 column view; a bit never denotes different packages in different bitsets);
    per-warden bitset commitments $X_i$ updated only by their own warden's complaint proofs
    (monotone: set bits are preserved; every new bit justified), published as authenticated
@@ -1866,6 +2071,15 @@ analysis (Belenios, Swiss Post).
    proving pipeline and one wrapper verification across many small elections. Deferred from
    v3.0: 50 concurrent small elections need only 1-2 sustained GPUs, so the pipeline is not
    a fleet cliff; adopt if gate 8's synchronized closing-burst test shows otherwise.
+11. **Aggregated ceremony proofs.** The tally ceremony's on-chain footprint is its proof
+   verifications: one roster proof, one per dealer and one per contribution, each a
+   separately wrapped proof (≈6.5M gas in total at ν=5/θ=3, Annex A.3, the dominant fixed
+   cost of a small election). Recursively aggregating an attempt's dealer proofs, and its θ
+   contributions, into one wrapped proof each would take nine verifications down to three
+   and save about 2.3M of that. Moving the 9 KB join envelopes out of calldata would save
+   most of another 1.9M. Deferred
+   from v3.0: it changes who proves what (an aggregator needs every dealer's proof but no
+   secret), and sequencer mode already pays one proof.
 
 ### Phase-0 gates (normative; pass before `ballotVKHash` is pinned)
 
@@ -1873,7 +2087,7 @@ analysis (Belenios, Swiss Post).
    prove one statement; the net AIR shrink from removing the predecessor/nullifier clauses
    must be **measured, not assumed**, since fewer constraints need not cross a trace-padding
    boundary); measured native + browser proving (desktop and
-   a 2023 mid-range phone; pass: browser p50 ≤ 10 s AND p95 peak prover memory ≤ 1.5 GB on
+   a 2023 mid-range phone; pass: browser p50 ≤ 10 s AND p95 peak prover memory ≤ 1.5 GiB on
    that phone, since the wasm32 address space and mobile tab limits bind before time does;
    else adopt the fallback FRI profile, whose batch-guest verification cost is pre-computed
    now so a late profile flip cannot invalidate GPU economics or deadline profiles);
@@ -1881,33 +2095,43 @@ analysis (Belenios, Swiss Post).
    mask-prefix equality at nf boundaries and rejection of trailing inactive bytes.
 2. wasm32 challenger query-sampler fix + production hiding CSPRNG, with negative tests.
 3. **Byte-exact pinned encodings + negative test vectors** for every new structure:
-   ColumnRecord + UpdateRecord, `viewAcc`/`viewsRoot`, slot vectors and the §8.4 blinding
-   KDFs, the operation-log envelope, the ceremony bundle envelope (body + ordered
-   per-recipient bundle-key wraps, §10.4), scan-complete signal semantics (§9.2), chunk
-   continuation states (§2.5; the §8.7, §9.2 and §10.4 test lists are normative), **the Blake3
-   census leaf encoding (`address ‖ weight ‖ pk_PQ` field widths and endianness, incl. the
-   `pk_PQ = 0` legacy case)**, **and the §5.3
-   slot-update vectors**: no public branch flag or length difference between real writes and
-   refreshes; fresh blinding across retries/forks; zero-constant sharing checks; replay
-   rejection without predecessor state; overwrite after total client-state loss; duplicate
-   real-write atomic rejection; whole-lineage exclusion with no occupancy reset; θ-subset
-   tally invariance through overwrite chains.
+   the ballot public vector including θ and the context parameters (§6; cross-threshold,
+   cross-ν, cross-context and inconsistent-nf rejection); ColumnRecord, first-write lists,
+   `viewAcc`/`viewsRoot` (encoding version 2) and the pre-digested payload envelope
+   (§8.7); `sealCtx`, the σ derivation and the write-log envelope (§8.5; a same-seed
+   re-seal with different contents must repeat no key, coin or nonce); the PQ key map
+   (leaf and node tags, value encoding, membership and absence proofs, the creation-time
+   snapshot, §8.2/§11; an enrolled voter presented as absent must be rejected; a replayed
+   or cross-registry key authorization must be rejected after a replacement); the CSP
+   credential message and context string (§11; cross-registry replay, changed index or
+   key, forbidden zero `pk_PQ`); the join envelope, `joinCtx`, the roster program and the
+   session id (§10.4; key substitution under a lifted signature, an omitted valid join, an
+   included invalid join, a stale attempt, a wrong registered signing key, garbage bytes
+   that must yield "invalid" and never abort); the ceremony bundle envelope (body + ordered
+   per-recipient bundle-key wraps); scan-complete signal semantics (§9.2); the attempt
+   state machine (§10.4: each of the three failure conditions, the latest permitted
+   roster proof still leaving downstream time, delayed advancement creating exactly one
+   new attempt); chunk continuation states (§2.5); and the §8.7 test list, which is
+   normative. Also: overwrite after total client-state loss; a stale package settled
+   after a newer one (the client's voteID watch must flag it); final-base exclusion with
+   no occupancy reset; θ-subset tally invariance through overwrite chains and exclusions.
 4. **Hiding/zero-knowledge verification for every new published proof path**: chunked
    complaint proofs and warden-contribution chunks added to the §12.4 list; every statement
    branch and continuation path of the merged warden guest audited separately (one VK is
    not one hiding analysis); the VADCOP-final
-   hiding question filed upstream with ZisK (feeds item 4 above); plus the §15.2d
-   compositional hiding argument for the blinded-slot layer (eased by the direct share sum:
-   published contributions no longer depend on any $k_b$-derived value, §10.1).
+   hiding question filed upstream with ZisK (feeds item 4 above); the §2.5 shape rule,
+   tested on paired histories with identical public counts but different final-base and
+   exclusion assignments, including at segment boundaries; plus the §15 item 2e
+   compositional hiding argument for hidden writes.
 5. DEM security-argument appendix published (§2.1).
 6. The named high-stakes FRI profile (§2.3) documented alongside the default; the versioned
    deadline profiles (§2.3) calibrated once from measured scan/proving rates, never per
-   election, with deadline-overflow, maximum-refresh and synchronized closing-burst
+   election, with deadline-overflow and synchronized closing-burst
    workload tests; early-close tests (scan-complete signals and stage completion, §9.2 and
    §10.4, including θ-subset insufficiency); scaled ceremony deadlines.
-7. **ePrint submission of the MSA construction** (masked-share accumulator + blinded slot
-   state + zero-blinding tally) for public peer review, the protocol's main novelty
-   debt.
+7. **ePrint submission of the construction** (masked Shamir shares over KEM transport +
+   hidden writes with a θ-gated write log + the zero-blinded direct share-sum tally) for
+   public peer review, the protocol's main novelty debt.
 8. Prototype-derived deployment limits: full batch proving cost, warden tally throughput,
    complaint throughput under adversarial all-malformed load (worst case remains linear in
    reported faults, §9.2), last-minute malformed floods, synchronized closing bursts across
@@ -1918,10 +2142,13 @@ analysis (Belenios, Swiss Post).
    routine elections; ν=8 for genuinely high stakes): DA, ceremony and warden costs are all
    linear or worse in ν, and defaulting to ν=8 triples a fleet's DA bill for no threat-model
    reason.
-9. **The census conversion guest** (§8.2): completeness (no omitted or added leaves),
-   canonical ordering and index preservation, uniqueness, and PQKeyRegistry membership or
-   non-membership under the creation snapshot, with negative vectors for omitted voters,
-   duplicated leaves, and enrollment downgrades (`pk_PQ` zeroed for an enrolled voter).
+9. **Census compatibility, checked against deployed contracts, not the paper**: the
+   batch guest's census verification is byte-compatible with the deployed v2 batch
+   program (node hash, leaf packing, the `leaf < 2^248` rule, the slot rule, per-origin
+   root policy); the deployed census contracts' slot-uniqueness check is confirmed to
+   cover every slot v3 derives; and the PQKeyRegistry contract (address-authorized
+   registration and replacement, the sparse map's on-chain update cost and behaviour under
+   concurrent registrations) is built and measured.
 
 **First implementation target (from the external design review).** The atomic cost PoCs of
 Annex A are done (per-component measurements, real proofs); what follows is the
@@ -1930,11 +2157,12 @@ Annex A are done (per-component measurements, real proofs); what follows is the
 complaints, exclusions, the ceremony, warden proofs, and on-chain finalization,
 with these measured gates: the complete 16-field ballot relation including overwrites,
 production hiding randomness, the exact pinned proof profile verified inside ZisK, full
-batch proving cost, complaint throughput under adversarial load, and the complete warden
-tally job (archive authentication included). Browser latency/memory and deployment limits
+batch proving cost **through the wrapped proof**, complaint throughput under adversarial
+load, the complete warden tally job (archive authentication and last-write selection
+across batches included), and the ceremony's real gas. Browser latency/memory and deployment limits
 (electorate sizes, committee sizes, deadlines, hardware) are derived from those measurements,
 not from component benchmarks. Warden-side statements (key well-formedness §4, complaints
-§9.2, dealer §10.3, contributions §10.1) SHOULD compile into **one guest binary** with a
+§9.2, the roster proof §10.4, dealer §10.3, contributions §10.1) SHOULD compile into **one guest binary** with a
 leading statement-type tag in the public outputs; every contract entry point checks its
 exact expected tag, version, output schema and registry-derived context (a valid
 low-obligation statement must never substitute for a complaint or contribution). That gives
@@ -1969,7 +2197,7 @@ one VK to pin and one audit target, while gate 4 still audits every branch separ
 - [JCJ] A. Juels, D. Catalano, M. Jakobsson, *Coercion-Resistant Electronic Elections*, WPES 2005.
 - [VXX] D. Chaum et al., *VoteXX: Extreme Coercion Resistance*, ePrint 2022/1212 (nullification).
 - [TDC] J. Erdmanis, *Trapdoor-Chain Vote Precedence*, E-Vote-ID 2026 (depth-based precedence; smartcard-assisted).
-- [KTV] R. Küsters, T. Truderung, A. Vogt, *A Game-Based Definition of Coercion-Resistance and its Applications*, CSF 2010 (the δ-CR framework used in §12.3).
+- [KTV] R. Küsters, T. Truderung, A. Vogt, *A Game-Based Definition of Coercion-Resistance and its Applications*, CSF 2010 (the game-based framework a formal treatment of §12.3 would use).
 - [KEMB] *ML-KEM WebAssembly implementations and benchmarks*. https://github.com/dchest/mlkem-wasm
 - [WHIR] *EVM Verification of WHIR over a 31-bit Field*, ethresear.ch, 2025.
 
@@ -1977,128 +2205,207 @@ one VK to pin and one audit target, while gate 4 still audits every branch separ
 
 ## Annex A: measured feasibility (proof-of-concept results)
 
-*This annex exists to answer one question: can this specification be implemented, at
-production scale, with today's tools? Every load-bearing cost in the protocol was
-implemented as a small, self-contained proof of concept and **measured**, with real GPU
-proving, on 2026 commodity hardware. Nothing in this annex is a simulation of a proof: every
-quoted proving time is a generated, verified ZisK proof. A reader of this annex alone should
-come away knowing what each actor pays, on what hardware, at what election sizes.*
+*This annex answers one question: can this specification be implemented, at production
+scale, with today's tools? The main cost drivers were built as small, self-contained
+proofs of concept and measured with real GPU proving on 2026 commodity hardware. An
+independent audit of the previous version of this annex found it claimed more than it had
+measured, so every figure below carries one of three labels. **Measured**: a proof was
+generated and verified, or gas was read from an executed transaction. **Extrapolated**:
+scaled linearly from measured runs. **Estimated**: composed from measured parts plus stated
+assumptions. A.6 lists what is not measured at all.*
 
-**Method.** Seven PoCs (Rust ZisK guests, a WASM prover build, Solidity under Foundry),
-each atomic: in-guest ML-KEM-768 (encapsulation and decapsulation with the full §2 FO
-rule); the batch guest's per-package state kernel (digests, census verification, depth-64
-SMT writes, §8.4 slot-update derivation, §8.7 column views, §8.5 payload); a **combined
-batch guest** running proof verification and the state kernel in one program; the §10.1
-warden tally kernel (view authentication, $h_i$ openings, direct share sum); the voter's
-ballot prover at the pinned profile, native and in WASM; the on-chain contracts (Lagrange
-finalization, signals, settlement bookkeeping, the point-evaluation precompile); and the
-wrapper proof's on-chain verification with a real wrapped ZisK proof.
-Hardware: one NVIDIA RTX 5090 (32 GB), cargo-zisk 1.3.0-alpha (GPU), ziskemu for exact step
-counts, Node/V8 for WASM, Foundry for gas. Parameters: ν=8, nf=16, θ=5 unless stated (the heaviest v3.0
-profile). Guest outputs are checked byte-for-byte against independent native recomputation,
-and every kernel ships negative tests (a corrupted witness share aborts the tally guest; 14
-tampered batch inputs are rejected; a tampered ciphertext is rejected by the FO check at
-identical step count). Every GPU proof passed `cargo-zisk verify`. The PoC sources,
-exact reproduction commands and raw logs will be published with the reference
-implementation; prototype commits, flags and hardware are pinned there (§6's provenance
-rule applies).
+**Method.** Eight PoCs (Rust ZisK guests, a WASM prover build, Solidity under Foundry),
+each atomic: in-guest ML-KEM-768; the batch guest's per-package state work; a **combined
+batch guest** running proof verification and state work in one program; the wrap that
+turns a ZisK proof into one the EVM can verify; the warden tally inner loop; the voter's
+ballot prover at the pinned profile, native and in WASM; the on-chain contracts; and the
+on-chain verification of our own wrapped proofs. Hardware: one NVIDIA RTX 5090 (32 GB),
+59 GB host RAM. Toolchain: cargo-zisk 1.3.0-alpha (GPU) for the STARK-stage figures and
+the 1.3.2-alpha production GPU binaries for everything involving the wrap, with the STARK
+stage re-measured the same day (within −2% to +8%); ziskemu for exact step counts, Node/V8
+for WASM, Foundry for gas. Parameters: ν=8, nf=16, θ=5 for the guests (the heaviest v3.0
+profile) unless stated. Guest outputs are checked byte-for-byte against independent native
+recomputation, and every kernel ships negative tests (a corrupted witness share aborts the
+tally guest; tampered batch inputs and corrupted ballot proofs are rejected; a tampered
+ciphertext is rejected by the FO check at identical step count). Every GPU proof quoted
+passed `cargo-zisk verify`. Sources, reproduction commands and raw logs will be published
+with the reference implementation (§6's provenance rule applies).
+
+**Two limits apply throughout.** The ballot proofs being verified in-guest, and proven in
+the browser, come from the **prototype ballot circuit** (a v2-era circuit: 2,048 × 379
+trace, 123 public values), not the final §6 circuit, which does not exist yet. And the
+state-work guests implement the batch format of draft v1.5. v1.6 removes work from that
+format (slot vectors, blinding derivations, refresh updates) and adds one key-map lookup
+per package (§8.2, up to 160 Keccak calls) and changes the census path's hash, so the
+state-work figures are expected to be close to an upper bound for v1.6. That expectation
+is not a measurement.
 
 ### A.1 Sequencer: throughput and hardware
 
-Measured per-package proving cost of the complete batch guest workload:
+**Measured**, per component, in guest steps:
 
-| Component | ZisK steps / package | GPU s / package |
-|---|---|---|
-| Ballot-proof verification (§8.1; at GPU saturation, K ≥ 64) | 2.62M | 0.333 |
-| State kernel (everything else per package: digests, census, SMT, slot updates, views) | 0.161M | 0.036 |
-| ML-KEM payload (§8.5: ν encapsulations **per batch**, 3.7M steps ≈ 0.4 s) | ≈0.014M amortized at K=256 | ≈0.002 |
-| **Total (measured in ONE combined guest, not added)** | **2.71M** | **≈0.37** |
+| Component | Steps |
+|---|---|
+| Ballot-proof verification (§8.1) | 2.53M per proof + ≈2.7M once per batch |
+| State work per package (digests, census path, SMT writes, column views, the v1.5 slot updates) | 0.161M per package + 0.13M per batch |
+| **Combined guest** (both of the above in one program, one proof) | **2.71M per package**, additive to within 0.4% |
+| §8.5 payload: ν=8 ML-KEM encapsulations, measured in its own guest | 3.7M per batch (not in the combined guest) |
 
-![Where one vote's batch proving goes](figures/annex-vote-cost.svg)
+**Measured**, wall-clock on one GPU, combined guest:
 
-Proof verification is 94% of the per-vote cost; the entire state machinery of §8.2-§8.7
-adds 6%. The state kernel's predicted Blake3 precompile count (1,084 compressions per
-package) matched the measured count exactly, so the §8 obligations are fully priced, none
-skipped. The components were then integrated: a **combined guest** runs the verification
-and the state kernel in one program, and composition is additive (+0.4% over the parts,
-fully accounted for by the output-binding digest). A full 256-ballot combined batch (695M
-steps, 42 proof segments) proves in **104 s at 46 GB host RAM**, or 111 s at 26 GB with the
-prover's low-memory flag; 26 of 26 combined proofs verified, and 18 tampered inputs
-(including corrupted ballot proofs) are rejected.
+| Ballots per batch | STARK stage | **Wrapped proof, ready for the chain** | Votes/s/GPU, wrapped | v2 production, wrapped, 16 fields |
+|---|---|---|---|---|
+| 64 | 33.0 s | **38.2 s** | 1.68 | 30.3 s (2.1/s) |
+| 128 | 56.4 s | **61.1 s** | 2.10 | 45.7 s (2.8/s) |
+| 256 | 103.7 s | **107.3 s** | 2.39 | 76.7 s (3.3/s) |
 
 ![Sequencer throughput vs batch size](figures/annex-throughput.svg)
 
-One consumer GPU sustains **1.4-2.5 votes/second, measured end to end in the combined
-guest** (K = 32 → 256, asymptote ≈2.7, ML-KEM payload included), which is **≈120k-210k
-votes per day per GPU**. A 100k-voter election (≈120k casts with revotes)
-costs ≈13-14 GPU-hours of sequencer proving in total, parallelizable across sequencers
-exactly as in v2; at 2026 rental prices that is a few tens of dollars, or roughly
-**$0.0001-0.0002 of proving per vote**. Fifty concurrent small elections are a 1-2
-sustained-GPU workload. Two measurement caveats that generalize: GPU seconds per step vary
-≈1.8× between FRI-heavy and hash-heavy workloads, and small-batch measurements understate
-saturated per-proof cost (0.304 s at K ≤ 32 became 0.333 s at K ≥ 64), so capacity planning
-must carry measured seconds-per-package per workload at saturation, never a single
-steps-per-second constant (Phase-0 gate 8).
+The wrap (recursion to one final STARK, then a PLONK proof over BN254) adds **≈5.2 s per
+proof whatever the proof's size**; the previous version of this annex omitted it. Adding
+the ML-KEM payload (≈0.4 s per batch, estimated from its own guest) changes only the last
+digit of those rates. So one GPU sustains **1.7 to 2.4 votes per second with on-chain-ready
+proofs**, 145k to 206k votes a day, and v3 costs **1.3 to 1.4× v2's proving per vote** at
+16 ballot fields.
 
-### A.2 Wardens: a light role, measured
+![Where one vote's batch proving goes](figures/annex-vote-cost.svg)
 
-The v1.5 direct share sum (§10.1) was implemented as specified: ColumnRecord folding,
-$h_i$ openings against witnessed $(s, K)$, per-batch payload-key commitment checks, DEM
-operation-log decryption, share accumulation. Measured: **1,988 steps and 9.37 Blake3
-compressions per counted package**, flat from 1k to 102k packages, which lands at the low
-end of §10.1's projected 9-12M compressions per million casts: the projection is now a
-measurement.
+Verifying the voter's proof is 78% of a vote's proving time at 256 per batch; all state
+work is 8%; the rest is fixed cost per batch. The marginal cost is 0.37 s per extra ballot
+at GPU saturation (0.333 s verification + 0.036 s state work); small batches measured
+earlier understated it at 0.30 s.
+
+**Hardware (measured).** The wrap stage asks for 30.05 GB of GPU memory, against 30.32 GB
+available on a 32 GB card, and 32-38 GB of host RAM. A 256-ballot batch peaks at 47 GB of
+host RAM, or 38 GB with the prover's low-memory flag at a 10% time cost (118 s). A
+sequencer therefore needs a 32 GB-class GPU and 48-64 GB of RAM, the same class v2's prover
+uses. One of three 256-ballot runs without the low-memory flag hung in the STARK stage and
+was killed by the prover's own timeout; both retries passed, and production already
+treats that error as transient and retries in low-memory mode.
+
+**Extrapolated.** A 100k-voter election with 120k casts needs ≈14 GPU-hours of sequencer
+proving at 256 per batch, ≈16.5 at the 119 per batch that native settlement allows at ν=5,
+≈19 at the 74 it allows at ν=8 (§8.6), parallelizable across sequencers as in v2. At an
+assumed USD 0.5-1.5 per GPU-hour that is USD 7-30 per election, under USD 0.0003 per voter; the rental price is an assumption, not a measurement. "Fifty concurrent small
+elections on one or two GPUs" is likewise an estimate from the ≈16 s all-in cost of a
+small wrapped proof, not a measured load test (gate 8).
+
+**What the combined guest does not contain.** It verifies real ballot proofs and runs the
+state work, but the proofs' public values are not yet bound to the packages (they are
+hashed into the output; a real equality check would cost about the same); it has no
+occupancy counter, no `hybridSig` ECDSA, no key-map lookup, and no encapsulations. All are
+small next to the 2.5M steps of one verification, and the 3-of-5 prototype (§15) is where
+they get measured together.
+
+### A.2 Wardens
+
+**Measured.** The inner loop of the §10.1 contribution was built for its hashing, against
+the v1.5 log format: column-record folding, the $h_i$ opening against witnessed $(s, K)$, per-batch
+key-share commitment checks and key reconstruction, log decryption, share accumulation.
+It costs **1,988 steps and 9.37 Blake3 compressions per counted package** (3.85 for the
+record, 4.00 for the opening, 1.52 amortized per-batch work), flat from 1k to 102k
+packages. Runs: 1,024 packages in 10.9 s (15.9 s wrapped); 10,240 in 13.6 s; 102,400 in
+44 s at 27.6 GiB of host RAM. Nine other tampered inputs besides the corrupted share are
+each rejected by their named check.
+
+**Extrapolated.** A million-cast contribution is ≈10 such chunks: ≈6 minutes of proving,
+≈7 minutes of wall-clock, ≈8 with a wrap per chunk. No million-cast job was proven as one, and chunk
+linking (§2.5) is not implemented.
 
 ![Warden GPU time](figures/annex-warden.svg)
 
-A warden's **entire tally contribution for a million-cast election proves in ≈6-7 minutes**
-on one consumer GPU (≈10 chunks of ≈100k packages, 44 s each, ≤28 GiB host RAM per chunk).
-For the fleet's typical elections the job is seconds. The only path to GPU-*hours* is the
-funded adversarial worst case, a complaint proof against every single package (0.064 s GPU
-per proven decapsulation, ≈2.1 GPU-hours at 120k casts), which is exactly the workload the
-adaptive deadline profiles (§2.3) provision for. Decapsulation and share recovery outside
-proofs run at native speed and are CPU-noise by comparison.
+**Not in that measurement:** selecting each slot's last package across batches (the PoC
+counts every package, the worst case for the secret work but with no slot map); the
+exclusion set; opening the blinding commitments; the statement's bindings to snapshot,
+session and dealer set. The slot map is the only one that scales with the election: a
+map lookup and update per package.
 
-### A.3 Ethereum: gas and fees
+**Complaints (measured unit, extrapolated totals).** One proven decapsulation with the
+full FO check costs 608K steps, 0.064 s of GPU at the margin. An ordinary complaint about
+one package is a small proof, ≈16 s all-in with its wrap. The funded adversarial worst
+case, a complaint against every package, is ≈2.1 GPU-hours per warden at 120k casts and
+≈18 at a million, which is the workload the deadline profiles (§2.3) provision for.
 
-Measured with Foundry (the Lagrange test reconstructs known tallies from Shamir sum-shares
-and must match exactly; the point-evaluation precompile was exercised live with a valid KZG
-vector):
+**Hardware: the correction that matters.** Every proof a warden submits on-chain
+(contribution, dealer bundle, complaint, and the permissionless roster proof) must be
+wrapped, and the wrap needs the same ≈30 GB of GPU memory and 32-38 GB of host RAM as a
+sequencer's. The work is light (minutes), but the machine is not: as configured, **a
+warden needs a 32 GB-class GPU**, not a laptop. Two ways around it exist and neither is
+measured: a CPU wrap path, and handing the final STARK to someone else to wrap, which is
+acceptable only once that proof's hiding is established (§12.4, gate 4), since it carries
+the warden's secrets in its witness.
 
-| Item | Gas (total transaction unless noted) |
+### A.3 Ethereum
+
+**Measured** (Foundry; the Lagrange test reconstructs known tallies from Shamir sum-shares
+and must match exactly; the point-evaluation precompile was exercised with a valid KZG
+vector; the wrapper verifier was run on **our own** wrapped proofs with the program key
+and root pinned, and rejects a flipped proof byte, a flipped public value, another
+program's key and a swapped proof):
+
+| Item | Gas |
 |---|---|
-| `finalizeResults`: the on-chain tally, θ = 1 / 3 / 5 / 8 | 162k / 217k / 278k / 387k |
-| `scanComplete` signal (middle / freeze-triggering, ν=5) | 75k / 97k |
-| Settlement bookkeeping ($z_b$ keccaks, `archiveAcc` fold, root, checkpoint; execution only) | 57k |
-| Point-evaluation precompile, per blob (measured live) | 50,461 |
-| Wrapper proof verification: a **real wrapped ZisK proof** (final stage: PLONK over BN254, 768-B proof, one public input, batch-size-independent; tamper-rejecting) | **268,540 measured** |
-| Per-batch settlement, all in (bookkeeping + 6 point-evals + measured wrapper verification + calldata + base) | ≈665k + 786k blob gas |
-| Per-election fixed (creation *estimated* ≈300k + ν signals + finalize, ν=θ=5) | ≈991k |
+| `finalizeResults`, the on-chain tally, θ = 1 / 3 / 5 / 8 (whole transaction) | 162k / 217k / 278k / 387k |
+| `scanComplete` signal, middle / freeze-triggering (whole transaction) | 75k / 97k |
+| Wrapped-proof verification, our batch proof / our tally proof (execution) | 271,146 / 269,898 |
+| The same as a standalone transaction | 306k |
+| Point-evaluation precompile, per blob | 50,461 |
+| Settlement bookkeeping in a stand-in contract ($z_b$ keccaks, `archiveAcc` fold, root, counters) | 57k |
 
-Interpolating the final result on-chain, the step that replaces v2's threshold decryption,
-costs about as much as one DEX trade. There is no expensive cryptography in any contract:
-no pairing beyond the inherited wrapper, no SLH-DSA (§4), no Blake3. As an independent
-cross-check, v2's production settlement with the same wrapper (`submitTransition`) is
-benchmarked at 498-667k gas for 1-4 blobs, consistent with the figures above.
+The verifier is PLONK over BN254 with a 768-byte proof and one public input, so its gas
+does not depend on the guest or the batch size. Interpolating the result on-chain, the
+step that replaces v2's threshold decryption, costs about as much as one DEX trade. No
+contract verifies SLH-DSA, Blake3 or anything else exotic.
 
-![Ethereum cost per election](figures/annex-eth-cost.svg)
+**Estimated: settlement per batch.** 21k base + 57k bookkeeping + ≈44k for the per-batch
+view checkpoint (§8.7, a new storage slot) + 271k verification + ≈16k calldata + 50.5k per
+blob: **≈0.41M + 50k per blob**, i.e. 0.46M at 1 blob, 0.56M at 3 and 0.71M at 6. v2's production
+benchmark of the same flow is 498-667k for 1-4 blobs, the same shape.
 
-The chart prices blob gas at the full execution gas price; real blob base fees run far
-lower, so these totals are deliberately pessimistic. Even so: a 500-voter election costs
-≈0.008-0.4 ETH across the 1-50 gwei range, and a 100k-voter election ≈0.7-34 ETH, i.e.
-**≈$0.02-0.21 per vote at 10 gwei and $3k/ETH**, dominated by execution gas at realistic
-blob fees. The ν-sizing table of gate 8 matters here: DA is linear in ν, and these figures
-are for ν=8-grade packages settled at ν=5-sized batching; sequencer mode prices at roughly
-v2 cost.
+**Estimated: the tally ceremony, fixed per election.** At ν=5, θ=3: creation 0.30M
+(estimate), five scan signals 0.40M, five joins 1.92M (each carries a ≈9 KB envelope as
+calldata, which pays the EIP-7623 floor of about 40 gas per byte: ≈0.38M per join,
+computed, not measured), the roster proof 0.35M, five dealer proofs 1.83M, five
+share-bundle transactions 0.35M (estimate), three contributions 1.19M, finalization
+0.22M: **≈6.5M gas**, of which 3.4M is nine proof-carrying transactions and 1.9M is join
+calldata. ≈4.4M at ν/θ = 3/2, ≈10.1M at 8/5, ≈1M in sequencer mode. This is the dominant
+cost of a small election, it is several times what the previous version of this annex
+stated (≈1M, which counted no proof verifications), and §15 item 11 tracks cutting it.
+
+**Estimated: whole elections, native settlement** (at most 6 blobs per batch, which sets
+the batch size, §8.6):
+
+| ν / θ | Votes per batch | 500 voters: batches, execution gas, per voter | 100k voters, 120k casts: batches, execution gas, per voter | Blob gas, 100k voters |
+|---|---|---|---|---|
+| 1 / 1 | 256 (3 blobs) | 2, 2.1M, 4.2k | 469, 264M, 2.6k | 184M |
+| 3 / 2 | 197 | 3, 6.6M, 13.1k | 610, 439M, 4.4k | 480M |
+| 5 / 3 | 119 | 5, 10.1M, 20.2k | 1,009, 725M, 7.2k | 794M |
+| 8 / 5 | 74 | 7, 15.1M, 30.1k | 1,622, 1,165M, 11.6k | 1,276M |
+
+![Execution gas per voter](figures/annex-eth-cost.svg)
+
+In money, at USD 3k per ETH, execution alone costs a 100k-voter election USD 0.008 to USD 0.035 per
+voter at 1 gwei and ten times that at 10 gwei; a 500-voter election, where the ceremony
+dominates, USD 0.01 to USD 0.09 per voter at 1 gwei. Blob gas is a separate market: priced as
+high as execution gas it would roughly double the large-election figures, and it normally
+trades far lower. (The previous version of this annex quoted USD 0.02-0.21 per voter for the
+100k case from a model that settled 256-vote batches in 6 blobs, which only ν=1 can do;
+the corrected figure for ν=5 at 10 gwei is USD 0.22 execution-only.) Two things would move
+these numbers a lot and are not costed here: settling on a rollup with L1 blobs (v2's
+production path, where execution gas is far cheaper; its inclusion-proof flow has no
+measurement in this annex), and the multi-recipient transport of §15 item 5, which would
+triple the votes per blob.
 
 ### A.4 The voter: proving a ballot in the browser
 
-The pinned proof profile (§2.3: blowup 32, 18 FRI queries, 16-bit grinding, hiding PCS,
-Blake3 transcript) was measured on the existing ballot-circuit prototype, natively and
-compiled to WASM under Node's V8 (Chrome's engine), with the known wasm32 challenger defect
-patched (a one-line u64 comparison; unpatched, wasm32 proving panics at **every** profile,
-so the fix is a prerequisite for any browser proving, §6). Every WASM proof verifies under
-the native verifier and is rejected after a one-byte flip or under the wrong profile.
+**Measured** on the prototype ballot circuit at the pinned proof profile (§2.3: blowup 32,
+18 FRI queries, 16-bit grinding, hiding PCS, Blake3 transcript), natively and compiled to
+WASM under Node's V8 (Chrome's engine), with the wasm32 challenger defect patched (a
+one-line u64 comparison; unpatched, wasm32 proving panics at **every** profile, so the fix
+is a prerequisite for any browser proving, §6). A pinned-profile proof made in WASM
+verifies under the native verifier and is rejected after a one-byte flip or under the
+wrong profile. "Browser" here means that engine run from the command line: no real
+browser tab was measured.
 
 | Profile | Native, 1 thread | WASM, warm (cold first proof) | Proof size | Peak WASM memory |
 |---|---|---|---|---|
@@ -2108,59 +2415,72 @@ the native verifier and is rejected after a one-byte flip or under the wrong pro
 
 ![Voter proving time and memory per profile](figures/annex-voter.svg)
 
-Against the Phase-0 gate (p50 ≤ 10 s and ≤ 1.5 GB on a 2023 mid-range phone): **time
+Against the Phase-0 gate (p50 ≤ 10 s and ≤ 1.5 GiB on a 2023 mid-range phone): **time
 passes with ≈2× headroom on desktop hardware** (a phone more than ≈2× slower than this
-desktop, or a final circuit more than ≈2× heavier, consumes it), and **memory passes at
-under a third of the budget**; memory does not depend on CPU speed, so that verdict carries
-to phones for this circuit, with room for one doubling of the final circuit's rows but not
-two. Proof size came in 39% below the blowup-8 baseline, exactly as §2.3 states, and the
-measured blowup-8 → 32 cost multiplier (2.45× single-threaded, 2.0× in WASM) is below the
-~2.7× the cost model assumes. The essential caveat: this is the prototype circuit
-(2,048 × 379 trace), not the final §6 ballot AIR with the re-laid in-AIR Blake3 section;
+desktop, or a final circuit more than ≈2× heavier, consumes it), and **memory sits at
+about a third of the budget** (478 MiB of linear memory; 614 MiB for the whole Node
+process). Memory does not depend on CPU speed, so that verdict carries to phones for this
+circuit, with room for one doubling of the final circuit's rows but not two. Proof size
+came in 39% below the blowup-8 baseline, as §2.3 states, and the blowup-8 → 32 cost
+multiplier is 2.45× single-threaded, 2.0× in WASM. The essential caveat: this is the
+prototype circuit, not the final §6 ballot AIR with the re-laid in-AIR Blake3 section;
 these numbers are floors and scaling factors, and gate 1's phone benchmark remains the
 decisive test. The fallback profile buys ≈35% of the time and half the memory for 34%
-larger proofs: a real safety valve if the final circuit runs heavy.
+larger proofs: a real safety valve if the final circuit runs heavy. Not measured: any real
+browser tab, Firefox
+and Safari engines, real phones, WASM threads.
 
 ### A.5 ML-KEM-768 inside the zkVM
 
-The one post-quantum primitive the protocol runs inside guests was measured end to end
-(RustCrypto `ml-kem`, 24 verified proofs):
+**Measured** (RustCrypto `ml-kem`, 24 verified proofs):
 
 | Operation | Steps (Keccak precompile) | Steps (pure software) | GPU marginal |
 |---|---|---|---|
 | Encapsulation | 462K | 1.04M | 0.049 s |
 | Decapsulation + full constant-time FO comparison | 608K | 1.24M | 0.064 s |
 
-The §8.5 batch payload (ν=8 encapsulations) is a per-batch cost of ≈0.4 s GPU, invisible
-per vote. The §2 normative FO rule is precisely what the measured implementation does: the
-re-encrypted ciphertext is compared over all 1,088 bytes with no early exit, verified in
-source and by a tamper test that completes in the identical step count on the rejection
-path.
+The §8.5 batch payload (ν encapsulations) is a per-batch cost of ≈0.4 s GPU at ν=8,
+invisible per vote. The §2 normative FO rule is precisely what the measured implementation
+does: the re-encrypted ciphertext is compared over all 1,088 bytes with no early exit,
+verified in source and by a tamper test that completes in the identical step count on the
+rejection path. The decapsulation guest measures the primitive; it does not yet bind the
+warden's registered key seed or the package's $h_i$ as a real complaint proof must.
 
-### A.6 What this annex establishes, and what remains
+### A.6 What this annex establishes, and what it does not
 
-Established by measurement: the batch guest's full obligation set is priced, linear, and
-**integrated** (one combined guest verifying proofs and executing the state machinery,
-proven at 256 ballots per proof on one consumer GPU); sequencer throughput supports fleet
-operation on single-digit GPUs; the warden role is minutes of commodity GPU even at a
-million casts, validating the §10.1 projection; the voter's proof fits the latency and
-memory gates on desktop with headroom at the pinned profile, with a measured fallback that
-halves memory; the entire on-chain footprint is cheap, standard Solidity, with the wrapper
-verification now **measured** against a real wrapped proof (268.5k gas) and corroborated by
-v2's production settlement benchmarks; and the in-guest KEM, the one exotic ingredient,
-costs half a million steps per operation. Three encoding-level optimizations were
-identified for Phase-0 gate 3 (a pre-digested payload-envelope layout, a constant-prefix
-$hCtx$ alignment, and 8-byte-aligned guest input layouts), each worth 5-35% of its kernel's
-hashing cost; none is load-bearing for feasibility.
+**Established by measurement.** One guest can verify ballot proofs and do the batch's
+state work, and prove 256 ballots in under two minutes on one consumer GPU, wrapped; the
+64-ballot wrapped proof was verified by the production verifier contract on a local chain
+for 271k gas. The per-vote proving cost is
+within 1.4× of v2's. A warden's tally loop costs ≈2,000 steps per package. A WASM
+build proves a ballot at the pinned profile in about five seconds and under half a
+gigabyte, on desktop hardware under V8. ML-KEM inside the zkVM costs about half a million steps per operation. The
+contracts need no unusual cryptography, and the on-chain tally costs a few hundred
+thousand gas.
 
-Honestly open, and owned by the §15 Phase-0 gates: the **final ballot AIR** (the re-laid
-in-AIR Blake3 section of §6 does not exist yet; A.4's figures are floors and scaling
-factors, and gate 1's instrumented counts plus a real 2023-phone benchmark remain the
-decisive voter-side test); real browser engines beyond V8 and WASM threading; the §2.5
-chunk-linking overhead on the million-cast tally (chunks are measured individually); the
-dealer-proof guest (a composition of measured primitives, expected trivial); and
-election-creation gas (estimated, not built). Nothing measured in this annex contradicts a
-cost claim in this specification; two projections (§8.1 economics, §10.1 tally work) came
-in at or better than stated, and the one number that moved against us is small (saturated
-verification costs 0.333 s per proof, not 0.304 s, a 2-6% throughput haircut captured in
-A.1's table).
+**Extrapolated or estimated, and labelled so above:** million-cast warden jobs; GPU-hours
+and dollar costs per election; the ceremony's gas; whole-election gas tables.
+
+**Not measured, and owned by the Phase-0 gates (§15):**
+- the **final ballot circuit**, on which both the browser numbers and the in-guest
+  verification cost (78% of sequencer time) depend;
+- the v1.6 batch format itself (hidden writes, the key-map lookup, `sealCtx`, the Keccak
+  census path), expected but not shown to cost no more than the measured v1.5 format;
+- the complete contribution proof (slot map across batches, exclusions, bindings) and
+  chunk linking;
+- the roster, dealer and complaint guests as real statements, and SLH-DSA credential
+  verification per package for CSP censuses;
+- a CPU wrap path, or any way for a warden without a 32 GB GPU to submit a proof;
+- real phones and non-V8 browser engines;
+- the registry contracts themselves (creation, the key registry, the attempt state
+  machine) and rollup settlement;
+- anything under adversarial or concurrent load.
+
+What moved against earlier claims: saturated verification costs 0.333 s per proof, not
+0.30; the wrap adds 5 s per proof; a warden needs a large GPU; large elections cost two to
+three and a half times the Ethereum gas first reported, and the ceremony's fixed gas
+several times (≈6.5M against ≈1M at five wardens).
+What moved in favour: v3's proving cost is close to v2's, not an order of magnitude above
+it; the tally loop landed at the low end of its projection; the prover multiplier of the
+pinned profile is below the assumed one; and v1.6's hidden writes cut 17 to 24% of every
+batch's data.

@@ -4,8 +4,8 @@ flowchart LR
   classDef keep fill:#dae8fc,stroke:#6c8ebf;
   a1["ElGamal ballots<br/>(BabyJubjub, Shor-breakable)"]:::v2 -->|becomes| b1["Shamir shares + PRF masks<br/>(Goldilocks field)"]:::v3
   a2["Groth16 ballot proof<br/>(BN254, trusted setup)"]:::v2 -->|becomes| b2["Plonky3 STARK<br/>(browser WASM, transparent)"]:::v3
-  a3["DKG / council key ceremony<br/>(shared BabyJubjub key)"]:::v2 -->|becomes| b3["Warden ML-KEM keys<br/>(no shared key, no ceremony)"]:::v3
-  a4["Threshold decryption<br/>+ BSGS search"]:::v2 -->|becomes| b4["θ warden sums + Lagrange<br/>(exact, no decryption)"]:::v3
-  a5["Re-encryption of stored ballots<br/>(silent revoting)"]:::v2 -->|becomes| b5["Re-blinding of public slot vectors<br/>(overwrites and refreshes<br/>look identical)"]:::v3
-  a6["ECDSA voter signatures"]:::v2 -->|becomes| b6["Hash-preimage proof inside the STARK<br/>(CSP credentials: SLH-DSA)"]:::v3
-  k1["Unchanged: ZisK batch program, blob DA,<br/>process registry, permissionless sequencers<br/>(state tree re-hashed with Blake3)"]:::keep
+  a3["DKG / council key ceremony<br/>(shared BabyJubjub key)"]:::v2 -->|becomes| b3["Warden ML-KEM keys<br/>(no shared key, no setup ceremony)"]:::v3
+  a4["Threshold decryption<br/>+ BSGS search"]:::v2 -->|becomes| b4["θ warden share sums + Lagrange<br/>(exact, no decryption)"]:::v3
+  a5["Re-encryption of stored ballots<br/>+ refresh sample as cover"]:::v2 -->|becomes| b5["Hidden writes: a revote publishes<br/>nothing about its slot<br/>(no cover needed)"]:::v3
+  a6["ECDSA voter signatures"]:::v2 -->|becomes| b6["Hash-preimage proof inside the STARK,<br/>key from a PQ key map<br/>(CSP credentials: SLH-DSA)"]:::v3
+  k1["Unchanged: census trees, ZisK batch program role,<br/>blob DA, process registry, permissionless sequencers<br/>(state tree re-hashed with Blake3)"]:::keep

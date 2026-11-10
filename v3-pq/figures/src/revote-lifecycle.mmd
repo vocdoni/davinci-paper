@@ -1,21 +1,18 @@
 flowchart LR
   classDef pkg fill:#d5e8d4,stroke:#82b366;
-  classDef slot fill:#fff2cc,stroke:#d6b656;
+  classDef pub fill:#fff2cc,stroke:#d6b656;
+  classDef sec fill:#f8cecc,stroke:#b85450;
   classDef chk fill:#dae8fc,stroke:#6c8ebf;
-  classDef pub fill:#f5f5f5,stroke:#999999;
-  P0["first package P0<br/>(fresh randomness)"]:::pkg -->|"first write"| T1["slot vector T = E(P0) + Z + M"]:::slot
-  T1 -->|"refresh (any sequencer)"| T2["T' = T + Z' + M'"]:::slot
-  T2 -->|"revote: fresh package P1<br/>(no reference to P0 needed)"| T3["T'' = E(P1) + Z'' + M''"]:::slot
-  O["public record per touched slot:<br/>slot index + new vector —<br/>IDENTICAL for refresh and overwrite"]:::pub
-  T2 --- O
-  T3 --- O
-  subgraph STARK["checked in the voter's ballot STARK (same statement, first vote or revote)"]
-    S1["valid ballot, shares, masks,<br/>commitments, voteID, identity"]:::chk
-  end
+  P0["first package P0<br/>(fresh randomness)"]:::pkg --> B1["batch 7 publishes:<br/>P0 · slot s marked OCCUPIED"]:::pub
+  P1["revote: fresh package P1<br/>(no reference to P0)"]:::pkg --> B2["batch 12 publishes:<br/>P1 · nothing about slot s"]:::pub
+  B1 --> L1["write log of batch 7 (encrypted):<br/>P0 wrote slot s"]:::sec
+  B2 --> L2["write log of batch 12 (encrypted):<br/>P1 wrote slot s"]:::sec
+  L1 --> T["at tally, θ wardens open the logs:<br/>slot s → its package in the<br/>highest batch = P1 (last write wins)"]:::chk
+  L2 --> T
+  O["the public sees: one more package,<br/>one more overwrite in the batch count,<br/>never which slot"]:::pub
+  B2 --- O
   subgraph BATCH["checked by the batch program"]
-    B1["census join: this voter owns this slot"]:::chk
-    B2["at most 1 real ballot per slot per batch"]:::chk
-    B3["accumulator delta = sum of<br/>published vector changes"]:::chk
+    C1["census: this voter owns slot s"]:::chk
+    C2["at most 1 ballot per slot per batch"]:::chk
+    C3["log entry = the package's slot"]:::chk
   end
-  P1x["last settled write wins — as v2"]:::pub
-  T3 --- P1x
