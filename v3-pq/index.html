@@ -27,6 +27,7 @@
       top: 0;
       z-index: 2;
       display: flex;
+      flex-wrap: wrap;
       gap: 12px;
       align-items: center;
       padding: 12px 16px;
@@ -34,7 +35,8 @@
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(4px);
     }
-    .topbar a {
+    .topbar > a,
+    .topbar > button {
       text-decoration: none;
       border: 1px solid #d0d7de;
       border-radius: 6px;
@@ -42,6 +44,35 @@
       color: #1f2328;
       background: #f6f8fa;
       font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    .topbar > button { cursor: pointer; }
+    #toc {
+      position: absolute;
+      top: 100%;
+      left: 16px;
+      right: 16px;
+      max-width: 600px;
+      max-height: 65vh;
+      overflow-y: auto;
+      padding: 16px;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(31, 35, 40, 0.15);
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    #toc ol { list-style: none; margin: 0; padding: 0; }
+    #toc a {
+      display: block;
+      padding: 5px 8px;
+      padding-left: calc(8px + var(--toc-depth) * 16px);
+      color: #0969da;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    #toc a:hover, #toc a:focus-visible { background: #f6f8fa; }
+    .markdown-body :is(h1, h2, h3, h4, h5, h6) {
+      scroll-margin-top: calc(var(--topbar-height, 80px) + 16px);
     }
     .markdown-body {
       box-sizing: border-box;
@@ -160,7 +191,11 @@
     <a href="../">DAVINCI v2 spec</a>
     <a href="spec.md" download>Download spec.md</a>
     <a href="spec.md" target="_blank" rel="noopener noreferrer">Raw markdown</a>
+    <button id="toc-toggle" type="button" aria-expanded="false" aria-controls="toc" disabled>Table of contents</button>
     <span id="status">Loading…</span>
+    <nav id="toc" aria-label="Table of contents" hidden>
+      <ol id="toc-list"></ol>
+    </nav>
   </div>
   <article id="content" class="markdown-body"></article>
   <div id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
@@ -189,6 +224,59 @@
         html = html.replace(/@@MATH(\d+)@@/g, (_, i) =>
           math[+i].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
         content.innerHTML = html;
+        const tocToggle = document.getElementById('toc-toggle');
+        const toc = document.getElementById('toc');
+        const tocList = document.getElementById('toc-list');
+        const usedIds = new Set(Array.from(document.querySelectorAll('[id]'), el => el.id));
+        // Build navigation from rendered headings, keeping duplicate titles distinct.
+        content.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((heading) => {
+          const title = heading.textContent.trim();
+          if (!heading.id) {
+            const base = title.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s+/g, '-') || 'section';
+            let id = base;
+            let suffix = 1;
+            while (usedIds.has(id)) id = base + '-' + suffix++;
+            heading.id = id;
+            usedIds.add(id);
+          }
+          const item = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = '#' + encodeURIComponent(heading.id);
+          link.textContent = title;
+          link.style.setProperty('--toc-depth', Number(heading.tagName.slice(1)) - 1);
+          item.append(link);
+          tocList.append(item);
+        });
+        const closeToc = () => {
+          toc.hidden = true;
+          tocToggle.setAttribute('aria-expanded', 'false');
+        };
+        tocToggle.disabled = !tocList.children.length;
+        tocToggle.addEventListener('click', () => {
+          toc.hidden = !toc.hidden;
+          tocToggle.setAttribute('aria-expanded', String(!toc.hidden));
+        });
+        toc.addEventListener('click', (event) => {
+          const link = event.target.closest('a');
+          if (!link) return;
+          closeToc();
+          const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+          heading.setAttribute('tabindex', '-1');
+          heading.focus({ preventScroll: true });
+        });
+        document.addEventListener('click', (event) => {
+          if (!toc.contains(event.target) && !tocToggle.contains(event.target)) closeToc();
+        });
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && !toc.hidden) {
+            closeToc();
+            tocToggle.focus();
+          }
+        });
+        const topbar = document.querySelector('.topbar');
+        new ResizeObserver(() => {
+          document.documentElement.style.setProperty('--topbar-height', topbar.offsetHeight + 'px');
+        }).observe(topbar);
         if (window.renderMathInElement) {
           window.renderMathInElement(content, {
             throwOnError: false,
