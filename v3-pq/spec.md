@@ -81,7 +81,9 @@ inherited non-PQ dependencies (§12.5).
 ## Protocol intuition (read this first)
 
 *This walkthrough is self-contained: you need no prior DAVINCI knowledge. Every term used
-loosely here gets a precise definition from §2 onward; the jargon cheat-sheet is §2.4.
+loosely here gets a precise definition from §2 onward; the jargon cheat-sheet is §2.4,
+and the same flow written out message by message, with notation and pointers into every
+section, is the "Protocol overview" after §4.
 Readers who know v2 will recognize the shape; the deltas are marked "(v2: …)".*
 
 ### The cast
@@ -395,9 +397,11 @@ of the document assumes them.
 - **KEM** (Key Encapsulation Mechanism; here **ML-KEM**, the standardized Kyber) — a
   public-key *lockbox*: anyone can "encapsulate" against your public key and obtain a fresh
   32-byte shared secret plus a ciphertext; only you (with the private key) can recover that
-  secret from the ciphertext. Think of it as the post-quantum replacement for ECDH key
-  exchange, except there is no shared-curve math and the two parties never need to be online
-  together.
+  secret from the ciphertext. Two operations:
+  - $(ct, K) \leftarrow \mathrm{Encaps}(pk)$, run by the sender, returns a
+    public ciphertext `ct` and a secret `K`
+  - $K \leftarrow \mathrm{Decaps}(sk, ct)$, run by the key holder, recovers the
+    same `K`.
 - **PRF** (pseudorandom function) — a keyed hash used as a deterministic random-number
   generator: same key + input ⇒ same output, and without the key the outputs are
   indistinguishable from random. Mentally: `keccak256(key, input)` used the way you'd use a
@@ -583,6 +587,185 @@ PRF/hash, and the zero-knowledge of the STARKs, all post-quantum (full leakage m
   one contribution proof, §10.4). **Locked mode is deferred**: it
   requires an organizer-side share column and a separately reviewed extension of the tally
   equations; it is not part of v3.0.
+
+---
+
+## Protocol overview: the full flow, end to end
+
+*A map of the whole protocol: who does what, in which order, and what travels where. It
+states no new rules; every step names the section that specifies it. Read it after [§2](#2-notation-parameters-and-encodings)-[§4](#4-roles-what-changed),
+or return to it whenever a later section needs the surrounding context.*
+
+**Parties.** Voter $\mathsf{V}$ (a browser; holds `address` and a PQ secret `sk`, [§11](#11-census-and-authentication)).
+Organizer $\mathsf{O}$. Wardens $\mathsf{W}_1..\mathsf{W}_\nu$, each with an ML-KEM pair
+$(pk_i, sk_i)$, an SLH-DSA pair and a settlement account ([§4](#4-roles-what-changed)); any $\theta$ produce the
+result. Sequencers $\mathsf{Q}$ (permissionless) collect, prove and settle. The registry
+$\mathsf{R}$ on Ethereum verifies every proof and alone writes election state. Blob space
+$\mathsf{DA}$ holds bulk data, captured by untrusted archives ([§4](#4-roles-what-changed), [§9.3](#93-liveness)). Anyone may relay a
+proof-carrying message.
+
+### Before the election
+
+- **Warden registration (per epoch, [§4](#4-roles-what-changed)).** $\mathsf{W}_i \to \mathsf{R}$:
+  $H(pk_i)$, $H(pk^{sig}_i)$, a settlement account, a URI serving both keys, and a ZisK
+  proof that $pk_i$ is well formed. No DKG, no election key ([§3](#3-the-core-idea-tally-without-a-shared-decryption-key)).
+- **Voter enrollment (once, [§11](#11-census-and-authentication)).** $\mathsf{V}$ draws `sk`, sets `pk_PQ = H(sk)` and
+  registers it in the PQKeyRegistry, authorized by its own address. Off-chain censuses may
+  use an organizer-published key map instead; CSP credentials carry `pk_PQ` themselves.
+- **Election creation ([§4](#4-roles-what-changed), [§7](#7-state-tree-changes), [§11](#11-census-and-authentication)).** $\mathsf{O} \to \mathsf{R}$: `censusRoot` (v2's
+  Keccak tree, unchanged), `pqKeyRoot` as of this transaction, the ballot rules, the auth
+  policy (`pq-only` | `hybrid` | `hybrid-legacy`), the deadline profile, the schedule, and
+  `wardenSetHash` over $(\nu, \theta, epoch, \text{the } \nu \text{ registered triples})$.
+  $\mathsf{R}$ rejects an unregistered committee and enforces the [§2.3](#23-protocol-parameters) bounds. The genesis
+  root is built by the first batch proof, not on-chain ([§7](#7-state-tree-changes)).
+
+### Casting (§5, §6)
+
+- **Key check ([§4](#4-roles-what-changed)).** $\mathsf{V}$ fetches $pk_1..pk_\nu$, recomputes `wardenSetHash` and
+  compares it on-chain; mismatch means no cast.
+- **Package ([§5.1](#51-public-package-contents-and-canonicalpackage), [§5.2](#52-construction-browser-pseudocode)).** Let $b_f$ be the voter's chosen value for field $f$ of the ballot,
+  $f \in 1..nf$, already weighted under the election rules. The browser turns the ballot
+  into a package in four steps.
+  - *Share.* For each field $f$ it picks a random polynomial $P_f$ of degree $\theta-1$
+    whose constant term is the vote, $P_f(0) = b_f$, and gives warden $i$ the evaluation
+    $s_{i,f} = P_f(i)$. Any $\theta$ shares of a field recover $b_f$; fewer reveal nothing.
+  - *Lock.* For each warden $i$ it encapsulates against that warden's ML-KEM key,
+    $(ct_i, K_i) \leftarrow \mathrm{Encaps}(pk_i)$: a public ciphertext $ct_i$ and a secret
+    $K_i$ that only warden $i$ can recover from it.
+  - *Mask.* From $K_i$ it derives `nf` pseudorandom masks, one field element per ballot
+    field, through a keyed hash stream ([§2.2](#22-domain-separated-contexts)), and publishes
+    $e_{i,f} = s_{i,f} + \mathrm{mask}_{i,f}$ instead of the share. Warden $i$ regenerates
+    the same masks from $K_i$; to everyone else the column is uniform noise.
+  - *Commit.* It hashes each warden's shares and secret,
+    $h_i = \mathrm{Blake3}(hCtx(i) \,\|\, s_{i,1..nf} \,\|\, K_i)$, folds them into
+    $\mathrm{sharesDigest} = \mathrm{Blake3}(h_1 \,\|\, \dots \,\|\, h_\nu)$, and binds slot and
+    identity to them in
+    $\mathrm{pkgCommit} = \mathrm{Blake3}(\mathrm{commitCtx} \,\|\, slot \,\|\, pk_{voter} \,\|\, \mathrm{sharesDigest} \,\|\, salt)$,
+    with a fresh 256-bit `salt` for hiding; `hCtx(i)` and `commitCtx` are the
+    domain-separation contexts of [§2.2](#22-domain-separated-contexts).
+
+  The public package is: the masked shares $E = (e_{i,f})$, the ciphertexts $(ct_i)$, the
+  commitments $(h_i)$, `pkgCommit`, and a `voteID` derived from a fresh random `k`. Shares,
+  polynomials, secrets and salt stay in the browser as witness of the proof below. Every
+  random value is fresh CSPRNG output, for every attempt.
+- **Proof ([§6](#6-the-ballot-proof-plonky3-stark)).** A browser STARK with publics
+  $(\text{context}, \theta, nf, \mathrm{voteID}, address, pk_{PQ}, slot, weight, E, h, \mathrm{pkgCommit}, \mathrm{Blake3}(cts))$
+  shows: the
+  ballot obeys the rules; each field's $\nu$ shares lie on one polynomial of degree
+  $\le \theta-1$ with constant term $b_f$; masks and $h_i$ match the secrets used; `voteID`
+  is derived correctly; the prover knows `sk` with $H(sk) = pk_{PQ}$. Not shown: that
+  $ct_i$ decapsulates to $K_i$ (complaints cover it, [§9.2](#92-complaints-and-the-exclusion-set-x-open-from-admission), [§10.2](#102-why-malformed-voter-transport-cannot-corrupt-anything)).
+- **Audit or cast ([§5.2](#52-construction-browser-pseudocode)).** The client must offer a Benaloh audit: open a candidate
+  package on a second device, discard it, build a fresh one. Audited packages are never
+  submitted.
+- **Submission ([§5.4](#54-submission-interface-voter-sequencer)).** $\mathsf{V} \to \mathsf{Q}$, private channel:
+  $\{\mathrm{Pkg}, \pi^{ballot}, \mathrm{censusProof}?, \mathrm{hybridSig}?\}$ (`?` marks an optional
+  component: the census proof only where the origin needs one, `hybridSig` only in hybrid
+  modes). A revote is the same message with a fresh package for the same slot ([§5.3](#53-revoting-slot-overwrites-hidden)). The client keeps every
+  voteID it released ([§5.2](#52-construction-browser-pseudocode)).
+
+### Batching and settlement (§8), per batch $b$ of $K$ packages
+
+The sequencer $\mathsf{Q}$ does everything in this stage until settlement, and proves all
+of it: the computation runs inside the batch program, a ZisK guest ([§8](#8-the-batch-program-zisk-guest); the program whose
+execution the zkVM proves), and the
+resulting batch proof $\pi^{batch}$ is what the registry $\mathsf{R}$ verifies before
+accepting the batch. Nothing $\mathsf{Q}$ asserts is taken on trust.
+
+- **$\mathsf{Q}$ collects.** It gathers $K$ submitted packages with their ballot proofs,
+  loads the current state tree, the census and the key map, and draws a fresh batch seed
+  from its CSPRNG. These are the inputs of the batch program.
+- **$\mathsf{Q}$ re-checks every package and proves it ([§8.1](#81-ballot-proof-verification-measured-cost), [§8.2](#82-census-authentication-binding)).** For each package it
+  rebuilds the ballot proof's public vector from the package bytes and the election data,
+  verifies $\pi^{ballot}$ against it, proves the voter's census membership and key-map
+  lookup (present key, or proven absence under `hybrid-legacy`), checks that one
+  `address` runs through census leaf, key map and ballot publics, and verifies `hybridSig`
+  where the policy asks. A package failing any check is not admitted.
+- **$\mathsf{Q}$ computes and proves the state transition ([§7](#7-state-tree-changes), [§8.3](#83-state-transitions), [§8.4](#84-hidden-writes)).** For each admitted package it
+  inserts the leaf `voteID → pkgDigest`, derives the package's slot from the census, and
+  checks that no two packages in the batch share a slot. A slot written for the first time
+  gets the `OCCUPIED` marker and is listed publicly; a slot already occupied is an
+  overwrite and gets no public mark at all. The batch's public outputs about slots are
+  the first-write list and the counters, nothing more.
+- **$\mathsf{Q}$ seals the write log for the wardens, in-proof ([§8.5](#85-the-warden-payload-kem-dem-proven)).** From the seed, bound to the
+  batch contents, it derives a batch key $k_b$ and encrypts under it the write log
+  $L_b$, the slot of each admitted package in voteID order. It then Shamir-shares $k_b$
+  $\theta$-of-$\nu$ and wraps share $i$ to warden $i$'s key $pk_i$ with one in-guest ML-KEM
+  encapsulation plus a salted commitment to the share. $\pi^{batch}$ ties every log entry
+  to its package's census-derived slot, so a wrong or missing payload cannot be proven.
+- **$\mathsf{Q}$ commits to each warden's column ([§8.7](#87-per-warden-column-views-normative)).** Of every admitted package,
+  warden $i$ will later need only its own slice: `voteID`, `pkgDigest`, its masked shares,
+  its $h_i$ and a hash of its $ct_i$. The batch program hashes those slices per warden,
+  together with the first-write list and the payload, into a running accumulator
+  `viewAcc[i,b]` chained from batch to batch, and stores the hash of all $\nu$
+  accumulators, `viewsRoot[b]`, in the state tree. A warden's tally proof later shows it
+  processed exactly these records by recomputing the chain up to the frozen `viewsRoot`,
+  instead of re-hashing every full package in the archive.
+- **$\mathsf{Q}$ publishes and settles ([§8.6](#86-blob-layout-v3-and-da-numbers)).** $\mathsf{Q} \to \mathsf{DA}$: a header, the admitted
+  packages in voteID order, the first-write slots, and the warden payload.
+  $\mathsf{Q} \to \mathsf{R}$: $\pi^{batch}$ with its public outputs
+  `(oldRoot, newRoot, counters, censusRoot, pqKeyRoot, blobsDigest)`. The ballot proofs and
+  `hybridSig` stay with $\mathsf{Q}$ and never reach the blobs ([§5.4](#54-submission-interface-voter-sequencer)).
+- **$\mathsf{R}$ accepts the batch ([§7](#7-state-tree-changes), [§8.6](#86-blob-layout-v3-and-da-numbers)).** It verifies $\pi^{batch}$, binds the blobs
+  through `blobhash` and the point-evaluation precompile, requires `oldRoot` to equal the
+  stored root (or the genesis predicate for the first batch), stores `newRoot`, folds the
+  batch into `archiveAcc`, and retains the `(batchNumber, viewsRoot)` checkpoint. Only now
+  do the packages count as admitted.
+- **Archives and wardens follow along ([§4](#4-roles-what-changed), [§10.1](#101-what-each-participating-warden-computes)).** Archives capture every blob
+  while it is live. Each warden $\mathsf{W}_i$ may, at any time, read its own column from
+  the blobs, decapsulate its ciphertexts $ct_{v,i}$, recover its shares $s_{v,i,f}$ and
+  check them against $h_{v,i}$, so that most of its tally work is done before casting ends.
+
+### Complaints and freeze (§9)
+
+- **Complaints, from first admission ([§9.2](#92-complaints-and-the-exclusion-set-x-open-from-admission)).** If $\mathrm{Decaps}(sk_i, ct_{v,i})$ is
+  inconsistent with $h_{v,i}$, $\mathsf{W}_i$ proves it in ZisK; anyone relays to
+  $\mathsf{R}$, which appends `pkgDigest` to $X$. $X$ is append-only and alters no state. A
+  voter with a broken client sees the exclusion and revotes ([§5.3](#53-revoting-slot-overwrites-hidden), [§14](#14-errors-and-edge-cases-normative)).
+- **Casting freeze ([§9.1](#91-casting-freeze)).** At grace-window close $\mathsf{R}$ freezes $R_{cast}$, the
+  view checkpoint and the counts $C$ (casts), $M$ (batches); computes
+  $d_{complaint} = t_{freeze} + d_0 + \alpha C + \beta M$ and the ceremony stage durations
+  from the pinned profile ([§2.3](#23-protocol-parameters)). No accepted batch: zero result, done.
+- **Exclusion freeze ([§9.2](#92-complaints-and-the-exclusion-set-x-open-from-admission)).** Wardens may signal scan-complete; all $\nu$ signals close
+  early. At $d_{complaint}$ or early close, $X$ freezes and
+  $\mathrm{snap} = (R_{cast}, \mathrm{xDigest}, \mathrm{batchCount}, \mathrm{viewsRoot})$ is
+  fixed; attempt 1 starts.
+
+### Tally (§10), per attempt
+
+One pass through the five stages below is an attempt. Attempt 1 starts at the exclusion
+freeze; if it fails (last bullet) anyone starts the next, and everything attempt-scoped is
+drawn fresh while the snapshot and the batch keys stay fixed ([§10.4](#104-the-batch-key-exchange-and-the-session-state-machine)).
+
+- **Join ([§10.4](#104-the-batch-key-exchange-and-the-session-state-machine)).** $\mathsf{W}_i \to \mathsf{R}$ from its settlement account: an ephemeral
+  ML-KEM key $epk_i$ for this attempt, SLH-DSA-signed with context, `snap` and attempt.
+  Long-term keys never receive ceremony ciphertexts.
+- **Roster ([§10.4](#104-the-batch-key-exchange-and-the-session-state-machine)).** Anyone submits $\pi^{roster}$ (no secret witness) judging every join:
+  valid signature, valid key. Valid joins form $\Pi$, $|\Pi| \ge \theta$; then $\mathsf{R}$
+  derives `sessionId`. Senders re-run the roster program before encrypting to any $epk_j$.
+- **Dealer bundles ([§10.3](#103-the-zero-blinding-ceremony)).** Each $\mathsf{W}_k \in \Pi$ draws per-field $g_{k,f}$ with
+  $g_{k,f}(0) = 0$, commits to each $g_{k,f}(i)$, delivers it KEM-DEM to $epk_i$ for all
+  $i \in \Pi$, and proves all of it (the proof also authenticates $k$). Dealers verified by
+  the deadline form $D$, $|D| \ge \theta$, immutable.
+- **Share bundles ([§10.4](#104-the-batch-key-exchange-and-the-session-state-machine)).** Each $\mathsf{W}_i \in \Pi \to \mathsf{DA}$: one signed bundle
+  of its [§8.5](#85-the-warden-payload-kem-dem-proven) shares for all batches, encrypted under a fresh bundle key wrapped to every
+  $epk_j$, $j \in \Pi \setminus \{i\}$. Each member validates received shares against the batch
+  commitments, rebuilds every $k_b$ from $\theta$ valid shares, decrypts every $L_b$, and
+  learns the write history ([§12.2](#122-what-wardens-and-insiders-learn)).
+- **Contributions ([§10.1](#101-what-each-participating-warden-computes)).** $P_s$ = the package the logs assign to slot $s$ in the
+  highest batch. $\mathsf{W}_i \to \mathsf{R}$: $S_{i,f} = \sum_{s: P_s \notin X} s_{P_s,i,f} + G_f(i)$
+  with $G_f = \sum_{k \in D} g_{k,f}$, plus a ZisK proof of complete,
+  exactly-once processing against the frozen views that opens every counted $h$. No
+  output says how many were counted or excluded.
+- **Finalization ([§10.1](#101-what-each-participating-warden-computes)).** After $\theta$ valid contributions anyone calls
+  `finalizeResults`; $\mathsf{R}$ interpolates the $S_{i,f}$ at $x = 0$ on-chain. Since
+  $\deg P_f \le \theta-1$ and $G_f(0) = 0$, the value is the exact per-field tally ([§3](#3-the-core-idea-tally-without-a-shared-decryption-key),
+  [§10.3](#103-the-zero-blinding-ceremony)). Emits `ProcessResultsSet`; participants destroy ephemeral keys, bundle keys and
+  every $k_b$.
+- **Failure ([§10.4](#104-the-batch-key-exchange-and-the-session-state-machine)).** Missing participants cost margin only. An attempt fails iff
+  $|\Pi| < \theta$, $|D| < \theta$, or $< \theta$ contributions at the respective deadline;
+  then anyone advances to attempt $+1$ with fresh randomness and the same $k_b$. Sequencer
+  mode ($\nu = \theta = 1$): only the contribution proof remains.
 
 ---
 
